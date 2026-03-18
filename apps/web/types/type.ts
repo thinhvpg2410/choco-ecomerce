@@ -37,6 +37,7 @@ export interface Product {
   name: string;
   description: string;
   price: number;
+  sale_price?: number | null;
   stock: number;
 
   image_url: string;
@@ -44,7 +45,7 @@ export interface Product {
   category_id: string;
   brand_id: string;
 
-  weight: number;
+  weight: number[];
   weight_unit: string;
   package_type: string;
 
@@ -149,17 +150,32 @@ export interface CartItem {
   price: number;
 }
 
-// ================= WISHLIST =================
-export interface Wishlist {
+// // ================= WISHLIST =================
+// export interface Wishlist {
+//   id: string;
+//   user_id: string;
+//   created_at: string;
+// }
+
+// // ================= WISHLIST ITEM =================
+// export interface WishlistItem {
+//   id: string;
+//   wishlist_id: string;
+//   product_id: string;
+//   created_at: string;
+// }
+
+// ================= BANNER =================
+export interface Banner {
   id: string;
-  user_id: string;
+  description?: string;
+
+  image_url: string;
+
+  product_id?: string;
+
+  is_active: boolean;
+
   created_at: string;
 }
 
-// ================= WISHLIST ITEM =================
-export interface WishlistItem {
-  id: string;
-  wishlist_id: string;
-  product_id: string;
-  created_at: string;
-}
