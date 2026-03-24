@@ -5,13 +5,13 @@ export default function NotFound() {
     <div
       className="min-h-screen bg-cover bg-center"
       style={{
-        backgroundImage: "url('/image/tmp.png')"
+        backgroundImage: "url('/image/bg404.png')"
       }}
     >
     <div className="flex min-h-screen flex-col items-center justify-center text-center px-6">
 
       <h1 className="text-lg tracking-widest text-gray-700 font-semibold">
-        PAGE NOT FOUND
+        TRANG KHÔNG TỒN TẠI
       </h1>
 
       <img
@@ -21,8 +21,7 @@ export default function NotFound() {
       />
 
       <p className="mt-6 text-gray-800 text-lg">
-        Opps!! The page you are looking for doesn't exist
-        or may have been moved.
+        Oops!! Trang bạn đang tìm kiếm không tồn tại hoặc có thể đã được chuyển đi.
       </p>
 
       <Link

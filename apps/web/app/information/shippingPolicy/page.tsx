@@ -1,132 +1,113 @@
 export default function ShippingPolicy() {
-  return (
+return (
     <div>
-        <div className="w-full mx-auto py-4 px-30 text-sm text-gray-500 border-b-4 border-pink-100 rounded-full flex items-center gap-2">
-            <a href="/" className="flex items-center">
-                <img src="/image/home.png" alt="home" className="w-5 h-5"/>
-            </a>
-            <span>›</span>
-            <a href="/information" className="hover:text-purple-800 font-bold ">Information</a>
-            <span>›</span>
-            <a href="/information/shippingPolicy" className="hover:text-purple-800 font-bold ">Shipping Policy</a>
+        <div className="px-6 py-3 bg-[#f5efe6]">
+        {/* Breadcrumb */}
+            <div className="w-full mx-auto py-2 text-base text-[#3b1d14] flex items-center gap-2 font-serif">
+                <a href="/" className="flex items-center">
+                    <img src="/image/home.png" alt="home" className="w-5 h-5"/>
+                </a>
+                <span>›</span>
+                <a href="/information" className="hover:text-[#6b4f3b]">Giới thiệu</a>
+                <span>›</span>
+                <a href="/information/shippingPolicy" className="hover:text-[#6b4f3b]">Chính sách vận chuyển</a>
+            </div>
+
+            {/* Banner */}
+            <div className="relative overflow-hidden rounded-sm">
+                <img
+                src="/image/bg.jpeg"
+                alt="privacy"
+                className="w-full h-[300px] object-cover"
+                />
+                <div className="absolute inset-0 bg-[#3b1d14]/60"></div>
+                <div className="absolute inset-4 border border-[#e7c27d] pointer-events-none"></div>
+                <h1 className="absolute inset-0 flex items-center justify-center 
+                            font-serif text-[#e7c27d] text-5xl tracking-widest uppercase">
+                CHÍNH SÁCH VẬN CHUYỂN
+                </h1>
+            </div>
         </div>
 
-      {/* Title */}
-      <div className="text-center py-10">
-        <h1 className="text-4xl md:text-5xl font-extrabold">
-          <span className="text-blue-500">Shipping</span>{" "}
-          <span className="text-pink-500">Policy</span>
-        </h1>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-5xl mx-auto text-lg bg-white rounded-2xl shadow-[0_4px_20px_rgba(59,130,246,0.25),0_4px_20px_rgba(236,72,153,0.25)] p-8 text-black leading-relaxed space-y-6">
-
-        <p>
-          At <span className="font-semibold text-purple-500">Choco Kingdom</span>, we are dedicated to bringing the finest treats to your doorstep. To ensure your chocolates arrive in royal condition, we partner with reputable local and international couriers to provide fully tracked delivery services.
-        </p>
-
-        <div>
-            <h2 className="text-xl font-bold text-purple-800 mb-3">
-            1. Address Accuracy & Deliveries
-            </h2>
-            <p className="mt-3 text-lg">We ship exclusively to the exact address provided at checkout.</p>
-            <ul className="pl-5 space-y-2">
-            <li><span className="pl-5 font-semibold text-black-800">Correction:</span> If you notice a mistake in your address, please contact us immediately. While we will try our best to redirect the package, we cannot guarantee changes once the order is processed.</li>
-            <li><span className="pl-5 font-semibold text-black-800">Liability:</span> Choco Kingdom accepts no liability for lost or misplaced parcels due to incorrect address or name information. </li>
-            <li><span className="pl-5 font-semibold text-black-800">Full Names Required:</span> Per courier requirements, please provide a full legal name. Avoid using nicknames or fake names to ensure successful delivery.</li>
-            <li><span className="pl-5 font-semibold text-black-800">Redelivery Fees:</span> If a parcel is returned to us due to an address error, your absence, or failure to collect from a pickup point, we can reship it to you. However, a relevant shipping fee will be charged.</li>
-            
+        <div className="max-w-5xl mx-auto text-lg py-30 text-[#3b1d14] font-serif leading-relaxed space-y-6">
+            <p>
+                Chào mừng bạn đến với vương quốc đồ ngọt <span className="font-bold text-[#a67c2d]">Choco Kingdom</span>. Để đảm bảo những chiếc bánh kem tươi mới, socola tan chảy và các loại bánh kẹo giữ nguyên hình dáng hoàn hảo khi đến tay bạn, chúng tôi áp dụng chính sách giao hàng riêng biệt cho khu vực <span className="font-bold text-[#6b4f3b]">TP.HCM</span>
+            </p>
+            <div>
+                <h2 className="text-xl font-bold mb-3">
+                1. Phạm Vi & Hình Thức Giao Hàng
+                </h2>
                 <ul className="pl-5 space-y-2">
-                <li><span className="pl-5 font-semibold text-gray-700">Domestic Reshipment:</span> A flat fee of 50,000 VND will apply for reshipping within Vietnam.</li>
-                <li><span className="pl-5 font-semibold text-gray-700">International Reshipment:</span> For international orders, the reshipping fee will depend on the destination and weight of the package. Please contact our customer service for a quote.</li>
+                <li><span className="font-bold text-[#6b4f3b]">Khu vực phục vụ:</span> Chúng tôi chỉ nhận giao hàng trong nội thành và các huyện thuộc <span className="font-bold text-[#6b4f3b]">TP.HCM</span>.</li>
+                <li><span className="font-bold text-[#6b4f3b]">Hình thức vận chuyển:</span>
+                    <ul className="pl-5 space-y-2">
+                        <li><span className="font-bold text-[#6b4f3b]">Bánh kem & Đồ ngọt dễ vỡ:</span> Giao bằng đội ngũ shipper riêng hoặc xe ô tô để đảm bảo bánh không bị rung lắc, nghiêng đổ.</li>
+                        <li><span className="font-bold text-[#6b4f3b]">Socola & Bánh kẹo đóng gói:</span> Giao hỏa tốc bằng túi giữ nhiệt chuyên dụng.</li>
+                    </ul>
+                </li>
                 </ul>
-            </ul>
+            </div>
+
+            <div>
+                <h2 className="text-xl font-bold mb-3">
+                    2. Thời Gian Xử Lý Đơn Hàng
+                </h2>
+                <ul className="pl-5 space-y-2">
+                    <li><span className="font-bold text-[#6b4f3b]">Bánh kẹo có sẵn:</span> Giao trong vòng 2–4 giờ sau khi xác nhận đơn hàng (trong giờ làm việc).</li>
+                    <li><span className="font-bold text-[#6b4f3b]">Bánh kem thiết kế riêng:</span> Vui lòng đặt trước ít nhất <span className="font-bold text-[#6b4f3b]">24–48 giờ</span> để chúng tôi chuẩn bị nguyên liệu tươi mới nhất.</li>
+                    <li><span className="font-bold text-[#6b4f3b]">Giờ giao hàng:</span> Từ 8:00 đến 20:00 tất cả các ngày trong tuần (bao gồm cả Thứ Bảy và Chủ Nhật).</li>
+                </ul>
+            </div>
+
+            <div>
+                <h2 className="text-xl font-bold mb-3">
+                    3. Phí Vận Chuyển
+                </h2>
+                <ul className="pl-5 space-y-2">
+                    <li>Phí giao hàng được tính dựa trên khoảng cách từ cửa hàng đến địa chỉ của bạn:</li>
+                    <ul className="pl-5 space-y-2">
+                        <li><span className="font-bold text-[#6b4f3b]">Quận Nội Thành :</span> Giá vận chuyển giao động từ 20.000đ - 35.000đ.</li>
+                        <li><span className="font-bold text-[#6b4f3b]">Quận/Huyện Ngoại Thành:</span> Tính theo biểu phí thực tế của ứng dụng giao hàng (Ahamove/Grab).</li>
+                        <li><span className="font-bold text-[#6b4f3b]">Ưu đãi Freeship:</span> Miễn phí vận chuyển cho đơn hàng từ 500.000đ trở lên</li>
+                    </ul>
+                </ul>
+            </div>
+
+            <div>
+                <h2 className="text-xl font-bold mb-3">
+                    4. Quy Định Nhận Hàng & Kiểm Tra (Quan Trọng)
+                </h2>
+                <ul className="pl-5 space-y-2">
+                    <li>Do tính chất đặc thù của bánh kem và đồ ngọt:</li>
+                    <ul className="pl-5 space-y-2">
+                        <li><span className="font-bold text-[#6b4f3b]">Kiểm tra tại chỗ:</span> Quý khách vui lòng mở hộp và kiểm tra hình thức bánh ngay khi nhận hàng từ shipper.</li>
+                        <li><span className="font-bold text-[#6b4f3b]">Trách nhiệm:</span> Nếu bánh bị biến dạng, đổ vỡ do quá trình vận chuyển, vui lòng từ chối nhận và báo ngay cho Hotline để được đổi sản phẩm mới. Chúng tôi không giải quyết các khiếu nại về hình thức sau khi shipper đã rời đi.</li>
+                        <li><span className="font-bold text-[#6b4f3b]">Lưu ý bảo quản:</span> Sau khi nhận bánh kem hoặc socola, vui lòng bảo quản ngay vào ngăn mát tủ lạnh để duy trì chất lượng tốt nhất.</li>
+                    </ul>
+                </ul>
+            </div>
+
+            <div>
+                <h2 className="text-xl font-bold mb-3">
+                    5. Thay Đổi & Huỷ Đơn
+                </h2>
+                <ul className="pl-5 space-y-2">
+                    <li><span className="font-bold text-[#6b4f3b]">Bánh kem:</span> Không hỗ trợ huỷ đơn sau khi bánh đã vào giai đoạn trang trí (thường là 4 tiếng trước giờ giao).</li>
+                    <li><span className="font-bold text-[#6b4f3b]">Thay đổi địa chỉ:</span> Vui lòng thông báo ít nhất 2 tiếng trước giờ giao dự kiến để chúng tôi điều phối shipper.</li>
+                </ul>
+            </div>
+
+            <div>
+                <h2 className="text-xl font-bold mb-3">
+                    Liên Hệ Choco Kingdom
+                </h2>
+                <ul className="pl-5 space-y-2">
+                    <li><span className="font-bold text-[#6b4f3b]">Hotline/Zalo đặt bánh:</span> ...........  </li>
+                    <li><span className="font-bold text-[#6b4f3b]">Facebook/Instagram:</span> Choco Kingdom - Sweet Paradise</li>
+                    <li><span className="font-bold text-[#6b4f3b]">Email:</span> contact@chocokindom.com</li>
+                </ul>
+            </div>
         </div>
-
-        {/* 2 */}
-        <div>
-            <h2 className="text-xl font-bold text-pink-500 mb-3">
-            2. Failed Deliveries & Refunds
-            </h2>
-
-            <ul className="space-y-2">
-            <li><span className="font-semibold">Successful Delivery:</span> Delivery to a pickup point is considered complete.</li>
-            <li><span className="font-semibold">Lost Parcels:</span> We will resend the order instead of issuing a refund.</li>
-            <li><span className="font-semibold">No Refunds:</span> Orders failed due to customer errors are not refundable.</li>
-            </ul>
-        </div>
-
-        {/* 3 */}
-        <div>
-            <h2 className="text-xl font-bold text-blue-500 mb-3">
-            3. International Shipping & Customs
-            </h2>
-
-            <ul className="space-y-2">
-            <li>Customers must pay all customs duties, taxes, or import fees.</li>
-            <li>We are not responsible for customs delays or rejections.</li>
-            <li>No refunds for returned items due to unpaid customs (perishable goods).</li>
-            </ul>
-        </div>
-
-        {/* 4 */}
-        <div>
-            <h2 className="text-xl font-bold text-pink-500 mb-3">
-            4. Product Integrity & Weather Conditions
-            </h2>
-
-            <ul className="space-y-2">
-            <li><span className="font-semibold">Melting Risk:</span> Chocolate may melt in hot conditions.</li>
-            <li><span className="font-semibold">Fragility:</span> Some items may break during shipping.</li>
-            <li><span className="font-semibold">Consumability:</span> No refunds for cosmetic damage that doesn’t affect quality.</li>
-            </ul>
-        </div>
-
-        {/* 5 */}
-        <div>
-            <h2 className="text-xl font-bold text-blue-500 mb-3">
-            5. Dispatch & Delivery Timelines
-            </h2>
-
-            <ul className="space-y-2">
-            <li>Domestic dispatch: 1–3 working days</li>
-            <li>International dispatch: 1–14 working days</li>
-            <li>Shipping days: Monday–Friday only</li>
-            <li>No refunds for delays caused by external factors</li>
-            </ul>
-        </div>
-
-        {/* 6 */}
-        <div>
-            <h2 className="text-xl font-bold text-pink-500 mb-3">
-            6. Restricted Addresses
-            </h2>
-
-            <p>
-            We do not ship to PO Boxes, APO, FPO, or similar addresses. Please provide a valid residential or business address. Orders with invalid addresses may be delayed.
-            </p>
-        </div>
-
-        {/* Contact */}
-        <div>
-            <h2 className="text-xl font-bold text-blue-500 mb-3">
-            Contact Us
-            </h2>
-
-            <p>
-            Email:{" "}
-            <span className="font-semibold text-pink-500">
-                hello@chocokingdom.vn
-            </span>
-            </p>
-
-            <p className="mt-1 text-gray-600">
-            Location: Ho Chi Minh City, Vietnam
-            </p>
-        </div>
-
-      </div>
     </div>
-  );
+    );
 }
