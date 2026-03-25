@@ -17,7 +17,7 @@ export function Footer() {
             Sản phẩm của chúng tôi
           </h3>
           <ul className="space-y-2 text-base">
-            <li className="hover:text-[#e7c27d] cursor-pointer">Sô cô la</li>
+            <li className="hover:text-[#e7c27d] cursor-pointer">Socola</li>
             <li className="hover:text-[#e7c27d] cursor-pointer">Kẹo</li>
             <li className="hover:text-[#e7c27d] cursor-pointer">Bánh quy</li>
             <li className="hover:text-[#e7c27d] cursor-pointer">Hộp snack</li>
