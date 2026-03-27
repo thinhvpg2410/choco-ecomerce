@@ -15,8 +15,12 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return API status payload', () => {
+      expect(appController.getHello()).toEqual({
+        success: true,
+        message: 'API is running',
+        data: { service: 'choco-ecommerce-api' },
+      });
     });
   });
 });
