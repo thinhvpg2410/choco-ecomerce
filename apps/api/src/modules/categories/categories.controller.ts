@@ -3,7 +3,7 @@ import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../users/schemas/user.schema';
+import { UserRole } from '@prisma/client';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -34,7 +34,7 @@ export class CategoriesController {
   @ApiBearerAuth()
   @ApiBody({ type: CreateCategoryDto })
   @ApiOkResponse({ type: CategoryDetailResponseDto })
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.admin)
   @Post()
   async create(@Body() createCategoryDto: CreateCategoryDto) {
     return this.categoriesService.create(createCategoryDto);
@@ -44,7 +44,7 @@ export class CategoriesController {
   @ApiBearerAuth()
   @ApiBody({ type: UpdateCategoryDto })
   @ApiOkResponse({ type: CategoryDetailResponseDto })
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.admin)
   @Put(':id')
   async update(
     @Param('id') categoryId: string,
@@ -56,7 +56,7 @@ export class CategoriesController {
   @ApiOperation({ summary: 'Delete category (admin only)' })
   @ApiBearerAuth()
   @ApiOkResponse({ description: 'Category deleted' })
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.admin)
   @Delete(':id')
   async remove(@Param('id') categoryId: string) {
     return this.categoriesService.remove(categoryId);

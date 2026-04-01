@@ -1,61 +1,63 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { User } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
-import { User, UserDocument } from './schemas/user.schema';
 import { UserResponseDto } from './dto/user-response.dto';
+import { PrismaService } from '../../prisma/prisma.service';
+import { isUuid } from '../../common/utils/is-uuid';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
-    const existingUser = await this.userModel.findOne({ email: createUserDto.email });
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: createUserDto.email },
+    });
     if (existingUser) {
       throw new ConflictException('Email already exists');
     }
 
-    const createdUser = await this.userModel.create(createUserDto);
+    const createdUser = await this.prisma.user.create({
+      data: {
+        email: createUserDto.email,
+        password: createUserDto.password,
+        ...(createUserDto.role !== undefined && { role: createUserDto.role }),
+        ...(createUserDto.status !== undefined && { status: createUserDto.status }),
+      },
+    });
     return this.toUserResponse(createdUser);
   }
 
   async findByEmail(email: string): Promise<UserResponseDto | null> {
-    const user = await this.userModel.findOne({ email }).exec();
+    const user = await this.prisma.user.findUnique({ where: { email } });
     return user ? this.toUserResponse(user) : null;
   }
 
-  async findByEmailWithPassword(email: string): Promise<UserDocument | null> {
-    return this.userModel.findOne({ email }).select('+password').exec();
+  async findByEmailWithPassword(email: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ where: { email } });
   }
 
-  async findByIdWithRefreshToken(userId: string): Promise<UserDocument | null> {
-    if (!Types.ObjectId.isValid(userId)) {
+  async findByIdWithRefreshToken(userId: string): Promise<User | null> {
+    if (!isUuid(userId)) {
       return null;
     }
 
-    return this.userModel
-      .findById(userId)
-      .select('+refreshTokenHash')
-      .exec();
+    return this.prisma.user.findUnique({ where: { id: userId } });
   }
 
-  async setRefreshTokenHash(
-    userId: string,
-    refreshTokenHash: string | null,
-  ): Promise<void> {
-    await this.userModel
-      .findByIdAndUpdate(userId, { refreshTokenHash }, { returnDocument: 'before' })
-      .exec();
+  async setRefreshTokenHash(userId: string, refreshTokenHash: string | null): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshTokenHash },
+    });
   }
 
   async findById(userId: string): Promise<UserResponseDto> {
-    if (!Types.ObjectId.isValid(userId)) {
+    if (!isUuid(userId)) {
       throw new NotFoundException('User not found');
     }
 
-    const user = await this.userModel.findById(userId).exec();
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -63,9 +65,9 @@ export class UsersService {
     return this.toUserResponse(user);
   }
 
-  toUserResponse(user: UserDocument): UserResponseDto {
+  toUserResponse(user: User): UserResponseDto {
     return {
-      id: user._id.toString(),
+      id: user.id,
       email: user.email,
       role: user.role,
       status: user.status,

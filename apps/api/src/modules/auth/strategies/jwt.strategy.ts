@@ -2,8 +2,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import { UserStatus } from '@prisma/client';
 import { UsersService } from '../../users/users.service';
-import { UserStatus } from '../../users/schemas/user.schema';
 
 export type JwtPayload = {
   sub: string;
@@ -26,7 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload) {
     const user = await this.usersService.findById(payload.sub);
-    if (user.status !== UserStatus.ACTIVE) {
+    if (user.status !== UserStatus.active) {
       throw new UnauthorizedException('User account is inactive');
     }
 

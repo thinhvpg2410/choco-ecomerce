@@ -3,24 +3,20 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Category, CategoryDocument } from './schemas/category.schema';
+import { Category } from '@prisma/client';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { Product, ProductDocument } from '../products/schemas/product.schema';
+import { PrismaService } from '../../prisma/prisma.service';
+import { isUuid } from '../../common/utils/is-uuid';
 
 @Injectable()
 export class CategoriesService {
-  constructor(
-    @InjectModel(Category.name)
-    private readonly categoryModel: Model<CategoryDocument>,
-    @InjectModel(Product.name)
-    private readonly productModel: Model<ProductDocument>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAll() {
-    const categories = await this.categoryModel.find().sort({ createdAt: -1 }).exec();
+    const categories = await this.prisma.category.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
     return {
       success: true,
       message: 'Categories fetched successfully',
@@ -29,7 +25,9 @@ export class CategoriesService {
   }
 
   async create(createCategoryDto: CreateCategoryDto) {
-    const createdCategory = await this.categoryModel.create(createCategoryDto);
+    const createdCategory = await this.prisma.category.create({
+      data: createCategoryDto,
+    });
     return {
       success: true,
       message: 'Category created successfully',
@@ -38,53 +36,52 @@ export class CategoriesService {
   }
 
   async update(categoryId: string, updateCategoryDto: UpdateCategoryDto) {
-    this.validateObjectId(categoryId);
-    const updatedCategory = await this.categoryModel
-      .findByIdAndUpdate(categoryId, updateCategoryDto, {
-        returnDocument: 'after',
-      })
-      .exec();
-
-    if (!updatedCategory) {
+    this.validateUuid(categoryId);
+    try {
+      const updatedCategory = await this.prisma.category.update({
+        where: { id: categoryId },
+        data: updateCategoryDto,
+      });
+      return {
+        success: true,
+        message: 'Category updated successfully',
+        data: this.toCategoryResponse(updatedCategory),
+      };
+    } catch {
       throw new NotFoundException('Category not found');
     }
-
-    return {
-      success: true,
-      message: 'Category updated successfully',
-      data: this.toCategoryResponse(updatedCategory),
-    };
   }
 
   async remove(categoryId: string) {
-    this.validateObjectId(categoryId);
+    this.validateUuid(categoryId);
 
-    const category = await this.categoryModel.findById(categoryId).exec();
+    const category = await this.prisma.category.findUnique({
+      where: { id: categoryId },
+    });
     if (!category) {
       throw new NotFoundException('Category not found');
     }
 
-    const existingProducts = await this.productModel.countDocuments({
-      category_id: category._id,
-      is_active: true,
+    const existingProducts = await this.prisma.product.count({
+      where: { categoryId: category.id, isActive: true },
     });
     if (existingProducts > 0) {
       throw new BadRequestException('Cannot delete category with existing products');
     }
 
-    await this.categoryModel.findByIdAndDelete(categoryId).exec();
+    await this.prisma.category.delete({ where: { id: categoryId } });
     return { success: true, message: 'Category deleted successfully' };
   }
 
-  private validateObjectId(id: string): void {
-    if (!Types.ObjectId.isValid(id)) {
+  private validateUuid(id: string): void {
+    if (!isUuid(id)) {
       throw new NotFoundException('Category not found');
     }
   }
 
-  private toCategoryResponse(category: CategoryDocument) {
+  private toCategoryResponse(category: Category) {
     return {
-      id: category._id.toString(),
+      id: category.id,
       name: category.name,
       description: category.description,
       createdAt: category.createdAt,

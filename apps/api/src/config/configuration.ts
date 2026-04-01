@@ -3,7 +3,7 @@ export default () => ({
     port: parseInt(process.env.PORT ?? '5000', 10),
   },
   database: {
-    uri: process.env.MONGODB_URI ?? 'mongodb://localhost:27017/choco-ecommerce',
+    url: process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/choco_ecommerce',
   },
   jwt: {
     secret: process.env.JWT_SECRET ?? 'choco-ecommerce-secret',

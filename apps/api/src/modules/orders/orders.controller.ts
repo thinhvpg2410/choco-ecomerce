@@ -11,7 +11,7 @@ import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../users/schemas/user.schema';
+import { UserRole } from '@prisma/client';
 import { OrderDetailResponseDto, OrderListResponseDto } from './dto/order-response.dto';
 
 @ApiTags('Orders')
@@ -48,7 +48,7 @@ export class OrdersController {
   @ApiOperation({ summary: 'Update order status (admin only)' })
   @ApiBody({ type: UpdateOrderStatusDto })
   @ApiOkResponse({ type: OrderDetailResponseDto })
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.admin)
   @Put(':id/status')
   async updateStatus(
     @Param('id') orderId: string,
@@ -59,7 +59,7 @@ export class OrdersController {
 
   @ApiOperation({ summary: 'Get all orders (admin only)' })
   @ApiOkResponse({ type: OrderListResponseDto })
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.admin)
   @Get()
   async findAllOrders() {
     return this.ordersService.findAllOrders();

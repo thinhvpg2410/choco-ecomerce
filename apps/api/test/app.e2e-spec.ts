@@ -2,23 +2,36 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { execSync } from 'node:child_process';
+import { join, resolve } from 'node:path';
+import { config } from 'dotenv';
 import { AppModule } from './../src/app.module';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import { GlobalExceptionFilter } from '../src/common/filters/global-exception.filter';
+
+config({ path: resolve(__dirname, '../.env') });
 
 jest.setTimeout(60000);
 
-describe('Auth, Products, Categories (e2e)', () => {
+const databaseUrl = process.env.E2E_DATABASE_URL ?? process.env.DATABASE_URL;
+const describeE2e = databaseUrl ? describe : describe.skip;
+
+describeE2e('Auth, Products, Categories (e2e)', () => {
   let app: INestApplication<App>;
-  let mongoServer: MongoMemoryServer;
+
   let adminAccessToken = '';
   let adminRefreshToken = '';
   let categoryId = '';
   let productId = '';
 
   beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
-    process.env.MONGODB_URI = mongoServer.getUri();
+    process.env.DATABASE_URL = databaseUrl;
+    const apiRoot = join(__dirname, '..');
+    execSync('npx prisma migrate deploy', {
+      cwd: apiRoot,
+      stdio: 'inherit',
+      env: { ...process.env },
+    });
+
     process.env.JWT_SECRET = 'test-access-secret';
     process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
 
@@ -33,8 +46,7 @@ describe('Auth, Products, Categories (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
-    await mongoServer.stop();
+    await app?.close();
   });
 
   it('registers admin user', async () => {
