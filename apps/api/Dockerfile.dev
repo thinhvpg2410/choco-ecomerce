@@ -1,0 +1,15 @@
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Workspace metadata for npm ci (postinstall runs prisma generate).
+COPY package*.json ./
+COPY apps/api/package*.json apps/api/
+COPY apps/web/package*.json apps/web/
+COPY apps/api/prisma apps/api/prisma
+
+RUN npm ci
+
+EXPOSE 5000
+
+CMD ["sh", "-c", "npm run prisma:migrate --workspace=api && npm run start:dev --workspace=api"]
