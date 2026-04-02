@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { UserStatus } from '@prisma/client';
+import { UserRole, UserStatus } from '@prisma/client';
 import { RegisterDto } from './dto/register.dto';
 import { UsersService } from '../users/users.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
@@ -22,7 +22,7 @@ export class AuthService {
     const createUserDto: CreateUserDto = {
       email: registerDto.email,
       password: hashedPassword,
-      role: registerDto.role,
+      role: UserRole.user,
       status: UserStatus.active,
     };
 
