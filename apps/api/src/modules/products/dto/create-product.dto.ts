@@ -1,7 +1,7 @@
 import {
   ArrayMinSize,
   IsArray,
-  IsMongoId,
+  IsUUID,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -38,7 +38,7 @@ export class CreateProductDto {
   images: string[];
 
   @ApiProperty()
-  @IsMongoId()
+  @IsUUID('4')
   category_id: string;
 
   @ApiPropertyOptional()

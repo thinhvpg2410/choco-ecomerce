@@ -1,7 +1,7 @@
 import {
   IsArray,
   IsBoolean,
-  IsMongoId,
+  IsUUID,
   IsNumber,
   IsOptional,
   IsString,
@@ -40,7 +40,7 @@ export class UpdateProductDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsMongoId()
+  @IsUUID('4')
   category_id?: string;
 
   @ApiPropertyOptional()

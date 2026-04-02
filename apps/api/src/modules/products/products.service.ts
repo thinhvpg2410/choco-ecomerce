@@ -1,20 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Product, ProductDocument } from './schemas/product.schema';
+import { Category, Prisma, Product } from '@prisma/client';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
-import { Category, CategoryDocument } from '../categories/schemas/category.schema';
+import { PrismaService } from '../../prisma/prisma.service';
+import { isUuid } from '../../common/utils/is-uuid';
+
+type ProductWithCategory = Product & { category: Category };
 
 @Injectable()
 export class ProductsService {
-  constructor(
-    @InjectModel(Product.name)
-    private readonly productModel: Model<ProductDocument>,
-    @InjectModel(Category.name)
-    private readonly categoryModel: Model<CategoryDocument>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAll(query: QueryProductDto) {
     const page = Number(query.page ?? 1);
@@ -23,23 +19,23 @@ export class ProductsService {
     const categoryId = query.category_id;
     const skip = (page - 1) * limit;
 
-    const filters: Record<string, unknown> = { is_active: true };
-    if (search) {
-      filters.name = { $regex: search, $options: 'i' };
-    }
-    if (categoryId) {
-      filters.category_id = new Types.ObjectId(categoryId);
-    }
+    const where: Prisma.ProductWhereInput = {
+      isActive: true,
+      ...(search && {
+        name: { contains: search, mode: 'insensitive' },
+      }),
+      ...(categoryId && { categoryId }),
+    };
 
     const [products, total] = await Promise.all([
-      this.productModel
-        .find(filters)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate('category_id', 'name')
-        .exec(),
-      this.productModel.countDocuments(filters),
+      this.prisma.product.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: { category: true },
+      }),
+      this.prisma.product.count({ where }),
     ]);
 
     return {
@@ -58,11 +54,11 @@ export class ProductsService {
   }
 
   async findOne(productId: string) {
-    this.validateObjectId(productId);
-    const product = await this.productModel
-      .findOne({ _id: productId, is_active: true })
-      .populate('category_id', 'name')
-      .exec();
+    this.validateProductId(productId);
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, isActive: true },
+      include: { category: true },
+    });
 
     if (!product) {
       throw new NotFoundException('Product not found');
@@ -77,10 +73,17 @@ export class ProductsService {
 
   async create(createProductDto: CreateProductDto) {
     await this.ensureCategoryExists(createProductDto.category_id);
-    const createdProduct = await this.productModel.create({
-      ...createProductDto,
-      category_id: new Types.ObjectId(createProductDto.category_id),
-      is_active: createProductDto.is_active ?? true,
+    const createdProduct = await this.prisma.product.create({
+      data: {
+        name: createProductDto.name,
+        description: createProductDto.description,
+        price: createProductDto.price,
+        stock: createProductDto.stock,
+        images: createProductDto.images ?? [],
+        categoryId: createProductDto.category_id,
+        isActive: createProductDto.is_active ?? true,
+      },
+      include: { category: true },
     });
     return {
       success: true,
@@ -90,28 +93,39 @@ export class ProductsService {
   }
 
   async update(productId: string, updateProductDto: UpdateProductDto) {
-    this.validateObjectId(productId);
+    this.validateProductId(productId);
     if (updateProductDto.category_id) {
       await this.ensureCategoryExists(updateProductDto.category_id);
     }
 
-    const payload = {
-      ...updateProductDto,
-      ...(updateProductDto.category_id
-        ? { category_id: new Types.ObjectId(updateProductDto.category_id) }
-        : {}),
+    const data: Prisma.ProductUpdateInput = {
+      ...(updateProductDto.name !== undefined && { name: updateProductDto.name }),
+      ...(updateProductDto.description !== undefined && {
+        description: updateProductDto.description,
+      }),
+      ...(updateProductDto.price !== undefined && { price: updateProductDto.price }),
+      ...(updateProductDto.stock !== undefined && { stock: updateProductDto.stock }),
+      ...(updateProductDto.images !== undefined && { images: updateProductDto.images }),
+      ...(updateProductDto.is_active !== undefined && {
+        isActive: updateProductDto.is_active,
+      }),
+      ...(updateProductDto.category_id !== undefined && {
+        category: { connect: { id: updateProductDto.category_id } },
+      }),
     };
 
-    const updatedProduct = await this.productModel
-      .findOneAndUpdate({ _id: productId, is_active: true }, payload, {
-        returnDocument: 'after',
-      })
-      .exec();
-
-    if (!updatedProduct) {
+    const existing = await this.prisma.product.findFirst({
+      where: { id: productId, isActive: true },
+    });
+    if (!existing) {
       throw new NotFoundException('Product not found');
     }
 
+    const updatedProduct = await this.prisma.product.update({
+      where: { id: productId },
+      data,
+      include: { category: true },
+    });
     return {
       success: true,
       message: 'Product updated successfully',
@@ -120,60 +134,48 @@ export class ProductsService {
   }
 
   async remove(productId: string) {
-    this.validateObjectId(productId);
-    const deletedProduct = await this.productModel
-      .findOneAndUpdate(
-        { _id: productId, is_active: true },
-        { is_active: false },
-        { returnDocument: 'after' },
-      )
-      .exec();
-
-    if (!deletedProduct) {
+    this.validateProductId(productId);
+    const result = await this.prisma.product.updateMany({
+      where: { id: productId, isActive: true },
+      data: { isActive: false },
+    });
+    if (result.count === 0) {
       throw new NotFoundException('Product not found');
     }
 
     return { success: true, message: 'Product deleted successfully' };
   }
 
-  private validateObjectId(id: string): void {
-    if (!Types.ObjectId.isValid(id)) {
+  private validateProductId(id: string): void {
+    if (!isUuid(id)) {
       throw new NotFoundException('Product not found');
     }
   }
 
   private async ensureCategoryExists(categoryId: string): Promise<void> {
-    if (!Types.ObjectId.isValid(categoryId)) {
+    if (!isUuid(categoryId)) {
       throw new NotFoundException('Category not found');
     }
 
-    const category = await this.categoryModel.findById(categoryId).exec();
+    const category = await this.prisma.category.findUnique({
+      where: { id: categoryId },
+    });
     if (!category) {
       throw new NotFoundException('Category not found');
     }
   }
 
-  private toProductResponse(product: ProductDocument) {
-    const categoryReference = product.category_id as
-      | Types.ObjectId
-      | { _id: Types.ObjectId; name?: string };
-
+  private toProductResponse(product: ProductWithCategory) {
     return {
-      id: product._id.toString(),
+      id: product.id,
       name: product.name,
       description: product.description,
-      price: product.price,
+      price: Number(product.price),
       stock: product.stock,
       images: product.images,
-      category_id:
-        categoryReference && typeof categoryReference === 'object' && '_id' in categoryReference
-          ? categoryReference._id.toString()
-          : product.category_id.toString(),
-      category_name:
-        categoryReference && typeof categoryReference === 'object' && 'name' in categoryReference
-          ? categoryReference.name
-          : undefined,
-      is_active: product.is_active,
+      category_id: product.categoryId,
+      category_name: product.category.name,
+      is_active: product.isActive,
       createdAt: product.createdAt,
     };
   }

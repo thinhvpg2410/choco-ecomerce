@@ -13,7 +13,7 @@ import { QueryProductDto } from './dto/query-product.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../users/schemas/user.schema';
+import { UserRole } from '@prisma/client';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -57,7 +57,7 @@ export class ProductsController {
   @ApiBearerAuth()
   @ApiBody({ type: CreateProductDto })
   @ApiOkResponse({ type: ProductDetailResponseDto })
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.admin)
   @Post()
   async create(@Body() createProductDto: CreateProductDto) {
     return this.productsService.create(createProductDto);
@@ -67,7 +67,7 @@ export class ProductsController {
   @ApiBearerAuth()
   @ApiBody({ type: UpdateProductDto })
   @ApiOkResponse({ type: ProductDetailResponseDto })
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.admin)
   @Put(':id')
   async update(
     @Param('id') productId: string,
@@ -79,7 +79,7 @@ export class ProductsController {
   @ApiOperation({ summary: 'Soft delete product (admin only)' })
   @ApiBearerAuth()
   @ApiOkResponse({ description: 'Product deleted' })
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.admin)
   @Delete(':id')
   async remove(@Param('id') productId: string) {
     return this.productsService.remove(productId);

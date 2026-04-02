@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@eslint/eslintrc": "0.1.0",
+    "@nestjs/cli": "^11.0.16",
+    "@nestjs/schematics": "^7.3.1",
     "@reduxjs/toolkit": "^2.11.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -31,9 +34,9 @@
     "@types/node": "^20.19.35",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
+    "eslint": "^10.1.0",
     "eslint-config-next": "16.1.6",
-    "tailwindcss": "^4",
+    "tailwindcss": "^4.2.1",
     "typescript": "^5"
   }
 }

@@ -1,23 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Cart, CartDocument } from './schemas/cart.schema';
-import { Product, ProductDocument } from '../products/schemas/product.schema';
+import { Cart, CartItem, Product } from '@prisma/client';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
+import { PrismaService } from '../../prisma/prisma.service';
+import { isUuid } from '../../common/utils/is-uuid';
+
+type CartWithItems = Cart & { items: CartItem[] };
 
 @Injectable()
 export class CartService {
-  constructor(
-    @InjectModel(Cart.name)
-    private readonly cartModel: Model<CartDocument>,
-    @InjectModel(Product.name)
-    private readonly productModel: Model<ProductDocument>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async getCart(userId: string) {
-    const userObjectId = this.toObjectId(userId, 'User not found');
-    const cart = await this.findOrCreateCart(userObjectId);
+    this.validateUserId(userId);
+    const cart = await this.findOrCreateCartWithItems(userId);
 
     return {
       success: true,
@@ -27,105 +23,146 @@ export class CartService {
   }
 
   async addToCart(userId: string, addToCartDto: AddToCartDto) {
-    const userObjectId = this.toObjectId(userId, 'User not found');
+    this.validateUserId(userId);
     const product = await this.ensureProductExists(addToCartDto.product_id);
-    const cart = await this.findOrCreateCart(userObjectId);
+    const cart = await this.findOrCreateCart(userId);
 
-    const existingItem = cart.items.find(
-      (item) => item.product_id.toString() === addToCartDto.product_id,
-    );
+    const existingItem = await this.prisma.cartItem.findUnique({
+      where: {
+        cartId_productId: {
+          cartId: cart.id,
+          productId: product.id,
+        },
+      },
+    });
 
     if (existingItem) {
-      existingItem.quantity += addToCartDto.quantity;
-      existingItem.price = product.price;
+      await this.prisma.cartItem.update({
+        where: { id: existingItem.id },
+        data: {
+          quantity: existingItem.quantity + addToCartDto.quantity,
+          price: product.price,
+        },
+      });
     } else {
-      cart.items.push({
-        product_id: product._id,
-        quantity: addToCartDto.quantity,
-        price: product.price,
+      await this.prisma.cartItem.create({
+        data: {
+          cartId: cart.id,
+          productId: product.id,
+          quantity: addToCartDto.quantity,
+          price: product.price,
+        },
       });
     }
 
-    await cart.save();
+    const updatedCart = await this.loadCartWithItems(cart.id);
 
     return {
       success: true,
       message: 'Product added to cart successfully',
-      data: this.toCartResponse(cart),
+      data: this.toCartResponse(updatedCart),
     };
   }
 
   async updateCartItem(userId: string, updateCartItemDto: UpdateCartItemDto) {
-    const userObjectId = this.toObjectId(userId, 'User not found');
+    this.validateUserId(userId);
     await this.ensureProductExists(updateCartItemDto.product_id);
 
-    const cart = await this.findOrCreateCart(userObjectId);
-    const item = cart.items.find(
-      (cartItem) => cartItem.product_id.toString() === updateCartItemDto.product_id,
-    );
+    const cart = await this.findOrCreateCart(userId);
+    const item = await this.prisma.cartItem.findUnique({
+      where: {
+        cartId_productId: {
+          cartId: cart.id,
+          productId: updateCartItemDto.product_id,
+        },
+      },
+    });
 
     if (!item) {
       throw new NotFoundException('Cart item not found');
     }
 
-    item.quantity = updateCartItemDto.quantity;
-    await cart.save();
+    await this.prisma.cartItem.update({
+      where: { id: item.id },
+      data: { quantity: updateCartItemDto.quantity },
+    });
+
+    const updatedCart = await this.loadCartWithItems(cart.id);
 
     return {
       success: true,
       message: 'Cart item updated successfully',
-      data: this.toCartResponse(cart),
+      data: this.toCartResponse(updatedCart),
     };
   }
 
   async removeCartItem(userId: string, productId: string) {
-    this.toObjectId(productId, 'Product not found');
-    const userObjectId = this.toObjectId(userId, 'User not found');
-    const cart = await this.findOrCreateCart(userObjectId);
+    this.validateProductId(productId);
+    this.validateUserId(userId);
+    const cart = await this.findOrCreateCart(userId);
 
-    const initialCount = cart.items.length;
-    cart.items = cart.items.filter((item) => item.product_id.toString() !== productId);
+    const result = await this.prisma.cartItem.deleteMany({
+      where: { cartId: cart.id, productId },
+    });
 
-    if (initialCount === cart.items.length) {
+    if (result.count === 0) {
       throw new NotFoundException('Cart item not found');
     }
 
-    await cart.save();
+    const updatedCart = await this.loadCartWithItems(cart.id);
 
     return {
       success: true,
       message: 'Cart item removed successfully',
-      data: this.toCartResponse(cart),
+      data: this.toCartResponse(updatedCart),
     };
   }
 
   async clearCart(userId: string) {
-    const userObjectId = this.toObjectId(userId, 'User not found');
-    const cart = await this.findOrCreateCart(userObjectId);
-    cart.items = [];
-    await cart.save();
+    this.validateUserId(userId);
+    const cart = await this.findOrCreateCart(userId);
+    await this.prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+    const updatedCart = await this.loadCartWithItems(cart.id);
 
     return {
       success: true,
       message: 'Cart cleared successfully',
-      data: this.toCartResponse(cart),
+      data: this.toCartResponse(updatedCart),
     };
   }
 
-  private async findOrCreateCart(userId: Types.ObjectId): Promise<CartDocument> {
-    const cart = await this.cartModel.findOne({ user_id: userId }).exec();
-    if (cart) {
-      return cart;
+  private async findOrCreateCart(userId: string): Promise<Cart> {
+    const existing = await this.prisma.cart.findUnique({
+      where: { userId },
+    });
+    if (existing) {
+      return existing;
     }
 
-    return this.cartModel.create({ user_id: userId, items: [] });
+    return this.prisma.cart.create({
+      data: { userId },
+    });
   }
 
-  private async ensureProductExists(productId: string): Promise<ProductDocument> {
-    const productObjectId = this.toObjectId(productId, 'Product not found');
-    const product = await this.productModel
-      .findOne({ _id: productObjectId, is_active: true })
-      .exec();
+  private async findOrCreateCartWithItems(userId: string): Promise<CartWithItems> {
+    const cart = await this.findOrCreateCart(userId);
+    return this.loadCartWithItems(cart.id);
+  }
+
+  private async loadCartWithItems(cartId: string): Promise<CartWithItems> {
+    const cart = await this.prisma.cart.findUniqueOrThrow({
+      where: { id: cartId },
+      include: { items: true },
+    });
+    return cart;
+  }
+
+  private async ensureProductExists(productId: string): Promise<Product> {
+    this.validateProductId(productId);
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, isActive: true },
+    });
 
     if (!product) {
       throw new NotFoundException('Product not found');
@@ -134,26 +171,33 @@ export class CartService {
     return product;
   }
 
-  private toObjectId(id: string, errorMessage: string): Types.ObjectId {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException(errorMessage);
+  private validateUserId(id: string): void {
+    if (!isUuid(id)) {
+      throw new NotFoundException('User not found');
     }
-
-    return new Types.ObjectId(id);
   }
 
-  private toCartResponse(cart: CartDocument) {
-    const items = cart.items.map((item) => ({
-      product_id: item.product_id.toString(),
-      quantity: item.quantity,
-      price: item.price,
-      subtotal: item.quantity * item.price,
-    }));
+  private validateProductId(id: string): void {
+    if (!isUuid(id)) {
+      throw new NotFoundException('Product not found');
+    }
+  }
+
+  private toCartResponse(cart: CartWithItems) {
+    const items = cart.items.map((item) => {
+      const price = Number(item.price);
+      return {
+        product_id: item.productId,
+        quantity: item.quantity,
+        price,
+        subtotal: item.quantity * price,
+      };
+    });
 
     const totalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
 
     return {
-      user_id: cart.user_id.toString(),
+      user_id: cart.userId,
       items,
       total_amount: totalAmount,
       updatedAt: cart.updatedAt,

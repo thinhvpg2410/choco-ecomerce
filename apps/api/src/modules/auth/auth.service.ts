@@ -2,11 +2,11 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { UserStatus } from '@prisma/client';
 import { RegisterDto } from './dto/register.dto';
 import { UsersService } from '../users/users.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
-import { UserStatus } from '../users/schemas/user.schema';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Injectable()
@@ -23,7 +23,7 @@ export class AuthService {
       email: registerDto.email,
       password: hashedPassword,
       role: registerDto.role,
-      status: UserStatus.ACTIVE,
+      status: UserStatus.active,
     };
 
     const createdUser = await this.usersService.create(createUserDto);
@@ -57,13 +57,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    if (user.status !== UserStatus.ACTIVE) {
+    if (user.status !== UserStatus.active) {
       throw new UnauthorizedException('User account is inactive');
     }
 
     const payload = this.buildJwtPayload(user);
     const tokens = await this.generateTokenPair(payload);
-    await this.saveRefreshTokenHash(user._id.toString(), tokens.refreshToken);
+    await this.saveRefreshTokenHash(user.id, tokens.refreshToken);
 
     return {
       success: true,
@@ -102,7 +102,7 @@ export class AuthService {
 
     const nextPayload = this.buildJwtPayload(user);
     const tokens = await this.generateTokenPair(nextPayload);
-    await this.saveRefreshTokenHash(user._id.toString(), tokens.refreshToken);
+    await this.saveRefreshTokenHash(user.id, tokens.refreshToken);
 
     return {
       success: true,
@@ -115,13 +115,9 @@ export class AuthService {
     };
   }
 
-  private buildJwtPayload(user: {
-    _id: { toString: () => string };
-    email: string;
-    role: string;
-  }) {
+  private buildJwtPayload(user: { id: string; email: string; role: string }) {
     return {
-      sub: user._id.toString(),
+      sub: user.id,
       email: user.email,
       role: user.role,
     };

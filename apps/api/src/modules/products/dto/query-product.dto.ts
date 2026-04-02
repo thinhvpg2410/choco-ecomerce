@@ -1,4 +1,4 @@
-import { IsInt, IsMongoId, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class QueryProductDto {
@@ -22,6 +22,6 @@ export class QueryProductDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsMongoId()
+  @IsUUID('4')
   category_id?: string;
 }
