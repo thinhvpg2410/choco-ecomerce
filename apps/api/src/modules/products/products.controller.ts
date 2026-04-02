@@ -27,6 +27,9 @@ import {
   ProductListResponseDto,
 } from './dto/product-response.dto';
 import { Public } from '../../common/decorators/public.decorator';
+import { OptionalAuth } from '../../common/decorators/optional-auth.decorator';
+import { OptionalUser } from '../../common/decorators/optional-user.decorator';
+import type { JwtRequestUser } from '../../common/types/jwt-request-user';
 
 @ApiTags('Products')
 @Controller('products')
@@ -40,17 +43,25 @@ export class ProductsController {
   @ApiQuery({ name: 'category_id', required: false })
   @ApiOkResponse({ type: ProductListResponseDto })
   @Public()
+  @OptionalAuth()
   @Get()
-  async findAll(@Query() query: QueryProductDto) {
-    return this.productsService.findAll(query);
+  async findAll(
+    @Query() query: QueryProductDto,
+    @OptionalUser() user?: JwtRequestUser,
+  ) {
+    return this.productsService.findAll(query, user);
   }
 
   @ApiOperation({ summary: 'Get product by id' })
   @ApiOkResponse({ type: ProductDetailResponseDto })
   @Public()
+  @OptionalAuth()
   @Get(':id')
-  async findOne(@Param('id') productId: string) {
-    return this.productsService.findOne(productId);
+  async findOne(
+    @Param('id') productId: string,
+    @OptionalUser() user?: JwtRequestUser,
+  ) {
+    return this.productsService.findOne(productId, user);
   }
 
   @ApiOperation({ summary: 'Create new product (admin only)' })

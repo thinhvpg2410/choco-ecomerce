@@ -14,6 +14,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { CouponsModule } from './modules/coupons/coupons.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from './common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PrismaModule } from './prisma/prisma.module';
 
@@ -34,6 +35,7 @@ import { PrismaModule } from './prisma/prisma.module';
   controllers: [AppController],
   providers: [
     AppService,
+    OptionalJwtAuthGuard,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],

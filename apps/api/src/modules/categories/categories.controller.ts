@@ -16,6 +16,9 @@ import {
   CategoryListResponseDto,
 } from './dto/category-response.dto';
 import { Public } from '../../common/decorators/public.decorator';
+import { OptionalAuth } from '../../common/decorators/optional-auth.decorator';
+import { OptionalUser } from '../../common/decorators/optional-user.decorator';
+import type { JwtRequestUser } from '../../common/types/jwt-request-user';
 
 @ApiTags('Categories')
 @Controller('categories')
@@ -25,9 +28,10 @@ export class CategoriesController {
   @ApiOperation({ summary: 'List all categories' })
   @ApiOkResponse({ type: CategoryListResponseDto })
   @Public()
+  @OptionalAuth()
   @Get()
-  async findAll() {
-    return this.categoriesService.findAll();
+  async findAll(@OptionalUser() user?: JwtRequestUser) {
+    return this.categoriesService.findAll(user);
   }
 
   @ApiOperation({ summary: 'Create category (admin only)' })

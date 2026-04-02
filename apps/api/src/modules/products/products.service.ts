@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Category, Prisma, Product } from '@prisma/client';
+import { JwtRequestUser } from '../../common/types/jwt-request-user';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
@@ -12,7 +13,7 @@ type ProductWithCategory = Product & { category: Category };
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: QueryProductDto) {
+  async findAll(query: QueryProductDto, viewer?: JwtRequestUser) {
     const page = Number(query.page ?? 1);
     const limit = Number(query.limit ?? 10);
     const search = query.search;
@@ -38,11 +39,24 @@ export class ProductsService {
       this.prisma.product.count({ where }),
     ]);
 
+    const cartByProduct = viewer
+      ? await this.getCartQuantitiesByProductId(viewer.sub)
+      : null;
+
     return {
       success: true,
       message: 'Products fetched successfully',
       data: {
-        items: products.map((product) => this.toProductResponse(product)),
+        items: products.map((product) => {
+          const base = this.toProductResponse(product);
+          if (!viewer || !cartByProduct) {
+            return base;
+          }
+          return {
+            ...base,
+            cart_quantity: cartByProduct.get(product.id) ?? 0,
+          };
+        }),
         pagination: {
           page,
           limit,
@@ -50,10 +64,19 @@ export class ProductsService {
           totalPages: Math.ceil(total / limit),
         },
       },
+      ...(viewer && {
+        meta: {
+          viewer: {
+            id: viewer.sub,
+            email: viewer.email,
+            role: viewer.role,
+          },
+        },
+      }),
     };
   }
 
-  async findOne(productId: string) {
+  async findOne(productId: string, viewer?: JwtRequestUser) {
     this.validateProductId(productId);
     const product = await this.prisma.product.findFirst({
       where: { id: productId, isActive: true },
@@ -64,10 +87,39 @@ export class ProductsService {
       throw new NotFoundException('Product not found');
     }
 
+    const myReview =
+      viewer &&
+      (await this.prisma.review.findUnique({
+        where: {
+          userId_productId: { userId: viewer.sub, productId: product.id },
+        },
+      }));
+
+    const base = this.toProductResponse(product);
     return {
       success: true,
       message: 'Product fetched successfully',
-      data: this.toProductResponse(product),
+      data: {
+        ...base,
+        ...(viewer && {
+          my_review: myReview
+            ? {
+                rating: myReview.rating,
+                comment: myReview.comment,
+                createdAt: myReview.createdAt,
+              }
+            : null,
+        }),
+      },
+      ...(viewer && {
+        meta: {
+          viewer: {
+            id: viewer.sub,
+            email: viewer.email,
+            role: viewer.role,
+          },
+        },
+      }),
     };
   }
 
@@ -144,6 +196,21 @@ export class ProductsService {
     }
 
     return { success: true, message: 'Product deleted successfully' };
+  }
+
+  private async getCartQuantitiesByProductId(userId: string): Promise<Map<string, number>> {
+    const cart = await this.prisma.cart.findUnique({
+      where: { userId },
+      include: { items: true },
+    });
+    const map = new Map<string, number>();
+    if (!cart) {
+      return map;
+    }
+    for (const item of cart.items) {
+      map.set(item.productId, item.quantity);
+    }
+    return map;
   }
 
   private validateProductId(id: string): void {

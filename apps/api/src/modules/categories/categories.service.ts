@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Category } from '@prisma/client';
+import { JwtRequestUser } from '../../common/types/jwt-request-user';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -13,7 +14,7 @@ import { isUuid } from '../../common/utils/is-uuid';
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(viewer?: JwtRequestUser) {
     const categories = await this.prisma.category.findMany({
       orderBy: { createdAt: 'desc' },
     });
@@ -21,6 +22,15 @@ export class CategoriesService {
       success: true,
       message: 'Categories fetched successfully',
       data: categories.map((category) => this.toCategoryResponse(category)),
+      ...(viewer && {
+        meta: {
+          viewer: {
+            id: viewer.sub,
+            email: viewer.email,
+            role: viewer.role,
+          },
+        },
+      }),
     };
   }
 
