@@ -1,4 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PublicResponseMetaDto } from '../../../common/dto/viewer-meta.dto';
 
 export class CategoryResponseDto {
   @ApiProperty()
@@ -23,6 +24,9 @@ export class CategoryListResponseDto {
 
   @ApiProperty({ type: [CategoryResponseDto] })
   data: CategoryResponseDto[];
+
+  @ApiPropertyOptional({ type: PublicResponseMetaDto })
+  meta?: PublicResponseMetaDto;
 }
 
 export class CategoryDetailResponseDto {

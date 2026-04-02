@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Cart, CartItem, Product } from '@prisma/client';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
+import { GuestCartItemDto } from './dto/guest-cart-item.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { isUuid } from '../../common/utils/is-uuid';
 
@@ -130,6 +131,94 @@ export class CartService {
       message: 'Cart cleared successfully',
       data: this.toCartResponse(updatedCart),
     };
+  }
+
+ 
+  async mergeGuestCart(userId: string, guestCart: GuestCartItemDto[]) {
+    this.validateUserId(userId);
+    if (!guestCart.length) {
+      const cart = await this.findOrCreateCartWithItems(userId);
+      return {
+        success: true,
+        message: 'No guest items to merge',
+        data: this.toCartResponse(cart),
+      };
+    }
+
+    const mergedLines = this.normalizeGuestCartQuantities(guestCart);
+
+    const cartWithItems = await this.prisma.$transaction(async (tx) => {
+      let cart = await tx.cart.findUnique({ where: { userId } });
+      if (!cart) {
+        cart = await tx.cart.create({ data: { userId } });
+      }
+
+      const existingItems = await tx.cartItem.findMany({
+        where: { cartId: cart.id },
+      });
+      const existingByProductId = new Map(
+        existingItems.map((item) => [item.productId, item]),
+      );
+
+      for (const [productId, guestQuantity] of mergedLines) {
+        const product = await tx.product.findFirst({
+          where: { id: productId, isActive: true },
+        });
+
+        if (!product) {
+          throw new NotFoundException(`Product not found: ${productId}`);
+        }
+
+        const existing = existingByProductId.get(productId);
+        const currentQty = existing?.quantity ?? 0;
+        const nextQty = currentQty + guestQuantity;
+
+        if (nextQty > product.stock) {
+          throw new BadRequestException(
+            `Insufficient stock for "${product.name}" (${productId}). In stock: ${product.stock}, cart would be: ${nextQty}`,
+          );
+        }
+
+        if (existing) {
+          await tx.cartItem.update({
+            where: { id: existing.id },
+            data: { quantity: nextQty, price: product.price },
+          });
+        } else {
+          const created = await tx.cartItem.create({
+            data: {
+              cartId: cart.id,
+              productId: product.id,
+              quantity: guestQuantity,
+              price: product.price,
+            },
+          });
+          existingByProductId.set(productId, created);
+        }
+      }
+
+      return tx.cart.findUniqueOrThrow({
+        where: { id: cart.id },
+        include: { items: true },
+      });
+    });
+
+    return {
+      success: true,
+      message: 'Guest cart merged successfully',
+      data: this.toCartResponse(cartWithItems),
+    };
+  }
+
+  private normalizeGuestCartQuantities(
+    guestCart: GuestCartItemDto[],
+  ): Map<string, number> {
+    const merged = new Map<string, number>();
+    for (const line of guestCart) {
+      const prev = merged.get(line.product_id) ?? 0;
+      merged.set(line.product_id, prev + line.quantity);
+    }
+    return merged;
   }
 
   private async findOrCreateCart(userId: string): Promise<Cart> {
