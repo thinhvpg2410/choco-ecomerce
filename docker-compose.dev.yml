@@ -16,6 +16,17 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: choco-redis-dev
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -28,6 +39,9 @@ services:
       JWT_REFRESH_SECRET: 3144049e5030d0eb0db1df3e2e6352a54b6ce1bd1701c588b61d83e78dde5972
       JWT_EXPIRES_IN: 1d
       JWT_REFRESH_EXPIRES_IN: 7d
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_TTL_SECONDS: "60"
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "1000"
     ports:
@@ -38,6 +52,8 @@ services:
       - /app/apps/api/node_modules
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     stdin_open: true
     tty: true

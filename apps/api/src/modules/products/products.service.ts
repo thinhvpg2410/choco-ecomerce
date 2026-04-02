@@ -1,126 +1,90 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Category, Prisma, Product } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { JwtRequestUser } from '../../common/types/jwt-request-user';
+import { CacheService } from '../../common/cache/cache.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { isUuid } from '../../common/utils/is-uuid';
 
-type ProductWithCategory = Product & { category: Category };
+const productPublicSelect = {
+  id: true,
+  name: true,
+  description: true,
+  price: true,
+  stock: true,
+  images: true,
+  categoryId: true,
+  isActive: true,
+  averageRating: true,
+  reviewCount: true,
+  createdAt: true,
+  category: { select: { id: true, name: true } },
+} satisfies Prisma.ProductSelect;
+
+type ProductPublicRow = Prisma.ProductGetPayload<{ select: typeof productPublicSelect }>;
+
+type ProductResponseSource = {
+  id: string;
+  name: string;
+  description: string;
+  price: Prisma.Decimal;
+  stock: number;
+  images: string[];
+  categoryId: string;
+  isActive: boolean;
+  averageRating: Prisma.Decimal | null;
+  reviewCount: number;
+  createdAt: Date;
+  category: { name: string };
+};
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   async findAll(query: QueryProductDto, viewer?: JwtRequestUser) {
+    if (viewer) {
+      return this.findAllForViewer(query, viewer);
+    }
+
     const page = Number(query.page ?? 1);
     const limit = Number(query.limit ?? 10);
-    const search = query.search;
-    const categoryId = query.category_id;
-    const skip = (page - 1) * limit;
+    const search = (query.search ?? '').trim();
+    const categoryId = query.category_id ?? '';
 
-    const where: Prisma.ProductWhereInput = {
-      isActive: true,
-      ...(search && {
-        name: { contains: search, mode: 'insensitive' },
-      }),
-      ...(categoryId && { categoryId }),
-    };
+    const cacheKey = this.cache.productsListKey(page, limit, search, categoryId);
+    type GuestListPayload = Awaited<ReturnType<ProductsService['loadGuestListPayload']>>;
+    const cached = await this.cache.get<GuestListPayload>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
-    const [products, total] = await Promise.all([
-      this.prisma.product.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-        include: { category: true },
-      }),
-      this.prisma.product.count({ where }),
-    ]);
-
-    const cartByProduct = viewer
-      ? await this.getCartQuantitiesByProductId(viewer.sub)
-      : null;
-
-    return {
-      success: true,
-      message: 'Products fetched successfully',
-      data: {
-        items: products.map((product) => {
-          const base = this.toProductResponse(product);
-          if (!viewer || !cartByProduct) {
-            return base;
-          }
-          return {
-            ...base,
-            cart_quantity: cartByProduct.get(product.id) ?? 0,
-          };
-        }),
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        },
-      },
-      ...(viewer && {
-        meta: {
-          viewer: {
-            id: viewer.sub,
-            email: viewer.email,
-            role: viewer.role,
-          },
-        },
-      }),
-    };
+    const payload = await this.loadGuestListPayload(query);
+    await this.cache.set(cacheKey, payload, this.cache.ttl.productsList);
+    return payload;
   }
 
   async findOne(productId: string, viewer?: JwtRequestUser) {
     this.validateProductId(productId);
-    const product = await this.prisma.product.findFirst({
-      where: { id: productId, isActive: true },
-      include: { category: true },
-    });
-
-    if (!product) {
-      throw new NotFoundException('Product not found');
+    if (viewer) {
+      return this.findOneForViewer(productId, viewer);
     }
 
-    const myReview =
-      viewer &&
-      (await this.prisma.review.findUnique({
-        where: {
-          userId_productId: { userId: viewer.sub, productId: product.id },
-        },
-      }));
+    const cacheKey = this.cache.productDetailKey(productId);
+    type GuestDetailPayload = ReturnType<ProductsService['buildGuestDetailPayload']>;
+    const cached = await this.cache.get<GuestDetailPayload>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
-    const base = this.toProductResponse(product);
-    return {
-      success: true,
-      message: 'Product fetched successfully',
-      data: {
-        ...base,
-        ...(viewer && {
-          my_review: myReview
-            ? {
-                rating: myReview.rating,
-                comment: myReview.comment,
-                createdAt: myReview.createdAt,
-              }
-            : null,
-        }),
-      },
-      ...(viewer && {
-        meta: {
-          viewer: {
-            id: viewer.sub,
-            email: viewer.email,
-            role: viewer.role,
-          },
-        },
-      }),
-    };
+    const payload = await this.loadGuestDetailPayload(productId);
+    await this.cache.set(cacheKey, payload, this.cache.ttl.productDetail);
+    return payload;
   }
 
   async create(createProductDto: CreateProductDto) {
@@ -137,6 +101,7 @@ export class ProductsService {
       },
       include: { category: true },
     });
+    await this.cache.invalidateAfterProductWrite(createdProduct.id);
     return {
       success: true,
       message: 'Product created successfully',
@@ -178,6 +143,7 @@ export class ProductsService {
       data,
       include: { category: true },
     });
+    await this.cache.invalidateAfterProductWrite(productId);
     return {
       success: true,
       message: 'Product updated successfully',
@@ -195,7 +161,142 @@ export class ProductsService {
       throw new NotFoundException('Product not found');
     }
 
+    await this.cache.invalidateAfterProductWrite(productId);
     return { success: true, message: 'Product deleted successfully' };
+  }
+
+  private async findAllForViewer(query: QueryProductDto, viewer: JwtRequestUser) {
+    const payload = await this.loadGuestListPayload(query);
+    const cartByProduct = await this.getCartQuantitiesByProductId(viewer.sub);
+    return {
+      ...payload,
+      data: {
+        ...payload.data,
+        items: payload.data.items.map((item) => ({
+          ...item,
+          cart_quantity: cartByProduct.get(item.id) ?? 0,
+        })),
+      },
+      meta: {
+        viewer: {
+          id: viewer.sub,
+          email: viewer.email,
+          role: viewer.role,
+        },
+      },
+    };
+  }
+
+  private async loadGuestListPayload(query: QueryProductDto) {
+    const page = Number(query.page ?? 1);
+    const limit = Number(query.limit ?? 10);
+    const search = query.search;
+    const categoryId = query.category_id;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.ProductWhereInput = {
+      isActive: true,
+      ...(search && {
+        name: { contains: search, mode: 'insensitive' },
+      }),
+      ...(categoryId && { categoryId }),
+    };
+
+    const [products, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        select: productPublicSelect,
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return this.buildGuestListPayload(products, page, limit, total);
+  }
+
+  private buildGuestListPayload(
+    products: ProductPublicRow[],
+    page: number,
+    limit: number,
+    total: number,
+  ) {
+    return {
+      success: true,
+      message: 'Products fetched successfully',
+      data: {
+        items: products.map((product) => this.toProductResponse(product)),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    };
+  }
+
+  private async findOneForViewer(productId: string, viewer: JwtRequestUser) {
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, isActive: true },
+      select: productPublicSelect,
+    });
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    const myReview = await this.prisma.review.findUnique({
+      where: {
+        userId_productId: { userId: viewer.sub, productId: product.id },
+      },
+    });
+
+    const base = this.toProductResponse(product);
+    return {
+      success: true,
+      message: 'Product fetched successfully',
+      data: {
+        ...base,
+        my_review: myReview
+          ? {
+              rating: myReview.rating,
+              comment: myReview.comment,
+              createdAt: myReview.createdAt,
+            }
+          : null,
+      },
+      meta: {
+        viewer: {
+          id: viewer.sub,
+          email: viewer.email,
+          role: viewer.role,
+        },
+      },
+    };
+  }
+
+  private async loadGuestDetailPayload(productId: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, isActive: true },
+      select: productPublicSelect,
+    });
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    return this.buildGuestDetailPayload(product);
+  }
+
+  private buildGuestDetailPayload(product: ProductPublicRow) {
+    const base = this.toProductResponse(product);
+    return {
+      success: true,
+      message: 'Product fetched successfully',
+      data: base,
+    };
   }
 
   private async getCartQuantitiesByProductId(userId: string): Promise<Map<string, number>> {
@@ -232,21 +333,22 @@ export class ProductsService {
     }
   }
 
-  private toProductResponse(product: ProductWithCategory) {
+  private toProductResponse(product: ProductResponseSource) {
+    const p = product;
     return {
-      id: product.id,
-      name: product.name,
-      description: product.description,
-      price: Number(product.price),
-      stock: product.stock,
-      images: product.images,
-      category_id: product.categoryId,
-      category_name: product.category.name,
-      is_active: product.isActive,
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      price: Number(p.price),
+      stock: p.stock,
+      images: p.images,
+      category_id: p.categoryId,
+      category_name: p.category.name,
+      is_active: p.isActive,
       average_rating:
-        product.averageRating === null ? null : Number(product.averageRating),
-      review_count: product.reviewCount,
-      createdAt: product.createdAt,
+        p.averageRating === null ? null : Number(p.averageRating),
+      review_count: p.reviewCount,
+      createdAt: p.createdAt,
     };
   }
 }

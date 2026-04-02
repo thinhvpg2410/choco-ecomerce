@@ -17,11 +17,13 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from './common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PrismaModule } from './prisma/prisma.module';
+import { AppCacheModule } from './common/cache/cache.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
     PrismaModule,
+    AppCacheModule,
     AuthModule,
     UsersModule,
     ProductsModule,

@@ -85,6 +85,9 @@ model Product {
   averageRating   Decimal? @map("average_rating") @db.Decimal(4, 2)
   reviewCount     Int      @default(0) @map("review_count")
 
+  @@index([name])
+  @@index([categoryId])
+  @@index([createdAt(sort: Desc)])
   @@map("products")
 }
 

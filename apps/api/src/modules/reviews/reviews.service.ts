@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { OrderStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CacheService } from '../../common/cache/cache.service';
 import { isUuid } from '../../common/utils/is-uuid';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
@@ -14,7 +15,10 @@ import { QueryReviewsDto } from './dto/query-reviews.dto';
 
 @Injectable()
 export class ReviewsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   async create(userId: string, dto: CreateReviewDto) {
     this.assertUuid(userId, 'User not found');
@@ -50,6 +54,7 @@ export class ReviewsService {
         return created;
       });
 
+      await this.cache.invalidateAfterProductWrite(dto.product_id);
       return {
         success: true,
         message: 'Review created successfully',
@@ -139,6 +144,7 @@ export class ReviewsService {
       return next;
     });
 
+    await this.cache.invalidateAfterProductWrite(review.productId);
     return {
       success: true,
       message: 'Review updated successfully',
@@ -165,11 +171,13 @@ export class ReviewsService {
       throw new ForbiddenException('You cannot delete this review');
     }
 
+    const productId = review.productId;
     await this.prisma.$transaction(async (tx) => {
       await tx.review.delete({ where: { id: reviewId } });
-      await this.syncProductRating(tx, review.productId);
+      await this.syncProductRating(tx, productId);
     });
 
+    await this.cache.invalidateAfterProductWrite(productId);
     return {
       success: true,
       message: 'Review deleted successfully',
