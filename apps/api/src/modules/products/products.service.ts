@@ -176,6 +176,9 @@ export class ProductsService {
       category_id: product.categoryId,
       category_name: product.category.name,
       is_active: product.isActive,
+      average_rating:
+        product.averageRating === null ? null : Number(product.averageRating),
+      review_count: product.reviewCount,
       createdAt: product.createdAt,
     };
   }

@@ -8,8 +8,10 @@ COPY apps/api/package*.json apps/api/
 COPY apps/web/package*.json apps/web/
 COPY apps/api/prisma apps/api/prisma
 
-RUN npm ci
+# Ensure Prisma Client matches schema (postinstall can miss workspace cwd in some setups).
+RUN npm ci && npm run prisma:generate --workspace=api
 
 EXPOSE 5000
 
-CMD ["sh", "-c", "npm run prisma:migrate --workspace=api && npm run start:dev --workspace=api"]
+# Regenerate client when apps/api is bind-mounted with a newer schema than the image.
+CMD ["sh", "-c", "npm run prisma:generate --workspace=api && npm run prisma:migrate --workspace=api && npm run start:dev --workspace=api"]

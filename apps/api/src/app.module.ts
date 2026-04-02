@@ -10,6 +10,9 @@ import { ProductsModule } from './modules/products/products.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { CartModule } from './modules/cart/cart.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
+import { CouponsModule } from './modules/coupons/coupons.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PrismaModule } from './prisma/prisma.module';
@@ -24,6 +27,9 @@ import { PrismaModule } from './prisma/prisma.module';
     CategoriesModule,
     CartModule,
     OrdersModule,
+    PaymentsModule,
+    ReviewsModule,
+    CouponsModule,
   ],
   controllers: [AppController],
   providers: [

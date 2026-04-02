@@ -76,6 +76,17 @@ export class AuthService {
     };
   }
 
+  verifyAccessToken(token: string): { sub: string } {
+    try {
+      const payload = this.jwtService.verify<{ sub: string }>(token, {
+        secret: this.configService.getOrThrow<string>('jwt.secret'),
+      });
+      return { sub: payload.sub };
+    } catch {
+      throw new UnauthorizedException('Invalid token');
+    }
+  }
+
   async refreshTokens(refreshTokenDto: RefreshTokenDto) {
     let payload: { sub: string; email: string; role: string };
 

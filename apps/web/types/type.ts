@@ -122,16 +122,22 @@ export interface Review {
 }
 
 // ================= COUPON =================
+/** Aligns with API `GET /api/coupons` and admin coupon payloads */
 export interface Coupon {
   id: string;
   code: string;
+  /** Percent off (0–100); 0 when `discount_amount` is used */
   discount_percent: number;
+  /** Fixed amount off when backend coupon type is FIXED */
+  discount_amount?: number;
   min_order_amount: number;
   max_discount_amount: number;
   usage_limit: number;
   used_count: number;
+  /** ISO date string; empty when no expiry */
   expiry_date: string;
   created_at: string;
+  is_active?: boolean;
 }
 
 // ================= CART =================

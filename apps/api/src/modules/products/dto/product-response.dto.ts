@@ -28,6 +28,12 @@ export class ProductResponseDto {
   @ApiProperty()
   is_active: boolean;
 
+  @ApiProperty({ required: false, nullable: true })
+  average_rating: number | null;
+
+  @ApiProperty()
+  review_count: number;
+
   @ApiProperty()
   createdAt: Date;
 }
