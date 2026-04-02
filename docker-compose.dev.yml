@@ -34,6 +34,8 @@ services:
       - "5000:5000"
     volumes:
       - ./apps/api:/app/apps/api
+      # Hide host apps/api/node_modules so Windows Prisma engines are not mounted into Linux.
+      - /app/apps/api/node_modules
     depends_on:
       db:
         condition: service_healthy
