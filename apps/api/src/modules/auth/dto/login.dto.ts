@@ -1,5 +1,14 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsEmail,
+  IsOptional,
+  IsString,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { GuestCartItemDto } from '../../cart/dto/guest-cart-item.dto';
 
 export class LoginDto {
   @ApiProperty({ example: 'admin@choco.com' })
@@ -10,4 +19,15 @@ export class LoginDto {
   @IsString()
   @MinLength(6)
   password: string;
+
+  @ApiPropertyOptional({
+    type: [GuestCartItemDto],
+    description:
+      'Optional guest cart from localStorage/session. Merged into the user cart after successful login.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GuestCartItemDto)
+  guestCart?: GuestCartItemDto[];
 }

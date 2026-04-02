@@ -1,5 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserResponseDto } from '../../users/dto/user-response.dto';
+import { CartDataResponseDto } from '../../cart/dto/cart-response.dto';
 
 export class AuthTokensDataDto {
   @ApiProperty()
@@ -10,6 +11,12 @@ export class AuthTokensDataDto {
 
   @ApiProperty({ type: UserResponseDto })
   user: UserResponseDto;
+
+  @ApiPropertyOptional({
+    type: CartDataResponseDto,
+    description: 'Present when guestCart was sent and merged on login',
+  })
+  cart?: CartDataResponseDto;
 }
 
 export class AuthTokensResponseDto {

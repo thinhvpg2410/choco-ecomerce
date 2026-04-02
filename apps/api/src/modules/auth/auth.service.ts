@@ -8,11 +8,14 @@ import { UsersService } from '../users/users.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { CartService } from '../cart/cart.service';
+import type { CartDataResponseDto } from '../cart/dto/cart-response.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
+    private readonly cartService: CartService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -61,6 +64,12 @@ export class AuthService {
       throw new UnauthorizedException('User account is inactive');
     }
 
+    let mergedCart: CartDataResponseDto | undefined;
+    if (loginDto.guestCart?.length) {
+      const mergeResult = await this.cartService.mergeGuestCart(user.id, loginDto.guestCart);
+      mergedCart = mergeResult.data;
+    }
+
     const payload = this.buildJwtPayload(user);
     const tokens = await this.generateTokenPair(payload);
     await this.saveRefreshTokenHash(user.id, tokens.refreshToken);
@@ -72,6 +81,7 @@ export class AuthService {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         user: this.usersService.toUserResponse(user),
+        ...(mergedCart !== undefined && { cart: mergedCart }),
       },
     };
   }
