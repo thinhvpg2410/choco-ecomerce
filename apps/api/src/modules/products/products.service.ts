@@ -11,16 +11,34 @@ import { isUuid } from '../../common/utils/is-uuid';
 const productPublicSelect = {
   id: true,
   name: true,
+  slug: true,
+  shortDescription: true,
   description: true,
+  sku: true,
   price: true,
+  salePrice: true,
+  costPrice: true,
   stock: true,
+  imageUrl: true,
   images: true,
   categoryId: true,
+  brandId: true,
+  ingredients: true,
+  nutritionInfo: true,
+  origin: true,
+  weight: true,
+  weightUnit: true,
+  packageType: true,
   isActive: true,
+  isFeatured: true,
+  isBestSeller: true,
+  isNew: true,
+  createdAt: true,
+  updatedAt: true,
   averageRating: true,
   reviewCount: true,
-  createdAt: true,
   category: { select: { id: true, name: true } },
+  brand: { select: { id: true, name: true } },
 } satisfies Prisma.ProductSelect;
 
 type ProductPublicRow = Prisma.ProductGetPayload<{ select: typeof productPublicSelect }>;
@@ -28,16 +46,34 @@ type ProductPublicRow = Prisma.ProductGetPayload<{ select: typeof productPublicS
 type ProductResponseSource = {
   id: string;
   name: string;
+  slug: string;
+  shortDescription: string | null;
   description: string;
+  sku: string;
   price: Prisma.Decimal;
+  salePrice: Prisma.Decimal | null;
+  costPrice: Prisma.Decimal | null;
   stock: number;
+  imageUrl: string;
   images: string[];
   categoryId: string;
+  brandId: string | null;
+  ingredients: string | null;
+  nutritionInfo: Prisma.JsonValue | null;
+  origin: string | null;
+  weight: Prisma.Decimal;
+  weightUnit: string;
+  packageType: string;
   isActive: boolean;
+  isFeatured: boolean;
+  isBestSeller: boolean;
+  isNew: boolean;
+  createdAt: Date;
+  updatedAt: Date | null;
   averageRating: Prisma.Decimal | null;
   reviewCount: number;
-  createdAt: Date;
-  category: { name: string };
+  category: { id: string; name: string };
+  brand: { id: string; name: string } | null;
 };
 
 @Injectable()
@@ -57,8 +93,15 @@ export class ProductsService {
     const search = (query.search ?? '').trim();
     const categoryId = query.category_id ?? '';
 
-    const cacheKey = this.cache.productsListKey(page, limit, search, categoryId);
-    type GuestListPayload = Awaited<ReturnType<ProductsService['loadGuestListPayload']>>;
+    const cacheKey = this.cache.productsListKey(
+      page,
+      limit,
+      search,
+      categoryId,
+    );
+    type GuestListPayload = Awaited<
+      ReturnType<ProductsService['loadGuestListPayload']>
+    >;
     const cached = await this.cache.get<GuestListPayload>(cacheKey);
     if (cached) {
       return cached;
@@ -76,7 +119,9 @@ export class ProductsService {
     }
 
     const cacheKey = this.cache.productDetailKey(productId);
-    type GuestDetailPayload = ReturnType<ProductsService['buildGuestDetailPayload']>;
+    type GuestDetailPayload = ReturnType<
+      ProductsService['buildGuestDetailPayload']
+    >;
     const cached = await this.cache.get<GuestDetailPayload>(cacheKey);
     if (cached) {
       return cached;
@@ -89,17 +134,37 @@ export class ProductsService {
 
   async create(createProductDto: CreateProductDto) {
     await this.ensureCategoryExists(createProductDto.category_id);
+    if (createProductDto.brand_id) {
+      await this.ensureBrandExists(createProductDto.brand_id);
+    }
+
     const createdProduct = await this.prisma.product.create({
       data: {
         name: createProductDto.name,
+        slug: createProductDto.slug,
+        shortDescription: createProductDto.short_description,
         description: createProductDto.description,
+        sku: createProductDto.sku,
         price: createProductDto.price,
+        salePrice: createProductDto.sale_price,
+        costPrice: createProductDto.cost_price,
         stock: createProductDto.stock,
+        imageUrl: createProductDto.image_url,
         images: createProductDto.images ?? [],
         categoryId: createProductDto.category_id,
+        brandId: createProductDto.brand_id,
+        ingredients: createProductDto.ingredients,
+        nutritionInfo: createProductDto.nutrition_info,
+        origin: createProductDto.origin,
+        weight: createProductDto.weight,
+        weightUnit: createProductDto.weight_unit,
+        packageType: createProductDto.package_type,
         isActive: createProductDto.is_active ?? true,
+        isFeatured: createProductDto.is_featured ?? false,
+        isBestSeller: createProductDto.is_best_seller ?? false,
+        isNew: createProductDto.is_new ?? false,
       },
-      include: { category: true },
+      include: { category: true, brand: true },
     });
     await this.cache.invalidateAfterProductWrite(createdProduct.id);
     return {
@@ -114,17 +179,74 @@ export class ProductsService {
     if (updateProductDto.category_id) {
       await this.ensureCategoryExists(updateProductDto.category_id);
     }
+    if (updateProductDto.brand_id) {
+      await this.ensureBrandExists(updateProductDto.brand_id);
+    }
 
     const data: Prisma.ProductUpdateInput = {
-      ...(updateProductDto.name !== undefined && { name: updateProductDto.name }),
+      ...(updateProductDto.name !== undefined && {
+        name: updateProductDto.name,
+      }),
+      ...(updateProductDto.slug !== undefined && {
+        slug: updateProductDto.slug,
+      }),
+      ...(updateProductDto.short_description !== undefined && {
+        shortDescription: updateProductDto.short_description,
+      }),
       ...(updateProductDto.description !== undefined && {
         description: updateProductDto.description,
       }),
-      ...(updateProductDto.price !== undefined && { price: updateProductDto.price }),
-      ...(updateProductDto.stock !== undefined && { stock: updateProductDto.stock }),
-      ...(updateProductDto.images !== undefined && { images: updateProductDto.images }),
+      ...(updateProductDto.sku !== undefined && { sku: updateProductDto.sku }),
+      ...(updateProductDto.price !== undefined && {
+        price: updateProductDto.price,
+      }),
+      ...(updateProductDto.sale_price !== undefined && {
+        salePrice: updateProductDto.sale_price,
+      }),
+      ...(updateProductDto.cost_price !== undefined && {
+        costPrice: updateProductDto.cost_price,
+      }),
+      ...(updateProductDto.stock !== undefined && {
+        stock: updateProductDto.stock,
+      }),
+      ...(updateProductDto.image_url !== undefined && {
+        imageUrl: updateProductDto.image_url,
+      }),
+      ...(updateProductDto.images !== undefined && {
+        images: updateProductDto.images,
+      }),
+      ...(updateProductDto.brand_id !== undefined && {
+        brand: { connect: { id: updateProductDto.brand_id } },
+      }),
+      ...(updateProductDto.ingredients !== undefined && {
+        ingredients: updateProductDto.ingredients,
+      }),
+      ...(updateProductDto.nutrition_info !== undefined && {
+        nutritionInfo: updateProductDto.nutrition_info,
+      }),
+      ...(updateProductDto.origin !== undefined && {
+        origin: updateProductDto.origin,
+      }),
+      ...(updateProductDto.weight !== undefined && {
+        weight: updateProductDto.weight,
+      }),
+      ...(updateProductDto.weight_unit !== undefined && {
+        weightUnit: updateProductDto.weight_unit,
+      }),
+      ...(updateProductDto.package_type !== undefined && {
+        packageType: updateProductDto.package_type,
+      }),
       ...(updateProductDto.is_active !== undefined && {
         isActive: updateProductDto.is_active,
+      }),
+      ...(updateProductDto.is_featured !== undefined && {
+        isFeatured: updateProductDto.is_featured,
+      }),
+      ...(updateProductDto.is_best_seller !== undefined && {
+        isBestSeller: updateProductDto.is_best_seller,
+      }),
+      ...(updateProductDto.is_new !== undefined && {
+        isNew: updateProductDto.is_new,
       }),
       ...(updateProductDto.category_id !== undefined && {
         category: { connect: { id: updateProductDto.category_id } },
@@ -141,7 +263,7 @@ export class ProductsService {
     const updatedProduct = await this.prisma.product.update({
       where: { id: productId },
       data,
-      include: { category: true },
+      include: { category: true, brand: true },
     });
     await this.cache.invalidateAfterProductWrite(productId);
     return {
@@ -165,7 +287,10 @@ export class ProductsService {
     return { success: true, message: 'Product deleted successfully' };
   }
 
-  private async findAllForViewer(query: QueryProductDto, viewer: JwtRequestUser) {
+  private async findAllForViewer(
+    query: QueryProductDto,
+    viewer: JwtRequestUser,
+  ) {
     const payload = await this.loadGuestListPayload(query);
     const cartByProduct = await this.getCartQuantitiesByProductId(viewer.sub);
     return {
@@ -189,17 +314,36 @@ export class ProductsService {
 
   private async loadGuestListPayload(query: QueryProductDto) {
     const page = Number(query.page ?? 1);
-    const limit = Number(query.limit ?? 10);
-    const search = query.search;
+    const limit = Number(query.limit ?? 12);
+    const search = (query.search ?? '').trim();
     const categoryId = query.category_id;
+    const brandId = query.brand_id;
+    const minPrice = query.min_price;
+    const maxPrice = query.max_price;
+    const isFeatured = query.is_featured;
+    const isBestSeller = query.is_best_seller;
+    const isNew = query.is_new;
+
     const skip = (page - 1) * limit;
 
     const where: Prisma.ProductWhereInput = {
       isActive: true,
+
       ...(search && {
         name: { contains: search, mode: 'insensitive' },
       }),
+
       ...(categoryId && { categoryId }),
+      ...(brandId && { brandId }),
+
+      // Lọc theo giá
+      ...(minPrice !== undefined && { price: { gte: minPrice } }),
+      ...(maxPrice !== undefined && { price: { lte: maxPrice } }),
+
+      // Lọc theo trạng thái đặc biệt
+      ...(isFeatured !== undefined && { isFeatured }),
+      ...(isBestSeller !== undefined && { isBestSeller }),
+      ...(isNew !== undefined && { isNew }),
     };
 
     const [products, total] = await Promise.all([
@@ -299,7 +443,9 @@ export class ProductsService {
     };
   }
 
-  private async getCartQuantitiesByProductId(userId: string): Promise<Map<string, number>> {
+  private async getCartQuantitiesByProductId(
+    userId: string,
+  ): Promise<Map<string, number>> {
     const cart = await this.prisma.cart.findUnique({
       where: { userId },
       include: { items: true },
@@ -333,22 +479,49 @@ export class ProductsService {
     }
   }
 
+  private async ensureBrandExists(brandId: string): Promise<void> {
+    if (!isUuid(brandId)) {
+      throw new NotFoundException('Brand not found');
+    }
+
+    const brand = await this.prisma.brand.findUnique({
+      where: { id: brandId },
+    });
+    if (!brand) {
+      throw new NotFoundException('Brand not found');
+    }
+  }
+
   private toProductResponse(product: ProductResponseSource) {
     const p = product;
     return {
       id: p.id,
       name: p.name,
+      slug: p.slug,
+      short_description: p.shortDescription,
       description: p.description,
+      sku: p.sku,
       price: Number(p.price),
+      sale_price: p.salePrice === null ? null : Number(p.salePrice),
+      cost_price: p.costPrice === null ? null : Number(p.costPrice),
       stock: p.stock,
-      images: p.images,
+      image_url: p.imageUrl,
       category_id: p.categoryId,
-      category_name: p.category.name,
+      brand_id: p.brandId,
+      ingredients: p.ingredients ?? undefined,
+      nutrition_info: p.nutritionInfo ?? undefined,
+      origin: p.origin ?? undefined,
+      weight: Number(p.weight),
+      weight_unit: p.weightUnit,
+      package_type: p.packageType,
       is_active: p.isActive,
-      average_rating:
-        p.averageRating === null ? null : Number(p.averageRating),
+      is_featured: p.isFeatured,
+      is_best_seller: p.isBestSeller,
+      is_new: p.isNew,
+      average_rating: p.averageRating === null ? null : Number(p.averageRating),
       review_count: p.reviewCount,
-      createdAt: p.createdAt,
+      created_at: p.createdAt,
+      updated_at: p.updatedAt ?? undefined,
     };
   }
 }

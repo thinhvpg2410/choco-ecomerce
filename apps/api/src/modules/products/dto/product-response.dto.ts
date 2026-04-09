@@ -23,7 +23,19 @@ export class ProductResponseDto {
   description: string;
 
   @ApiProperty()
+  slug: string;
+
+  @ApiProperty({ required: false })
+  short_description?: string;
+
+  @ApiProperty()
   price: number;
+
+  @ApiPropertyOptional({ minimum: 0.01 })
+  sale_price?: number;
+
+  @ApiPropertyOptional({ minimum: 0.01 })
+  cost_price?: number;
 
   @ApiProperty()
   stock: number;
@@ -32,13 +44,49 @@ export class ProductResponseDto {
   images: string[];
 
   @ApiProperty()
+  image_url: string;
+
+  @ApiProperty()
   category_id: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  brand_id?: string;
 
   @ApiProperty({ required: false })
   category_name?: string;
 
+  @ApiPropertyOptional({ required: false })
+  brand_name?: string;
+
+  @ApiPropertyOptional()
+  ingredients?: string;
+
+  @ApiPropertyOptional({ type: Object })
+  nutrition_info?: Record<string, any>;
+
+  @ApiPropertyOptional()
+  origin?: string;
+
+  @ApiProperty()
+  weight: number;
+
+  @ApiProperty()
+  weight_unit: string;
+
+  @ApiProperty()
+  package_type: string;
+
   @ApiProperty()
   is_active: boolean;
+
+  @ApiProperty()
+  is_featured: boolean;
+
+  @ApiProperty()
+  is_best_seller: boolean;
+
+  @ApiProperty()
+  is_new: boolean;
 
   @ApiProperty({ required: false, nullable: true })
   average_rating: number | null;

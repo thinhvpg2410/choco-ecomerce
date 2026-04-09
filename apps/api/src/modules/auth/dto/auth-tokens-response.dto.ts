@@ -6,8 +6,8 @@ export class AuthTokensDataDto {
   @ApiProperty()
   accessToken: string;
 
-  @ApiProperty()
-  refreshToken: string;
+  @ApiPropertyOptional()
+  refreshToken?: string;
 
   @ApiProperty({ type: UserResponseDto })
   user: UserResponseDto;

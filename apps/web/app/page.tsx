@@ -15,6 +15,7 @@ import Link from "next/link";
 import { banners } from "@/types/dataTest";
 
 export default function Home() {
+  
   const activeBanners = banners.filter((b) => b.is_active);
 
   const [current, setCurrent] = useState(0);

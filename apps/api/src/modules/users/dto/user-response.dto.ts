@@ -6,4 +6,5 @@ export class UserResponseDto {
   role: UserRole;
   status: UserStatus;
   createdAt: Date;
+  avatar_url?: string;
 }

@@ -43,8 +43,8 @@ export class PaymentsService {
 
     if (order.payment) {
       if (
-        order.payment.status === PaymentStatus.PENDING &&
-        order.payment.method === PaymentMethod.BANKING &&
+        order.payment.paymentStatus === PaymentStatus.PENDING &&
+        order.payment.paymentMethod === PaymentMethod.BANKING &&
         dto.payment_method === PaymentMethod.BANKING &&
         dto.transaction_code
       ) {
@@ -55,15 +55,6 @@ export class PaymentsService {
         );
       }
       throw new ConflictException('Payment already exists for this order');
-    }
-
-    const orderMethod = this.parseOrderPaymentMethod(order.paymentMethod);
-    if (!orderMethod) {
-      throw new BadRequestException('Order payment method is invalid');
-    }
-
-    if (orderMethod !== dto.payment_method) {
-      throw new BadRequestException('Payment method does not match the order');
     }
 
     if (dto.payment_method === PaymentMethod.BANKING && dto.transaction_code) {
@@ -121,8 +112,8 @@ export class PaymentsService {
       const payment = await tx.payment.create({
         data: {
           orderId,
-          method: PaymentMethod.COD,
-          status: PaymentStatus.COMPLETED,
+          paymentMethod: PaymentMethod.COD,
+          paymentStatus: PaymentStatus.PAID,
           amount: order.totalAmount,
         },
       });
@@ -152,8 +143,8 @@ export class PaymentsService {
     const payment = await this.prisma.payment.create({
       data: {
         orderId,
-        method: PaymentMethod.BANKING,
-        status: PaymentStatus.PENDING,
+        paymentMethod: PaymentMethod.BANKING,
+        paymentStatus: PaymentStatus.PENDING,
         amount: totalAmount,
       },
     });
@@ -186,10 +177,10 @@ export class PaymentsService {
       const created = await tx.payment.create({
         data: {
           orderId,
-          method: PaymentMethod.BANKING,
-          status: PaymentStatus.COMPLETED,
+          paymentMethod: PaymentMethod.BANKING,
+          paymentStatus: PaymentStatus.PAID,
           amount: order.totalAmount,
-          transactionRef,
+          transactionCode: transactionRef,
         },
       });
 
@@ -231,8 +222,8 @@ export class PaymentsService {
       }
 
       if (
-        order.payment.status !== PaymentStatus.PENDING ||
-        order.payment.method !== PaymentMethod.BANKING
+        order.payment.paymentStatus !== PaymentStatus.PENDING ||
+        order.payment.paymentMethod !== PaymentMethod.BANKING
       ) {
         throw new BadRequestException('Payment cannot be completed');
       }
@@ -240,8 +231,8 @@ export class PaymentsService {
       const updated = await tx.payment.update({
         where: { id: order.payment.id },
         data: {
-          status: PaymentStatus.COMPLETED,
-          transactionRef,
+          paymentStatus: PaymentStatus.PAID,
+          transactionCode: transactionRef,
         },
       });
 
@@ -283,24 +274,24 @@ export class PaymentsService {
   private toPaymentResponse(payment: {
     id: string;
     orderId: string;
-    method: PaymentMethod;
-    status: PaymentStatus;
+    paymentMethod: string;
+    paymentStatus: PaymentStatus;
     amount: Prisma.Decimal;
-    transactionRef: string | null;
+    transactionCode: string | null;
     createdAt: Date;
-    updatedAt: Date;
+    paidAt: Date | null;
   }) {
-    const paymentStatus = this.toWebPaymentStatus(payment.status);
+    const paymentStatus = this.toWebPaymentStatus(payment.paymentStatus);
     const isPaid = paymentStatus === 'PAID';
 
     return {
       id: payment.id,
       order_id: payment.orderId,
-      payment_method: payment.method,
+      payment_method: payment.paymentMethod,
       payment_status: paymentStatus,
-      transaction_code: payment.transactionRef ?? undefined,
+      transaction_code: payment.transactionCode ?? undefined,
       amount: Number(payment.amount),
-      ...(isPaid && { paid_at: payment.updatedAt.toISOString() }),
+      ...(isPaid && { paid_at: payment.paidAt?.toISOString() }),
       created_at: payment.createdAt.toISOString(),
     };
   }
@@ -309,7 +300,7 @@ export class PaymentsService {
     status: PaymentStatus,
   ): 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' {
     switch (status) {
-      case PaymentStatus.COMPLETED:
+      case PaymentStatus.PAID:
         return 'PAID';
       case PaymentStatus.FAILED:
         return 'FAILED';

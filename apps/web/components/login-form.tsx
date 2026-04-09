@@ -1,24 +1,81 @@
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+"use client";
+import { cn } from "@/services/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import api from "@/services/axios";
+import { useDispatch } from "react-redux";
+import { login } from "@/store/authSlice";
+import { clearCart } from "@/store/cartSlice";
+import { setAccessToken } from "@/services/axios";
+import { z } from "zod";
+import { useRouter } from "next/navigation";
+
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const dispatch = useDispatch();
+  const [errors, setErrors] = useState<any>({});
+  const router = useRouter();
+
+  const loginSchema = z.object({
+    email: z.string().email("Email không hợp lệ"),
+    password: z.string().min(6, "Mật khẩu >= 6 ký tự"),
+  });
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const result = loginSchema.safeParse({ email, password });
+
+    if (!result.success) {
+      setErrors(result.error.flatten().fieldErrors);
+      return;
+    }
+
+    setErrors({});
+
+    try {
+      const guestCart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+      const res = await api.post("/auth/login", {
+        email,
+        password,
+        guestCart,
+      });
+
+      const { accessToken, user, cart } = res.data.data;
+
+      setAccessToken(accessToken);
+
+      dispatch(login(user));
+
+      dispatch(clearCart());
+      localStorage.removeItem("cart");
+
+      router.push("/");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
-          <form className="p-6 md:p-8">
+          <form onSubmit={handleLogin} className="p-6 md:p-8">
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold">Chào mừng bạn trở lại</h1>
@@ -31,21 +88,32 @@ export function LoginForm({
                 <Input
                   id="email"
                   type="email"
-                  placeholder="m@example.com"
-                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
+                {errors.email && (
+                  <p className="text-red-500 text-xs">{errors.email[0]}</p>
+                )}
               </Field>
               <Field>
                 <div className="flex items-center">
                   <FieldLabel htmlFor="password">Mật khẩu</FieldLabel>
-                  <a
+                  {/* <a
                     href="#"
                     className="ml-auto text-sm underline-offset-2 hover:underline"
                   >
                     Quên mật khẩu?
-                  </a>
+                  </a> */}
                 </div>
-                <Input id="password" type="password" required />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                {errors.password && (
+                  <p className="text-red-500 text-xs">{errors.password[0]}</p>
+                )}
               </Field>
               <Field>
                 <Button type="submit">Đăng nhập</Button>
@@ -54,7 +122,6 @@ export function LoginForm({
                 Hoặc tiếp tục với
               </FieldSeparator>
               <Field className="grid grid-cols-1 gap-4">
-                
                 <Button variant="outline" type="button">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path
@@ -64,7 +131,6 @@ export function LoginForm({
                   </svg>
                   <span className="sr-only">Login with Google</span>
                 </Button>
-                
               </Field>
               <FieldDescription className="text-center">
                 Chưa có tài khoản? <a href="#">Đăng ký</a>
@@ -92,5 +158,5 @@ export function LoginForm({
         .
       </FieldDescription>
     </div>
-  )
+  );
 }

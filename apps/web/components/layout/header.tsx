@@ -28,12 +28,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { Button } from "@/components/ui/button";
+import { setAccessToken } from "@/services/axios";
+import api from "@/services/axios";
+import { FullScreenLoader } from "../FullScreenLoader";
 
 export function Header() {
-  const { user, isAuthenticated } = useSelector(
+  const { user, isAuthenticated, isLoading } = useSelector(
     (state: RootState) => state.auth,
   );
   const dispatch = useDispatch();
+
+ const handleLogout = async () => {
+   try {
+     await api.post("/auth/logout");
+   } catch {}
+
+   setAccessToken("");
+   dispatch(logout());
+   window.location.href = "/";
+ };
 
   const navItemClass =
     "cursor-pointer px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-pink-50 hover:text-pink-600";
@@ -41,6 +54,10 @@ export function Header() {
   const dropdownItemClass =
     "block px-3 py-1.5 rounded-md text-sm transition-all duration-200 hover:bg-pink-50 hover:text-pink-600";
 
+    if (isLoading) {
+      return <FullScreenLoader />;
+    }
+    
   return (
     <header className="border-b bg-white relative z-[1000]">
       {/* 🔥 GRID 3 CỘT */}
@@ -210,7 +227,7 @@ export function Header() {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuItem
-                  onClick={() => dispatch(logout())}
+                  onClick={() => handleLogout()}
                   className="text-red-500 cursor-pointer hover:bg-red-50"
                 >
                   Logout

@@ -7,7 +7,6 @@ import { RegisterDto } from './dto/register.dto';
 import { UsersService } from '../users/users.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { CartService } from '../cart/cart.service';
 import type { CartDataResponseDto } from '../cart/dto/cart-response.dto';
 
@@ -97,11 +96,15 @@ export class AuthService {
     }
   }
 
-  async refreshTokens(refreshTokenDto: RefreshTokenDto) {
+  async refreshTokens(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
     let payload: { sub: string; email: string; role: string };
 
     try {
-      payload = await this.jwtService.verifyAsync(refreshTokenDto.refreshToken, {
+      payload = await this.jwtService.verifyAsync(refreshToken, {
         secret: this.configService.getOrThrow<string>('jwt.refreshSecret'),
       });
     } catch {
@@ -114,7 +117,7 @@ export class AuthService {
     }
 
     const refreshTokenMatches = await bcrypt.compare(
-      refreshTokenDto.refreshToken,
+      refreshToken,
       user.refreshTokenHash,
     );
     if (!refreshTokenMatches) {

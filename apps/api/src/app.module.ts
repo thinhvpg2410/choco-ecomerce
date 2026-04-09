@@ -13,6 +13,11 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { CouponsModule } from './modules/coupons/coupons.module';
+import { BrandsModule } from './modules/brands/brands.module';
+import { UserAddressesModule } from './modules/user-addresses/user-addresses.module';
+import { BannersModule } from './modules/banners/banners.module';
+import { ProductImagesModule } from './modules/product-images/product-images.module';
+import { ProductVariantsModule } from './modules/product-variants/product-variants.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from './common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -21,7 +26,11 @@ import { AppCacheModule } from './common/cache/cache.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [configuration],
+      envFilePath: ['.env', '../../.env'],
+    }),
     PrismaModule,
     AppCacheModule,
     AuthModule,
@@ -33,6 +42,11 @@ import { AppCacheModule } from './common/cache/cache.module';
     PaymentsModule,
     ReviewsModule,
     CouponsModule,
+    BrandsModule,
+    UserAddressesModule,
+    BannersModule,
+    ProductImagesModule,
+    ProductVariantsModule,
   ],
   controllers: [AppController],
   providers: [

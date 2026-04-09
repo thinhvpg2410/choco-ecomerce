@@ -21,6 +21,7 @@ export class UsersService {
       data: {
         email: createUserDto.email,
         password: createUserDto.password,
+        avatarUrl: '/user.jpg', // Default avatar
         ...(createUserDto.role !== undefined && { role: createUserDto.role }),
         ...(createUserDto.status !== undefined && { status: createUserDto.status }),
       },
@@ -72,6 +73,7 @@ export class UsersService {
       role: user.role,
       status: user.status,
       createdAt: user.createdAt,
+      avatar_url: user.avatarUrl || undefined,
     };
   }
 }
