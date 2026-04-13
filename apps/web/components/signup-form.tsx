@@ -1,5 +1,5 @@
 "use client";
-import { cn } from "@/services/utils";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -10,13 +10,26 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import api from "@/services/axios";
 import { useDispatch } from "react-redux";
 import { login } from "@/store/authSlice";
-import { useState } from "react";
 import { setAccessToken } from "@/services/axios";
+import { authRegister } from "@/services/auth.service";
+import { useState } from "react";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
+const registerSchema = z
+  .object({
+    email: z.string().email("Email không hợp lệ"),
+    password: z.string().min(6, "Mật khẩu >= 6 ký tự"),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Mật khẩu không khớp",
+    path: ["confirmPassword"],
+  });
+
 export function SignupForm({
   className,
   ...props
@@ -29,54 +42,40 @@ export function SignupForm({
     password: "",
     confirmPassword: "",
   });
-
-  const [errors, setErrors] = useState<any>({});
-
-  const registerSchema = z
-    .object({
-      email: z.string().email("Email không hợp lệ"),
-      password: z.string().min(6, "Mật khẩu >= 6 ký tự"),
-      confirmPassword: z.string(),
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-      message: "Mật khẩu không khớp",
-      path: ["confirmPassword"],
-    });
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({
-      ...form,
-      [e.target.id]: e.target.value,
-    });
+    setForm((f) => ({ ...f, [e.target.id]: e.target.value }));
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const result = registerSchema.safeParse(form);
-
     if (!result.success) {
       setErrors(result.error.flatten().fieldErrors);
       return;
     }
-
-    setErrors({}); // clear lỗi
+    setErrors({});
+    setLoading(true);
 
     try {
-      const res = await api.post("/auth/register", {
+      const { accessToken, user } = await authRegister({
         email: form.email,
         password: form.password,
       });
 
-      const { accessToken, user } = res.data.data;
-
       setAccessToken(accessToken);
-
       dispatch(login(user));
 
+      toast.success("Tạo tài khoản thành công!");
       router.push("/");
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Đăng ký thất bại";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -90,7 +89,6 @@ export function SignupForm({
                 <h1 className="text-2xl font-bold">Tạo tài khoản mới</h1>
               </div>
 
-              {/* EMAIL */}
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
                 <Input id="email" value={form.email} onChange={handleChange} />
@@ -99,7 +97,6 @@ export function SignupForm({
                 )}
               </Field>
 
-              {/* PASSWORD */}
               <Field>
                 <FieldLabel htmlFor="password">Mật khẩu</FieldLabel>
                 <Input
@@ -113,7 +110,6 @@ export function SignupForm({
                 )}
               </Field>
 
-              {/* CONFIRM PASSWORD */}
               <Field>
                 <FieldLabel htmlFor="confirmPassword">
                   Xác nhận mật khẩu
@@ -132,7 +128,9 @@ export function SignupForm({
               </Field>
 
               <Field>
-                <Button type="submit">Tạo tài khoản</Button>
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Đang tạo..." : "Tạo tài khoản"}
+                </Button>
               </Field>
 
               <FieldSeparator>Hoặc tiếp tục với</FieldSeparator>

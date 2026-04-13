@@ -12,7 +12,7 @@ export interface User {
   dob?: string; // Ngày sinh (có thể dùng cho khuyến mãi sinh nhật)
   gender?: "male" | "female" | "other";
   avatar_url?: string;
-  fresh_token_hash: string; // Dùng để quản lý phiên đăng nhập
+  refresh_token_hash: string; // Dùng để quản lý phiên đăng nhập
   status: UserStatus;
   created_at: string;
   updated_at?: string; // Theo dõi khi nào thông tin user được cập nhật
@@ -75,6 +75,7 @@ export interface Product {
   stock: number; // Số lượng tồn kho
 
   image_url: string; // Ảnh chính (thumbnail)
+  product_images?: ProductImage[];
 
   category_id: string;
   brand_id: string;
@@ -84,13 +85,10 @@ export interface Product {
   nutrition_info?: Record<string, any>; // Thông tin dinh dưỡng dạng JSON
   // Ví dụ: { calories: 450, protein: 8, sugar: 25, ... }
 
-  
   origin?: string; // Xuất xứ: "Việt Nam", "Nhật Bản", "Đức", "Mỹ"...
 
   weight: number; // Trọng lượng (đổi từ number[] → number cho dễ dùng)
   weight_unit: string; // "g", "kg"
-
-  
 
   package_type: string; // "Hộp giấy", "Túi zip", "Lon", "Hũ nhựa"...
 
@@ -100,10 +98,12 @@ export interface Product {
   is_best_seller: boolean; // Sản phẩm bán chạy
   is_new: boolean; // Hàng mới về
 
-
-
   created_at: string;
   updated_at?: string;
+
+  // Quan hệ — backend đã trả về trong toProductResponse()
+  category?: { id: string; name: string };
+  brand?: { id: string; name: string };
 }
 
 // ================= PRODUCT IMAGE =================
@@ -116,21 +116,7 @@ export interface ProductImage {
   created_at: string;
 }
 
-// ================= PRODUCT VARIANT (Dùng khi 1 sản phẩm có nhiều phiên bản) =================
-export interface ProductVariant {
-  id: string;
-  product_id: string;
-  variant_name: string; // Ví dụ: "Vị socola - 200g", "Vị dâu - hộp 12 cái"
-  sku: string;
-  price: number;
-  sale_price?: number | null;
-  stock: number;
-  weight?: number;
-  image_url?: string; // Ảnh riêng cho biến thể (nếu khác)
-  is_active: boolean;
-  created_at: string;
-  updated_at?: string;
-}
+
 
 // ================= ORDER =================
 export interface Order {
@@ -165,8 +151,6 @@ export interface OrderItem {
   id: string;
   order_id: string;
   product_id: string;
-  variant_id?: string; // Nếu dùng ProductVariant
-
   product_name_at_time: string; // Lưu lại tên sản phẩm lúc mua (phòng khi tên thay đổi)
   product_image_at_time?: string; // Lưu ảnh lúc mua
 

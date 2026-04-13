@@ -155,7 +155,6 @@ model Product {
   averageRating   Decimal? @map("average_rating") @db.Decimal(4, 2)
   reviewCount     Int      @default(0) @map("review_count")
   productImages   ProductImage[]
-  variants        ProductVariant[]
   orderItems      OrderItem[]
   banners         Banner[]
 
@@ -178,26 +177,6 @@ model ProductImage {
   @@map("product_images")
 }
 
-model ProductVariant {
-  id         String  @id @default(uuid())
-  productId  String  @map("product_id")
-  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  variantName String @map("variant_name")
-  sku        String  @unique
-  price      Decimal @db.Decimal(12, 2)
-  salePrice  Decimal? @db.Decimal(12, 2) @map("sale_price")
-  stock      Int
-  weight     Decimal? @db.Decimal(8, 2)
-  imageUrl   String? @map("image_url")
-  isActive   Boolean @default(true) @map("is_active")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime? @updatedAt @map("updated_at")
-
-  cartItems CartItem[]
-  orderItems OrderItem[]
-
-  @@map("product_variants")
-}
 
 model Cart {
   id        String     @id @default(uuid())
@@ -217,7 +196,6 @@ model CartItem {
   productId String         @map("product_id")
   product   Product        @relation(fields: [productId], references: [id])
   variantId String?        @map("variant_id")
-  variant   ProductVariant? @relation(fields: [variantId], references: [id])
   quantity  Int
   price     Decimal        @db.Decimal(12, 2)
   createdAt DateTime       @default(now()) @map("created_at")
@@ -262,7 +240,6 @@ model OrderItem {
   productId           String         @map("product_id")
   product             Product        @relation(fields: [productId], references: [id])
   variantId           String?        @map("variant_id")
-  variant             ProductVariant? @relation(fields: [variantId], references: [id])
   productNameAtTime   String         @map("product_name_at_time")
   productImageAtTime  String?        @map("product_image_at_time")
   quantity            Int

@@ -1,16 +1,17 @@
 import axios from "axios";
+
 const api = axios.create({
   baseURL: "http://localhost:5000/api",
-  withCredentials: true, // 🔥 cho cookie
+  withCredentials: true,
 });
 
 let accessToken: string | null = null;
 
-export const setAccessToken = (token: string) => {
+export const setAccessToken = (token: string | null) => {
   accessToken = token;
 };
 
-// 👉 attach token
+// Request Interceptor
 api.interceptors.request.use((config) => {
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
@@ -18,37 +19,43 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Response Interceptor
 api.interceptors.response.use(
-  (res) => res,
-  async (err) => {
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Chỉ thực hiện refresh nếu lỗi 401 và không phải là request login/refresh
     if (
-      err.response?.status === 401 &&
-      !err.config._retry &&
-      !err.config.url.includes("/auth/refresh")
+      error.response?.status === 401 &&
+      !originalRequest?._retry &&
+      !originalRequest.url?.includes("/auth/")
     ) {
+      originalRequest._retry = true;
+
       try {
-        if (err.config && !err.config._retry) {
-          err.config._retry = true;
-          const res = await axios.post(
-            "http://localhost:5000/api/auth/refresh",
-            null,
-            { withCredentials: true },
-          );
+        const res = await axios.post(
+          `${api.defaults.baseURL}/auth/refresh`,
+          {},
+          { withCredentials: true },
+        );
 
-          const newAccess = res.data.data.accessToken;
-          setAccessToken(newAccess);
+        const newAccessToken = res.data.data.accessToken;
+        setAccessToken(newAccessToken);
 
-          if (err.config.headers) {
-            err.config.headers.Authorization = `Bearer ${newAccess}`;
-          }
-          return api(err.config);
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        setAccessToken(null);
+        // Bắn một sự kiện để Header/App biết và xử lý logout thay vì reload trang
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("auth:unauthorized"));
         }
-      } catch {
-        window.location.href = "/auth/login";
+        return Promise.reject(refreshError);
       }
     }
 
-    return Promise.reject(err);
+    return Promise.reject(error);
   },
 );
 

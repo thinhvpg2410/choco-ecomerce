@@ -64,7 +64,6 @@ export class OrdersService {
 
         orderItemsData.push({
           product: { connect: { id: product.id } },
-          variant: cartItem.variantId ? { connect: { id: cartItem.variantId } } : undefined,
           productNameAtTime: product.name,
           productImageAtTime: product.imageUrl,
           price: product.price,

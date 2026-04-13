@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -74,20 +82,30 @@ export class AuthController {
   async refresh(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
-    @Body() refreshTokenDto: RefreshTokenDto,
   ) {
-    const refreshToken =
-      request.cookies?.refreshToken ?? refreshTokenDto?.refreshToken;
-    const result = await this.authService.refreshTokens(refreshToken);
-    this.setRefreshTokenCookie(response, result.data.refreshToken);
-    return {
-      success: true,
-      message: 'Token refreshed successfully',
-      data: {
-        accessToken: result.data.accessToken,
-        user: result.data.user,
-      },
-    };
+    try {
+      const refreshToken = request.cookies?.refreshToken;
+
+      if (!refreshToken) {
+        throw new UnauthorizedException('Refresh token is required');
+      }
+
+      const result = await this.authService.refreshTokens(refreshToken);
+
+      this.setRefreshTokenCookie(response, result.data.refreshToken);
+
+      return {
+        success: true,
+        message: 'Token refreshed successfully',
+        data: {
+          accessToken: result.data.accessToken,
+          user: result.data.user,
+        },
+      };
+    } catch (error) {
+      console.error('Refresh token error:', error);
+      throw error;
+    }
   }
 
   @ApiOperation({ summary: 'Logout current user' })
@@ -135,6 +153,10 @@ export class AuthController {
   }
 
   private setRefreshTokenCookie(response: Response, refreshToken: string) {
-    response.cookie('refreshToken', refreshToken, this.refreshTokenCookieOptions);
+    response.cookie(
+      'refreshToken',
+      refreshToken,
+      this.refreshTokenCookieOptions,
+    );
   }
 }

@@ -1,7 +1,13 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { User } from '@prisma/client';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { User, UserStatus, UserRole } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { isUuid } from '../../common/utils/is-uuid';
 
@@ -23,7 +29,9 @@ export class UsersService {
         password: createUserDto.password,
         avatarUrl: '/user.jpg', // Default avatar
         ...(createUserDto.role !== undefined && { role: createUserDto.role }),
-        ...(createUserDto.status !== undefined && { status: createUserDto.status }),
+        ...(createUserDto.status !== undefined && {
+          status: createUserDto.status,
+        }),
       },
     });
     return this.toUserResponse(createdUser);
@@ -46,7 +54,10 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { id: userId } });
   }
 
-  async setRefreshTokenHash(userId: string, refreshTokenHash: string | null): Promise<void> {
+  async setRefreshTokenHash(
+    userId: string,
+    refreshTokenHash: string | null,
+  ): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
       data: { refreshTokenHash },
@@ -66,6 +77,53 @@ export class UsersService {
     return this.toUserResponse(user);
   }
 
+  async updateUser(
+    userId: string,
+    dto: UpdateUserDto,
+  ): Promise<UserResponseDto> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        username: dto.username,
+        phone: dto.phone,
+        dob: dto.dob ? new Date(dto.dob) : undefined,
+        gender: dto.gender,
+        avatarUrl: dto.avatar_url,
+      },
+    });
+    return this.toUserResponse(user);
+  }
+
+  // ==================== ADMIN ONLY - XÓA USER (SOFT DELETE) ====================
+  async deleteUserByAdmin(userId: string): Promise<UserResponseDto> {
+    if (!isUuid(userId)) {
+      throw new NotFoundException('User not found');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Không cho xóa tài khoản Admin
+    if (user.role === UserRole.admin) {
+      throw new BadRequestException('Cannot delete admin account');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: UserStatus.inactive,
+        refreshTokenHash: null,
+      },
+    });
+
+    return this.toUserResponse(updatedUser);
+  }
+
   toUserResponse(user: User): UserResponseDto {
     return {
       id: user.id,
@@ -73,6 +131,10 @@ export class UsersService {
       role: user.role,
       status: user.status,
       createdAt: user.createdAt,
+      username: user.username || undefined,
+      phone: user.phone || undefined,
+      dob: user.dob?.toISOString() || undefined,
+      gender: user.gender || undefined,
       avatar_url: user.avatarUrl || undefined,
     };
   }

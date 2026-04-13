@@ -7,7 +7,7 @@ import { getProducts } from "@/services/product.service";
 import { generatePagination } from "@/lib/pagination";
 import Link from "next/link";
 import { unstable_noStore as noStore } from "next/cache";
-import ProductFilters from "../../lib/product-filters";
+import ProductFilters from "../../lib/product-filters"; // ← sửa đường dẫn nếu cần
 
 type SearchParams = {
   page?: string;
@@ -16,6 +16,8 @@ type SearchParams = {
   max_price?: string;
   is_new?: string;
   is_best_seller?: string;
+  brand_id?: string; // ← THÊM
+  category_id?: string; // ← THÊM
 };
 
 export default async function ProductPage({
@@ -39,6 +41,8 @@ export default async function ProductPage({
     max_price: params.max_price,
     is_new: params.is_new === "true",
     is_best_seller: params.is_best_seller === "true",
+    brand_id: params.brand_id, // ← THÊM DÒNG NÀY
+    category_id: params.category_id, // ← THÊM DÒNG NÀY
   });
 
   const totalPages = total > 0 && limit > 0 ? Math.ceil(total / limit) : 1;
@@ -51,17 +55,16 @@ export default async function ProductPage({
       />
 
       <div className="container mx-auto px-6 pt-10">
-        {/* HEADER */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">
             Tất cả sản phẩm <span className="text-pink-600">({total})</span>
           </h1>
         </div>
 
-        {/* FILTER */}
+        {/* Filter ngang — full width */}
         <ProductFilters />
 
-        {/* LIST */}
+        {/* Product list bên dưới — full width */}
         {products.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border">
             <p className="text-gray-500">Không có sản phẩm nào.</p>
@@ -69,12 +72,10 @@ export default async function ProductPage({
         ) : (
           <>
             <ProductList products={products} />
-
             {/* PAGINATION */}
             {totalPages > 1 && (
               <div className="mt-12 flex justify-center">
                 <div className="inline-flex items-center gap-1 rounded-lg border bg-white p-1 shadow-sm">
-                  {/* Previous */}
                   <Link
                     href={`?page=${Math.max(1, currentPage - 1)}`}
                     prefetch={false}
@@ -87,7 +88,6 @@ export default async function ProductPage({
                     ← Trước
                   </Link>
 
-                  {/* Page Numbers */}
                   {generatePagination(currentPage, totalPages).map(
                     (page, idx) => (
                       <span key={idx}>
@@ -110,7 +110,6 @@ export default async function ProductPage({
                     ),
                   )}
 
-                  {/* Next */}
                   <Link
                     href={`?page=${Math.min(totalPages, currentPage + 1)}`}
                     prefetch={false}

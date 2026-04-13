@@ -1,21 +1,37 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Request } from '@nestjs/common';
+// user-addresses.controller.ts — fix req.user.sub
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Req,
+} from '@nestjs/common';
+import type { Request } from 'express';
 import { UserAddressesService } from './user-addresses.service';
 import { CreateUserAddressDto } from './dto/create-user-address.dto';
 import { UpdateUserAddressDto } from './dto/update-user-address.dto';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('User Addresses')
+@ApiBearerAuth()
 @Controller('user-addresses')
 export class UserAddressesController {
   constructor(private readonly userAddressesService: UserAddressesService) {}
 
   @Post()
-  create(@Body() createUserAddressDto: CreateUserAddressDto, @Request() req) {
-    createUserAddressDto.userId = req.user.id;
-    return this.userAddressesService.create(createUserAddressDto);
+  create(@Body() dto: CreateUserAddressDto, @Req() req: Request) {
+    const { sub } = req.user as { sub: string };
+    dto.userId = sub;
+    return this.userAddressesService.create(dto);
   }
 
   @Get()
-  findAll(@Request() req) {
-    return this.userAddressesService.findAll(req.user.id);
+  findAll(@Req() req: Request) {
+    const { sub } = req.user as { sub: string };
+    return this.userAddressesService.findAll(sub);
   }
 
   @Get(':id')
@@ -24,8 +40,8 @@ export class UserAddressesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserAddressDto: UpdateUserAddressDto) {
-    return this.userAddressesService.update(id, updateUserAddressDto);
+  update(@Param('id') id: string, @Body() dto: UpdateUserAddressDto) {
+    return this.userAddressesService.update(id, dto);
   }
 
   @Delete(':id')
