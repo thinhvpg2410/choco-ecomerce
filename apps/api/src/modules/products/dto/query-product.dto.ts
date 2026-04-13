@@ -1,27 +1,58 @@
-import { IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsOptional,
+  IsString,
+  IsUUID,
+  IsBoolean,
+  IsNumber,
+  Min,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class QueryProductDto {
-  @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
-  @IsInt()
+  @Transform(({ value }) => Number(value))
   @Min(1)
-  page = 1;
+  page?: number = 1;
 
-  @ApiPropertyOptional({ default: 10, minimum: 1, maximum: 100 })
   @IsOptional()
-  @IsInt()
+  @Transform(({ value }) => Number(value))
   @Min(1)
-  @Max(100)
-  limit = 10;
+  limit?: number = 12;
 
-  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID('4')
+  @IsUUID()
   category_id?: string;
+
+  @IsOptional()
+  @IsUUID()
+  brand_id?: string; // ← thêm
+
+  @IsOptional()
+  @IsNumber()
+  @Transform(({ value }) => Number(value))
+  min_price?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Transform(({ value }) => Number(value))
+  max_price?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  is_featured?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  is_best_seller?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  is_new?: boolean;
 }

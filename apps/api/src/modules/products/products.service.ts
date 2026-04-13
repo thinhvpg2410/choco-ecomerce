@@ -11,34 +11,50 @@ import { isUuid } from '../../common/utils/is-uuid';
 const productPublicSelect = {
   id: true,
   name: true,
+  slug: true,
+  shortDescription: true,
   description: true,
+  sku: true,
   price: true,
+  salePrice: true,
+  costPrice: true,
   stock: true,
-  images: true,
+  imageUrl: true,
   categoryId: true,
+  brandId: true,
+  ingredients: true,
+  nutritionInfo: true,
+  origin: true,
+  weight: true,
+  weightUnit: true,
+  packageType: true,
   isActive: true,
+  isFeatured: true,
+  isBestSeller: true,
+  isNew: true,
+  createdAt: true,
+  updatedAt: true,
   averageRating: true,
   reviewCount: true,
-  createdAt: true,
+
+  productImages: {
+    select: {
+      id: true,
+      imageUrl: true,
+      sortOrder: true,
+      isMain: true,
+      createdAt: true,
+    },
+    orderBy: { sortOrder: 'asc' as const },
+  },
+
   category: { select: { id: true, name: true } },
+  brand: { select: { id: true, name: true } },
 } satisfies Prisma.ProductSelect;
 
-type ProductPublicRow = Prisma.ProductGetPayload<{ select: typeof productPublicSelect }>;
-
-type ProductResponseSource = {
-  id: string;
-  name: string;
-  description: string;
-  price: Prisma.Decimal;
-  stock: number;
-  images: string[];
-  categoryId: string;
-  isActive: boolean;
-  averageRating: Prisma.Decimal | null;
-  reviewCount: number;
-  createdAt: Date;
-  category: { name: string };
-};
+type ProductPublicRow = Prisma.ProductGetPayload<{
+  select: typeof productPublicSelect;
+}>;
 
 @Injectable()
 export class ProductsService {
@@ -48,23 +64,23 @@ export class ProductsService {
   ) {}
 
   async findAll(query: QueryProductDto, viewer?: JwtRequestUser) {
+    // Parse MỘT LẦN DUY NHẤT
+    const page = Math.max(1, Number(query.page ?? 1));
+    const limit = Math.min(100, Number(query.limit ?? 12)); // ← đổi 10 thành 12
+
     if (viewer) {
-      return this.findAllForViewer(query, viewer);
+      return this.findAllForViewer(query, viewer, page, limit); // ← truyền xuống
     }
 
-    const page = Number(query.page ?? 1);
-    const limit = Number(query.limit ?? 10);
-    const search = (query.search ?? '').trim();
-    const categoryId = query.category_id ?? '';
+    const cacheKey = `products:${JSON.stringify({ ...query, page, limit })}`;
 
-    const cacheKey = this.cache.productsListKey(page, limit, search, categoryId);
-    type GuestListPayload = Awaited<ReturnType<ProductsService['loadGuestListPayload']>>;
+    type GuestListPayload = Awaited<
+      ReturnType<ProductsService['loadGuestListPayload']>
+    >;
     const cached = await this.cache.get<GuestListPayload>(cacheKey);
-    if (cached) {
-      return cached;
-    }
+    if (cached) return cached;
 
-    const payload = await this.loadGuestListPayload(query);
+    const payload = await this.loadGuestListPayload(query, page, limit); // ← truyền xuống
     await this.cache.set(cacheKey, payload, this.cache.ttl.productsList);
     return payload;
   }
@@ -76,7 +92,9 @@ export class ProductsService {
     }
 
     const cacheKey = this.cache.productDetailKey(productId);
-    type GuestDetailPayload = ReturnType<ProductsService['buildGuestDetailPayload']>;
+    type GuestDetailPayload = ReturnType<
+      ProductsService['buildGuestDetailPayload']
+    >;
     const cached = await this.cache.get<GuestDetailPayload>(cacheKey);
     if (cached) {
       return cached;
@@ -89,18 +107,51 @@ export class ProductsService {
 
   async create(createProductDto: CreateProductDto) {
     await this.ensureCategoryExists(createProductDto.category_id);
+    if (createProductDto.brand_id) {
+      await this.ensureBrandExists(createProductDto.brand_id);
+    }
+
     const createdProduct = await this.prisma.product.create({
       data: {
         name: createProductDto.name,
+        slug: createProductDto.slug,
+        shortDescription: createProductDto.short_description,
         description: createProductDto.description,
+        sku: createProductDto.sku,
         price: createProductDto.price,
+        salePrice: createProductDto.sale_price,
+        costPrice: createProductDto.cost_price,
         stock: createProductDto.stock,
-        images: createProductDto.images ?? [],
+        imageUrl: createProductDto.image_url,
         categoryId: createProductDto.category_id,
+        brandId: createProductDto.brand_id,
+        ingredients: createProductDto.ingredients,
+        nutritionInfo: createProductDto.nutrition_info,
+        origin: createProductDto.origin,
+        weight: createProductDto.weight,
+        weightUnit: createProductDto.weight_unit,
+        packageType: createProductDto.package_type,
         isActive: createProductDto.is_active ?? true,
+        isFeatured: createProductDto.is_featured ?? false,
+        isBestSeller: createProductDto.is_best_seller ?? false,
+        isNew: createProductDto.is_new ?? false,
       },
-      include: { category: true },
+      include: {
+        category: true,
+        brand: true,
+        productImages: {
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            id: true,
+            imageUrl: true,
+            sortOrder: true,
+            isMain: true,
+            createdAt: true,
+          },
+        },
+      },
     });
+
     await this.cache.invalidateAfterProductWrite(createdProduct.id);
     return {
       success: true,
@@ -114,17 +165,71 @@ export class ProductsService {
     if (updateProductDto.category_id) {
       await this.ensureCategoryExists(updateProductDto.category_id);
     }
+    if (updateProductDto.brand_id) {
+      await this.ensureBrandExists(updateProductDto.brand_id);
+    }
 
     const data: Prisma.ProductUpdateInput = {
-      ...(updateProductDto.name !== undefined && { name: updateProductDto.name }),
+      ...(updateProductDto.name !== undefined && {
+        name: updateProductDto.name,
+      }),
+      ...(updateProductDto.slug !== undefined && {
+        slug: updateProductDto.slug,
+      }),
+      ...(updateProductDto.short_description !== undefined && {
+        shortDescription: updateProductDto.short_description,
+      }),
       ...(updateProductDto.description !== undefined && {
         description: updateProductDto.description,
       }),
-      ...(updateProductDto.price !== undefined && { price: updateProductDto.price }),
-      ...(updateProductDto.stock !== undefined && { stock: updateProductDto.stock }),
-      ...(updateProductDto.images !== undefined && { images: updateProductDto.images }),
+      ...(updateProductDto.sku !== undefined && { sku: updateProductDto.sku }),
+      ...(updateProductDto.price !== undefined && {
+        price: updateProductDto.price,
+      }),
+      ...(updateProductDto.sale_price !== undefined && {
+        salePrice: updateProductDto.sale_price,
+      }),
+      ...(updateProductDto.cost_price !== undefined && {
+        costPrice: updateProductDto.cost_price,
+      }),
+      ...(updateProductDto.stock !== undefined && {
+        stock: updateProductDto.stock,
+      }),
+      ...(updateProductDto.image_url !== undefined && {
+        imageUrl: updateProductDto.image_url,
+      }),
+      ...(updateProductDto.brand_id !== undefined && {
+        brand: { connect: { id: updateProductDto.brand_id } },
+      }),
+      ...(updateProductDto.ingredients !== undefined && {
+        ingredients: updateProductDto.ingredients,
+      }),
+      ...(updateProductDto.nutrition_info !== undefined && {
+        nutritionInfo: updateProductDto.nutrition_info,
+      }),
+      ...(updateProductDto.origin !== undefined && {
+        origin: updateProductDto.origin,
+      }),
+      ...(updateProductDto.weight !== undefined && {
+        weight: updateProductDto.weight,
+      }),
+      ...(updateProductDto.weight_unit !== undefined && {
+        weightUnit: updateProductDto.weight_unit,
+      }),
+      ...(updateProductDto.package_type !== undefined && {
+        packageType: updateProductDto.package_type,
+      }),
       ...(updateProductDto.is_active !== undefined && {
         isActive: updateProductDto.is_active,
+      }),
+      ...(updateProductDto.is_featured !== undefined && {
+        isFeatured: updateProductDto.is_featured,
+      }),
+      ...(updateProductDto.is_best_seller !== undefined && {
+        isBestSeller: updateProductDto.is_best_seller,
+      }),
+      ...(updateProductDto.is_new !== undefined && {
+        isNew: updateProductDto.is_new,
       }),
       ...(updateProductDto.category_id !== undefined && {
         category: { connect: { id: updateProductDto.category_id } },
@@ -141,7 +246,20 @@ export class ProductsService {
     const updatedProduct = await this.prisma.product.update({
       where: { id: productId },
       data,
-      include: { category: true },
+      include: {
+        category: true,
+        brand: true,
+        productImages: {
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            id: true,
+            imageUrl: true,
+            sortOrder: true,
+            isMain: true,
+            createdAt: true,
+          },
+        },
+      },
     });
     await this.cache.invalidateAfterProductWrite(productId);
     return {
@@ -165,8 +283,13 @@ export class ProductsService {
     return { success: true, message: 'Product deleted successfully' };
   }
 
-  private async findAllForViewer(query: QueryProductDto, viewer: JwtRequestUser) {
-    const payload = await this.loadGuestListPayload(query);
+  private async findAllForViewer(
+    query: QueryProductDto,
+    viewer: JwtRequestUser,
+    page: number,
+    limit: number,
+  ) {
+    const payload = await this.loadGuestListPayload(query, page, limit); // ← truyền xuống
     const cartByProduct = await this.getCartQuantitiesByProductId(viewer.sub);
     return {
       ...payload,
@@ -178,28 +301,45 @@ export class ProductsService {
         })),
       },
       meta: {
-        viewer: {
-          id: viewer.sub,
-          email: viewer.email,
-          role: viewer.role,
-        },
+        viewer: { id: viewer.sub, email: viewer.email, role: viewer.role },
       },
     };
   }
 
-  private async loadGuestListPayload(query: QueryProductDto) {
-    const page = Number(query.page ?? 1);
-    const limit = Number(query.limit ?? 10);
-    const search = query.search;
-    const categoryId = query.category_id;
+  private async loadGuestListPayload(
+    query: QueryProductDto,
+    page: number, // ← nhận vào, KHÔNG tự parse nữa
+    limit: number, // ← nhận vào, KHÔNG tự parse nữa
+  ) {
+    const search = (query.search ?? '').trim();
+    const categoryId = query.category_id?.trim() || undefined;
+    const brandId = query.brand_id?.trim() || undefined;
+    const minPrice =
+      query.min_price !== undefined ? Number(query.min_price) : undefined;
+    const maxPrice =
+      query.max_price !== undefined ? Number(query.max_price) : undefined;
+
     const skip = (page - 1) * limit;
 
     const where: Prisma.ProductWhereInput = {
       isActive: true,
       ...(search && {
-        name: { contains: search, mode: 'insensitive' },
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { sku: { contains: search, mode: 'insensitive' } },
+        ],
       }),
       ...(categoryId && { categoryId }),
+      ...(brandId && { brandId }),
+      ...(minPrice !== undefined && { price: { gte: minPrice } }),
+      ...(maxPrice !== undefined && { price: { lte: maxPrice } }),
+      ...(query.is_featured !== undefined && {
+        isFeatured: Boolean(query.is_featured),
+      }),
+      ...(query.is_best_seller !== undefined && {
+        isBestSeller: Boolean(query.is_best_seller),
+      }),
+      ...(query.is_new !== undefined && { isNew: Boolean(query.is_new) }),
     };
 
     const [products, total] = await Promise.all([
@@ -299,7 +439,9 @@ export class ProductsService {
     };
   }
 
-  private async getCartQuantitiesByProductId(userId: string): Promise<Map<string, number>> {
+  private async getCartQuantitiesByProductId(
+    userId: string,
+  ): Promise<Map<string, number>> {
     const cart = await this.prisma.cart.findUnique({
       where: { userId },
       include: { items: true },
@@ -333,22 +475,70 @@ export class ProductsService {
     }
   }
 
-  private toProductResponse(product: ProductResponseSource) {
-    const p = product;
+  private async ensureBrandExists(brandId: string): Promise<void> {
+    if (!isUuid(brandId)) {
+      throw new NotFoundException('Brand not found');
+    }
+
+    const brand = await this.prisma.brand.findUnique({
+      where: { id: brandId },
+    });
+    if (!brand) {
+      throw new NotFoundException('Brand not found');
+    }
+  }
+
+  private toProductResponse(product: ProductPublicRow) {
     return {
-      id: p.id,
-      name: p.name,
-      description: p.description,
-      price: Number(p.price),
-      stock: p.stock,
-      images: p.images,
-      category_id: p.categoryId,
-      category_name: p.category.name,
-      is_active: p.isActive,
-      average_rating:
-        p.averageRating === null ? null : Number(p.averageRating),
-      review_count: p.reviewCount,
-      createdAt: p.createdAt,
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      short_description: product.shortDescription,
+      description: product.description,
+      sku: product.sku,
+      price: Number(product.price),
+      sale_price: product.salePrice ? Number(product.salePrice) : null,
+      cost_price: product.costPrice ? Number(product.costPrice) : null,
+      stock: product.stock,
+      image_url: product.imageUrl,
+
+      // ← Phần ảnh đồng bộ từ productImages
+      product_images: product.productImages.map((img) => ({
+        id: img.id,
+        product_id: product.id,
+        image_url: img.imageUrl,
+        sort_order: img.sortOrder,
+        is_main: img.isMain,
+        created_at: img.createdAt.toISOString(),
+      })),
+
+      category_id: product.categoryId,
+      brand_id: product.brandId,
+
+      ingredients: product.ingredients ?? undefined,
+      nutrition_info: product.nutritionInfo ?? undefined,
+      origin: product.origin ?? undefined,
+      weight: Number(product.weight),
+      weight_unit: product.weightUnit,
+      package_type: product.packageType,
+
+      is_active: product.isActive,
+      is_featured: product.isFeatured,
+      is_best_seller: product.isBestSeller,
+      is_new: product.isNew,
+
+      average_rating: product.averageRating
+        ? Number(product.averageRating)
+        : null,
+      review_count: product.reviewCount,
+
+      created_at: product.createdAt.toISOString(),
+      updated_at: product.updatedAt
+        ? product.updatedAt.toISOString()
+        : undefined,
+
+      category: product.category,
+      brand: product.brand,
     };
   }
 }

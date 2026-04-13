@@ -63,9 +63,11 @@ export class OrdersService {
         totalAmount += unitPrice * cartItem.quantity;
 
         orderItemsData.push({
-          productId: product.id,
-          name: product.name,
+          product: { connect: { id: product.id } },
+          productNameAtTime: product.name,
+          productImageAtTime: product.imageUrl,
           price: product.price,
+          salePrice: product.salePrice,
           quantity: cartItem.quantity,
         });
       }
@@ -74,11 +76,12 @@ export class OrdersService {
         data: {
           userId,
           totalAmount,
+          shippingFee: 0,
+          finalAmount: totalAmount,
           status: OrderStatus.PENDING,
           receiverName: createOrderDto.receiver_name,
           receiverPhone: createOrderDto.receiver_phone,
           shippingAddress: createOrderDto.shipping_address,
-          paymentMethod: createOrderDto.payment_method,
           items: { create: orderItemsData },
         },
         include: { items: true },
@@ -184,18 +187,20 @@ export class OrdersService {
     return {
       id: order.id,
       user_id: order.userId,
-      items: order.items.map((item) => ({
+      items: order.items?.map((item) => ({
         product_id: item.productId,
-        name: item.name,
+        variant_id: item.variantId,
+        name: item.productNameAtTime,
+        image: item.productImageAtTime,
         price: Number(item.price),
+        sale_price: item.salePrice ? Number(item.salePrice) : null,
         quantity: item.quantity,
-      })),
+      })) || [],
       total_amount: Number(order.totalAmount),
       status: order.status,
       receiver_name: order.receiverName,
       receiver_phone: order.receiverPhone,
       shipping_address: order.shippingAddress,
-      payment_method: order.paymentMethod,
       createdAt: order.createdAt,
     };
   }

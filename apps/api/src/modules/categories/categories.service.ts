@@ -22,7 +22,18 @@ export class CategoriesService {
     if (viewer) {
       const categories = await this.prisma.category.findMany({
         orderBy: { createdAt: 'desc' },
-        select: { id: true, name: true, description: true, createdAt: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          imageUrl: true,
+          parentId: true,
+          sortOrder: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       });
       return {
         success: true,
@@ -53,7 +64,18 @@ export class CategoriesService {
   private async loadGuestCategories() {
     const categories = await this.prisma.category.findMany({
       orderBy: { createdAt: 'desc' },
-      select: { id: true, name: true, description: true, createdAt: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        imageUrl: true,
+        parentId: true,
+        sortOrder: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
     return {
       success: true,
@@ -64,7 +86,15 @@ export class CategoriesService {
 
   async create(createCategoryDto: CreateCategoryDto) {
     const createdCategory = await this.prisma.category.create({
-      data: createCategoryDto,
+      data: {
+        name: createCategoryDto.name,
+        slug: createCategoryDto.slug,
+        description: createCategoryDto.description ?? '',
+        imageUrl: createCategoryDto.image_url,
+        parentId: createCategoryDto.parent_id,
+        sortOrder: createCategoryDto.sort_order,
+        isActive: createCategoryDto.is_active ?? true,
+      },
     });
     await this.cache.invalidateAfterCategoryWrite();
     return {
@@ -79,7 +109,25 @@ export class CategoriesService {
     try {
       const updatedCategory = await this.prisma.category.update({
         where: { id: categoryId },
-        data: updateCategoryDto,
+        data: {
+          ...(updateCategoryDto.name !== undefined && { name: updateCategoryDto.name }),
+          ...(updateCategoryDto.slug !== undefined && { slug: updateCategoryDto.slug }),
+          ...(updateCategoryDto.description !== undefined && {
+            description: updateCategoryDto.description,
+          }),
+          ...(updateCategoryDto.image_url !== undefined && {
+            imageUrl: updateCategoryDto.image_url,
+          }),
+          ...(updateCategoryDto.parent_id !== undefined && {
+            parentId: updateCategoryDto.parent_id,
+          }),
+          ...(updateCategoryDto.sort_order !== undefined && {
+            sortOrder: updateCategoryDto.sort_order,
+          }),
+          ...(updateCategoryDto.is_active !== undefined && {
+            isActive: updateCategoryDto.is_active,
+          }),
+        },
       });
       await this.cache.invalidateAfterCategoryWrite();
       return {
@@ -124,8 +172,14 @@ export class CategoriesService {
     return {
       id: category.id,
       name: category.name,
+      slug: category.slug,
       description: category.description,
-      createdAt: category.createdAt,
+      image_url: category.imageUrl,
+      parent_id: category.parentId,
+      sort_order: category.sortOrder,
+      is_active: category.isActive,
+      created_at: category.createdAt,
+      updated_at: category.updatedAt,
     };
   }
 }

@@ -28,12 +28,11 @@ export class CartService {
     const product = await this.ensureProductExists(addToCartDto.product_id);
     const cart = await this.findOrCreateCart(userId);
 
-    const existingItem = await this.prisma.cartItem.findUnique({
+    const existingItem = await this.prisma.cartItem.findFirst({
       where: {
-        cartId_productId: {
-          cartId: cart.id,
-          productId: product.id,
-        },
+        cartId: cart.id,
+        productId: product.id,
+        variantId: addToCartDto.variant_id ?? null,
       },
     });
 
@@ -70,12 +69,11 @@ export class CartService {
     await this.ensureProductExists(updateCartItemDto.product_id);
 
     const cart = await this.findOrCreateCart(userId);
-    const item = await this.prisma.cartItem.findUnique({
+    const item = await this.prisma.cartItem.findFirst({
       where: {
-        cartId_productId: {
-          cartId: cart.id,
-          productId: updateCartItemDto.product_id,
-        },
+        cartId: cart.id,
+        productId: updateCartItemDto.product_id,
+        variantId: updateCartItemDto.variant_id ?? null,
       },
     });
 

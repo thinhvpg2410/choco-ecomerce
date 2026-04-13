@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PublicResponseMetaDto } from '../../../common/dto/viewer-meta.dto';
+import { ProductImageDto } from '../../product-images/dto/product-image.dto'; 
 
 export class MyReviewSnippetDto {
   @ApiProperty()
@@ -23,22 +24,70 @@ export class ProductResponseDto {
   description: string;
 
   @ApiProperty()
+  slug: string;
+
+  @ApiProperty({ required: false })
+  short_description?: string;
+
+  @ApiProperty()
   price: number;
+
+  @ApiPropertyOptional({ minimum: 0.01 })
+  sale_price?: number | null;
+
+  @ApiPropertyOptional({ minimum: 0.01 })
+  cost_price?: number | null;
 
   @ApiProperty()
   stock: number;
 
-  @ApiProperty({ type: [String] })
-  images: string[];
+  @ApiProperty()
+  image_url: string;
+
+  @ApiProperty({ type: [ProductImageDto] })
+  product_images: ProductImageDto[];
 
   @ApiProperty()
   category_id: string;
 
+  @ApiPropertyOptional({ format: 'uuid' })
+  brand_id?: string;
+
   @ApiProperty({ required: false })
   category_name?: string;
 
+  @ApiPropertyOptional({ required: false })
+  brand_name?: string;
+
+  @ApiPropertyOptional()
+  ingredients?: string;
+
+  @ApiPropertyOptional({ type: Object })
+  nutrition_info?: Record<string, any>;
+
+  @ApiPropertyOptional()
+  origin?: string;
+
+  @ApiProperty()
+  weight: number;
+
+  @ApiProperty()
+  weight_unit: string;
+
+  @ApiProperty()
+  package_type: string;
+
   @ApiProperty()
   is_active: boolean;
+
+  @ApiProperty()
+  is_featured: boolean;
+
+  @ApiProperty()
+  is_best_seller: boolean;
+
+  @ApiProperty()
+  is_new: boolean;
 
   @ApiProperty({ required: false, nullable: true })
   average_rating: number | null;
@@ -50,18 +99,21 @@ export class ProductResponseDto {
   createdAt: Date;
 
   @ApiPropertyOptional({
-    description: 'When authenticated (list): units of this product in your cart',
+    description:
+      'When authenticated (list): units of this product in your cart',
   })
   cart_quantity?: number;
 
   @ApiPropertyOptional({
     type: MyReviewSnippetDto,
     nullable: true,
-    description: 'When authenticated (detail): your review for this product, if any',
+    description:
+      'When authenticated (detail): your review for this product, if any',
   })
   my_review?: MyReviewSnippetDto | null;
 }
 
+// ==================== PAGINATION & LIST ====================
 export class ProductPaginationDto {
   @ApiProperty()
   page: number;

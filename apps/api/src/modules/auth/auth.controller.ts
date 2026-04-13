@@ -1,5 +1,13 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
-import type { Request } from 'express';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -29,8 +37,20 @@ export class AuthController {
   @ApiOkResponse({ type: AuthTokensResponseDto })
   @Public()
   @Post('register')
-  async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const result = await this.authService.register(registerDto);
+    this.setRefreshTokenCookie(response, result.data.refreshToken);
+    return {
+      success: true,
+      message: 'Register successfully',
+      data: {
+        accessToken: result.data.accessToken,
+        user: result.data.user,
+      },
+    };
   }
 
   @ApiOperation({ summary: 'Login and get token pair' })
@@ -38,17 +58,74 @@ export class AuthController {
   @ApiOkResponse({ type: AuthTokensResponseDto })
   @Public()
   @Post('login')
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const result = await this.authService.login(loginDto);
+    this.setRefreshTokenCookie(response, result.data.refreshToken);
+    return {
+      success: true,
+      message: 'Login successfully',
+      data: {
+        accessToken: result.data.accessToken,
+        user: result.data.user,
+        ...(result.data.cart !== undefined && { cart: result.data.cart }),
+      },
+    };
   }
 
   @ApiOperation({ summary: 'Refresh access token using refresh token' })
-  @ApiBody({ type: RefreshTokenDto })
   @ApiOkResponse({ type: AuthTokensResponseDto })
   @Public()
   @Post('refresh')
-  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
-    return this.authService.refreshTokens(refreshTokenDto);
+  async refresh(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    try {
+      const refreshToken = request.cookies?.refreshToken;
+
+      if (!refreshToken) {
+        throw new UnauthorizedException('Refresh token is required');
+      }
+
+      const result = await this.authService.refreshTokens(refreshToken);
+
+      this.setRefreshTokenCookie(response, result.data.refreshToken);
+
+      return {
+        success: true,
+        message: 'Token refreshed successfully',
+        data: {
+          accessToken: result.data.accessToken,
+          user: result.data.user,
+        },
+      };
+    } catch (error) {
+      console.error('Refresh token error:', error);
+      throw error;
+    }
+  }
+
+  @ApiOperation({ summary: 'Logout current user' })
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: CurrentUserResponseDto })
+  @Post('logout')
+  async logout(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const jwtUser = request.user as { sub: string };
+    if (jwtUser?.sub) {
+      await this.usersService.setRefreshTokenHash(jwtUser.sub, null);
+    }
+    response.clearCookie('refreshToken', this.refreshTokenCookieOptions);
+    return {
+      success: true,
+      message: 'Logged out successfully',
+      data: null,
+    };
   }
 
   @ApiOperation({ summary: 'Get current authenticated user' })
@@ -63,5 +140,23 @@ export class AuthController {
       message: 'Current user fetched successfully',
       data: user,
     };
+  }
+
+  private get refreshTokenCookieOptions() {
+    return {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    };
+  }
+
+  private setRefreshTokenCookie(response: Response, refreshToken: string) {
+    response.cookie(
+      'refreshToken',
+      refreshToken,
+      this.refreshTokenCookieOptions,
+    );
   }
 }

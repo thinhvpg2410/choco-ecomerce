@@ -12,9 +12,100 @@ import Autoplay from "embla-carousel-autoplay";
 import { useRef, useState } from "react";
 import Link from "next/link";
 
-import { banners } from "@/types/dataTest";
 
 export default function Home() {
+   const banners = [
+    {
+      id: "bn1",
+      description: "Sale KitKat up to 20%",
+      image_url: "https://picsum.photos/800/300?1",
+      link: "/products?p=p1",
+      product_id: "p1",
+      is_active: true,
+      created_at: "2026-03-01",
+    },
+    {
+      id: "bn2",
+      description: "Oreo special offer",
+      image_url: "https://picsum.photos/800/300?2",
+      link: "/products?p=p3",
+      product_id: "p3",
+      is_active: true,
+      created_at: "2026-03-01",
+    },
+    {
+      id: "bn3",
+      description: "Snickers hot deal",
+      image_url: "https://picsum.photos/800/300?3",
+      link: "/products?p=p5",
+      product_id: "p5",
+      is_active: true,
+      created_at: "2026-03-02",
+    },
+    {
+      id: "bn4",
+      description: "Chocolate collection",
+      image_url: "https://picsum.photos/800/300?4",
+      link: "/products?category=c1",
+      product_id: null,
+      is_active: true,
+      created_at: "2026-03-02",
+    },
+    {
+      id: "bn5",
+      description: "Cookies & Biscuits",
+      image_url: "https://picsum.photos/800/300?5",
+      link: "/products?category=c2",
+      product_id: null,
+      is_active: true,
+      created_at: "2026-03-02",
+    },
+    {
+      id: "bn6",
+      description: "Snack sale weekend",
+      image_url: "https://picsum.photos/800/300?6",
+      link: "/products?category=c3",
+      product_id: null,
+      is_active: true,
+      created_at: "2026-03-03",
+    },
+    {
+      id: "bn7",
+      description: "Limited KitKat combo",
+      image_url: "https://picsum.photos/800/300?7",
+      link: "/products?p=p2",
+      product_id: "p2",
+      is_active: true,
+      created_at: "2026-03-03",
+    },
+    {
+      id: "bn8",
+      description: "Best seller Oreo",
+      image_url: "https://picsum.photos/800/300?8",
+      link: "/products?p=p4",
+      product_id: "p4",
+      is_active: true,
+      created_at: "2026-03-03",
+    },
+    {
+      id: "bn9",
+      description: "Gummy candy for kids",
+      image_url: "https://picsum.photos/800/300?9",
+      link: "/products?p=p7",
+      product_id: "p7",
+      is_active: false, // test inactive
+      created_at: "2026-03-04",
+    },
+    {
+      id: "bn10",
+      description: "Hot chips deal",
+      image_url: "https://picsum.photos/800/300?10",
+      link: "/products?p=p8",
+      product_id: "p8",
+      is_active: true,
+      created_at: "2026-03-04",
+    },
+  ];
   const activeBanners = banners.filter((b) => b.is_active);
 
   const [current, setCurrent] = useState(0);

@@ -25,7 +25,7 @@ export class CouponsService {
     const coupons = await this.prisma.coupon.findMany({
       where: {
         isActive: true,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+        OR: [{ expiryDate: null }, { expiryDate: { gt: now } }],
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -41,18 +41,28 @@ export class CouponsService {
     this.validateCouponValue(dto.type, dto.value, dto.max_discount);
     const code = this.normalizeCode(dto.code);
 
+    const data: any = {
+      code,
+      couponType: dto.type,
+      minOrderAmount: dto.min_order_amount ?? 0,
+      usageLimit: dto.usage_limit ?? null,
+      expiryDate: dto.expires_at ? new Date(dto.expires_at) : null,
+      isActive: dto.is_active ?? true,
+    };
+
+    if (dto.type === CouponType.PERCENT) {
+      data.discountPercent = dto.value;
+    } else {
+      data.discountAmount = dto.value;
+    }
+
+    if (dto.max_discount !== undefined) {
+      data.maxDiscountAmount = dto.max_discount;
+    }
+
     try {
       const coupon = await this.prisma.coupon.create({
-        data: {
-          code,
-          type: dto.type,
-          value: dto.value,
-          maxDiscount: dto.max_discount ?? null,
-          minOrderAmount: dto.min_order_amount ?? 0,
-          usageLimit: dto.usage_limit ?? null,
-          expiresAt: dto.expires_at ? new Date(dto.expires_at) : null,
-          isActive: dto.is_active ?? true,
-        },
+        data,
       });
 
       return {
@@ -76,29 +86,33 @@ export class CouponsService {
       throw new NotFoundException('Coupon not found');
     }
 
-    const nextType = dto.type ?? existing.type;
-    const nextValue = dto.value ?? Number(existing.value);
-    const nextMaxRaw = dto.max_discount !== undefined ? dto.max_discount : existing.maxDiscount;
-    const nextMax =
-      nextMaxRaw === null || nextMaxRaw === undefined ? undefined : Number(nextMaxRaw);
+    const nextType = dto.type ?? existing.couponType;
+    const nextValue = dto.value ?? (nextType === CouponType.PERCENT ? Number(existing.discountPercent || 0) : Number(existing.discountAmount || 0));
+    const nextMaxRaw = dto.max_discount !== undefined ? dto.max_discount : existing.maxDiscountAmount ? Number(existing.maxDiscountAmount) : null;
+    const nextMax = nextMaxRaw === null || nextMaxRaw === undefined ? undefined : Number(nextMaxRaw);
 
     this.validateCouponValue(nextType, nextValue, nextMax);
+
+    const data: any = {};
+    if (dto.code !== undefined) data.code = this.normalizeCode(dto.code);
+    if (dto.type !== undefined) data.couponType = dto.type;
+    if (dto.value !== undefined) {
+      if (dto.type === CouponType.PERCENT) {
+        data.discountPercent = dto.value;
+      } else {
+        data.discountAmount = dto.value;
+      }
+    }
+    if (dto.max_discount !== undefined) data.maxDiscountAmount = dto.max_discount;
+    if (dto.min_order_amount !== undefined) data.minOrderAmount = dto.min_order_amount;
+    if (dto.usage_limit !== undefined) data.usageLimit = dto.usage_limit;
+    if (dto.expires_at !== undefined) data.expiryDate = dto.expires_at ? new Date(dto.expires_at) : null;
+    if (dto.is_active !== undefined) data.isActive = dto.is_active;
 
     try {
       const coupon = await this.prisma.coupon.update({
         where: { id: couponId },
-        data: {
-          ...(dto.code !== undefined && { code: this.normalizeCode(dto.code) }),
-          ...(dto.type !== undefined && { type: dto.type }),
-          ...(dto.value !== undefined && { value: dto.value }),
-          ...(dto.max_discount !== undefined && { maxDiscount: dto.max_discount }),
-          ...(dto.min_order_amount !== undefined && { minOrderAmount: dto.min_order_amount }),
-          ...(dto.usage_limit !== undefined && { usageLimit: dto.usage_limit }),
-          ...(dto.expires_at !== undefined && {
-            expiresAt: dto.expires_at ? new Date(dto.expires_at) : null,
-          }),
-          ...(dto.is_active !== undefined && { isActive: dto.is_active }),
-        },
+        data,
       });
 
       return {
@@ -156,7 +170,7 @@ export class CouponsService {
     }
 
     const now = new Date();
-    if (coupon.expiresAt && coupon.expiresAt <= now) {
+    if (coupon.expiryDate && coupon.expiryDate <= now) {
       throw new BadRequestException('Coupon has expired');
     }
 
@@ -184,7 +198,11 @@ export class CouponsService {
       );
     }
 
-    const discount = this.computeDiscount(coupon, subtotal);
+    const discount = this.computeDiscount({
+      type: coupon.couponType,
+      value: (coupon.couponType === CouponType.PERCENT ? coupon.discountPercent : coupon.discountAmount) || new Prisma.Decimal(0),
+      maxDiscount: coupon.maxDiscountAmount,
+    }, subtotal);
     const finalAmount = this.roundMoney(Math.max(0, subtotal - discount));
 
     return {
@@ -263,46 +281,44 @@ export class CouponsService {
   private toCouponResponse(coupon: {
     id: string;
     code: string;
-    type: CouponType;
-    value: Prisma.Decimal;
-    maxDiscount: Prisma.Decimal | null;
+    couponType: CouponType;
+    discountPercent: Prisma.Decimal | null;
+    discountAmount: Prisma.Decimal | null;
+    maxDiscountAmount: Prisma.Decimal | null;
     minOrderAmount: Prisma.Decimal;
     usageLimit: number | null;
     usedCount: number;
-    expiresAt: Date | null;
+    expiryDate: Date | null;
     isActive: boolean;
     createdAt: Date;
   }) {
-    const valueNum = Number(coupon.value);
+    const discountPercentNum = coupon.discountPercent ? Number(coupon.discountPercent) : 0;
+    const discountAmountNum = coupon.discountAmount ? Number(coupon.discountAmount) : 0;
     const row: {
       id: string;
       code: string;
-      discount_percent: number;
-      discount_amount?: number;
-      min_order_amount: number;
-      max_discount_amount: number;
-      usage_limit: number;
-      used_count: number;
-      expiry_date: string;
-      created_at: string;
-      is_active?: boolean;
+      type: CouponType;
+      value: number;
+      maxDiscount: number | null;
+      minOrderAmount: number;
+      usageLimit: number | null;
+      usedCount: number;
+      expiresAt: string | null;
+      isActive: boolean;
+      createdAt: string;
     } = {
       id: coupon.id,
       code: coupon.code,
-      discount_percent: coupon.type === CouponType.PERCENT ? valueNum : 0,
-      min_order_amount: Number(coupon.minOrderAmount),
-      max_discount_amount: Number(coupon.maxDiscount ?? 0),
-      usage_limit: coupon.usageLimit ?? 0,
-      used_count: coupon.usedCount,
-      expiry_date: coupon.expiresAt ? coupon.expiresAt.toISOString() : '',
-      created_at: coupon.createdAt.toISOString(),
-      is_active: coupon.isActive,
+      type: coupon.couponType,
+      value: coupon.couponType === CouponType.PERCENT ? discountPercentNum : discountAmountNum,
+      maxDiscount: coupon.maxDiscountAmount ? Number(coupon.maxDiscountAmount) : null,
+      minOrderAmount: Number(coupon.minOrderAmount),
+      usageLimit: coupon.usageLimit,
+      usedCount: coupon.usedCount,
+      expiresAt: coupon.expiryDate ? coupon.expiryDate.toISOString() : null,
+      isActive: coupon.isActive,
+      createdAt: coupon.createdAt.toISOString(),
     };
-
-    if (coupon.type === CouponType.FIXED) {
-      row.discount_amount = valueNum;
-    }
-
     return row;
   }
 }
