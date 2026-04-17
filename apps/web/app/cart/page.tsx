@@ -1,4 +1,3 @@
-import { cartItems, products } from "@/types/dataTest";
 import { Button } from "@/components/ui/button";
 
 export default function CartPage() {
