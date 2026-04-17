@@ -46,16 +46,14 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const cart = await getCart();
-        setItems(cart?.items ?? []);
-      } catch {
-        toast.error("Không tải được giỏ hàng");
-      } finally {
-        setLoadingCart(false);
-      }
-    })();
+    const data = localStorage.getItem("checkout_cart");
+
+    if (data) {
+      const parsed = JSON.parse(data);
+      setItems(parsed.items ?? []);
+    }
+
+    setLoadingCart(false);
   }, []);
 
   const MOCK_VOUCHERS: Record<
@@ -166,11 +164,15 @@ export default function CheckoutPage() {
                 className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
               >
                 <div className="w-14 h-14 rounded-xl bg-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                  <ShoppingBag className="w-5 h-5 text-gray-300" />
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                  className="w-full h-full object-cover rounded"
+                />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-gray-900 truncate">
-                    {item.product_id}
+                    {item.name}
                   </p>
                   <p className="text-[11.5px] text-gray-400 mt-0.5">
                     {fmt(item.price)}

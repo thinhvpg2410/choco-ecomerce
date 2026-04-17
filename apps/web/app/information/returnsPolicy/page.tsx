@@ -7,8 +7,7 @@ return (
                 <a href="/" className="flex items-center">
                     <img src="/image/home.png" alt="home" className="w-5 h-5"/>
                 </a>
-                <span>›</span>
-                <a href="/information" className="hover:text-[#6b4f3b]">Giới thiệu</a>
+                <span>› Chính sách </span>
                 <span>›</span>
                 <a href="/information/returnsPolicy" className="hover:text-[#6b4f3b]">Chính sách đổi trả</a>
             </div>

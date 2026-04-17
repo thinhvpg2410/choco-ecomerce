@@ -36,14 +36,29 @@ export interface UpdateCartDto {
   quantity: number;
 }
 
+export const getProductById = async (id: string) => {
+  try {
+    const res = await api.get(`/products/${id}`);
+    return res.data.data || res.data.product;
+  } catch (error) {
+    console.error("Lỗi lấy thông tin sản phẩm:", error);
+    return null;
+  }
+};
+
 // Lấy giỏ hàng hiện tại
 export const getCart = async (): Promise<Cart | null> => {
   try {
     const res = await api.get("/cart");
     return res.data?.data || null;
   } catch (error: any) {
-    console.error("❌ Get cart error:", error?.response?.data || error);
-    return null;
+    console.error("❌ Get cart error full:", {
+      message: error?.message,
+      response: error?.response?.data,
+      status: error?.response?.status,
+      stack: error?.stack
+    });
+    return null; 
   }
 };
 

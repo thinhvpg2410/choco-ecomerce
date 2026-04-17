@@ -77,32 +77,31 @@ export function ProductCard({ product }: Props) {
         </div>
 
         {/* NỘI DUNG */}
-        <div className="p-3.5 flex flex-col gap-1.5 flex-1">
+        <div className="p-3.5 flex flex-col gap-1 flex-1">
           {/* Brand */}
           {product.brand?.name && (
             <p className="text-[10.5px] text-[#b0aaa0] uppercase tracking-[.06em] font-semibold">
               {product.brand.name}
             </p>
           )}
-
           {/* Tên 2 dòng rồi ... */}
-          <h3 className="text-[13.5px] font-bold text-[#1a1a1a] line-clamp-2 leading-snug min-h-[38px] group-hover:text-pink-600 transition-colors">
+          <h3 className="text-2xl font-semibold text-[#3b1d14] line-clamp-2 group-hover:text-[#a67c2d] transition-colors">
             {product.name}
           </h3>
 
           {/* Giá */}
-          <div className="flex items-baseline gap-2 mt-0.5">
+          <div className="flex items-baseline gap-0.5">
             {hasSale ? (
               <>
-                <span className="text-[15px] font-extrabold text-rose-600">
+                <span className="text-xl font-extrabold text-rose-600">
                   {product.sale_price!.toLocaleString("vi-VN")}đ
                 </span>
-                <span className="text-[11.5px] text-[#d1ccc4] line-through">
+                {/* <span className="text-[11.5px] text-[#d1ccc4] line-through">
                   {product.price.toLocaleString("vi-VN")}đ
-                </span>
+                </span> */}
               </>
             ) : (
-              <span className="text-[15px] font-extrabold text-[#1a1a1a]">
+              <span className="text-xl font-extrabold text-rose-600">
                 {product.price.toLocaleString("vi-VN")}đ
               </span>
             )}
@@ -110,17 +109,17 @@ export function ProductCard({ product }: Props) {
 
           {/* Tồn kho */}
           {isOkStock && (
-            <p className="text-[11px] font-semibold text-green-600">
+            <p className="text-base font-extrabold text-[#8D6E63]">
               Còn {product.stock} sản phẩm
             </p>
           )}
           {isLowStock && (
-            <p className="text-[11px] font-semibold text-amber-500">
+            <p className="text-base font-extrabold text-amber-500">
               Còn {product.stock} sản phẩm
             </p>
           )}
           {isOutOfStock && (
-            <p className="text-[11px] font-semibold text-red-500">Hết hàng</p>
+            <p className="text-base font-extrabold text-red-500">Hết hàng</p>
           )}
 
           {/* Divider */}
@@ -130,7 +129,7 @@ export function ProductCard({ product }: Props) {
           <div
             className={`flex items-center justify-between ${isOutOfStock ? "opacity-35 pointer-events-none" : ""}`}
           >
-            <span className="text-[12px] text-gray-500 font-medium">
+            <span className="text-sm text-[#6b4f3b]">
               Số lượng
             </span>
             <div className="flex items-center border-[1.5px] border-[#f0ede8] rounded-[10px] overflow-hidden bg-[#fafafa]">

@@ -104,6 +104,10 @@ export interface Product {
   // Quan hệ — backend đã trả về trong toProductResponse()
   category?: { id: string; name: string };
   brand?: { id: string; name: string };
+
+  // Đánh giá
+  average_rating?: number; // Điểm đánh giá trung bình từ review
+  review_count?: number; // Số lượng đánh giá đã nhận
 }
 
 // ================= PRODUCT IMAGE =================
