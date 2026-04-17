@@ -1,40 +1,26 @@
 // src/services/cart.service.ts
 import api from "@/services/axios";
-
-export interface CartItem {
-  id: string;
-  product_id: string;
-  variant_id?: string | null;
-  quantity: number;
-  product: {
-    id: string;
-    name: string;
-    image_url: string;
-    price: number;
-    sale_price: number | null;
-    slug: string;
-  };
-}
-
-export interface Cart {
-  id: string;
-  user_id: string;
-  items: CartItem[];
-  total_items: number;
-  total_price: number;
-}
+import {CartItem, Cart} from "@/types/type";
 
 export interface AddToCartDto {
   product_id: string;
-  variant_id?: string;
   quantity: number;
 }
 
 export interface UpdateCartDto {
   product_id: string;
-  variant_id?: string;
   quantity: number;
 }
+
+export const getProductById = async (id: string) => {
+  try {
+    const res = await api.get(`/products/${id}`);
+    return res.data.data || res.data.product;
+  } catch (error) {
+    console.error("Lỗi lấy thông tin sản phẩm:", error);
+    return null;
+  }
+};
 
 // Lấy giỏ hàng hiện tại
 export const getCart = async (): Promise<Cart | null> => {
@@ -42,8 +28,13 @@ export const getCart = async (): Promise<Cart | null> => {
     const res = await api.get("/cart");
     return res.data?.data || null;
   } catch (error: any) {
-    console.error("❌ Get cart error:", error?.response?.data || error);
-    return null;
+    console.error("❌ Get cart error full:", {
+      message: error?.message,
+      response: error?.response?.data,
+      status: error?.response?.status,
+      stack: error?.stack
+    });
+    return null; 
   }
 };
 

@@ -138,7 +138,9 @@ JOIN products p ON random() < 0.25;
 
 -- ================= ORDERS =================
 WITH order_users AS (
-  SELECT id, row_number() OVER (ORDER BY email) AS rn FROM users WHERE role = 'user'
+  SELECT id, row_number() OVER (ORDER BY email) AS rn 
+  FROM users 
+  WHERE role = 'user'
 )
 INSERT INTO orders (
   id, user_id, coupon_id, total_amount, shipping_fee, discount_amount, final_amount,
@@ -148,13 +150,27 @@ INSERT INTO orders (
 SELECT
   uuid_generate_v4(),
   ou.id,
-  CASE WHEN ou.rn % 3 = 0 THEN (SELECT id FROM coupons LIMIT 1) ELSE NULL END,
+  CASE 
+    WHEN ou.rn % 3 = 0 THEN (SELECT id FROM coupons LIMIT 1) 
+    ELSE NULL 
+  END,
   (random() * 400000 + 80000)::numeric(12,2),
   20000.00,
   CASE WHEN ou.rn % 3 = 0 THEN 50000.00 ELSE 0.00 END,
-  ((random() * 400000 + 80000)::numeric(12,2) + 20000.00 - CASE WHEN ou.rn % 3 = 0 THEN 50000.00 ELSE 0.00 END),
-  CASE WHEN ou.rn % 4 = 0 THEN 'CONFIRMED' ELSE 'PENDING' END,
-  CASE WHEN ou.rn % 4 = 0 THEN 'PAID' ELSE 'PENDING' END,
+  ((random() * 400000 + 80000)::numeric(12,2) + 20000.00 
+    - CASE WHEN ou.rn % 3 = 0 THEN 50000.00 ELSE 0.00 END),
+
+  -- ✅ FIX ENUM
+  CASE 
+    WHEN ou.rn % 4 = 0 THEN 'CONFIRMED'::"OrderStatus"
+    ELSE 'PENDING'::"OrderStatus"
+  END,
+
+  CASE 
+    WHEN ou.rn % 4 = 0 THEN 'PAID'::"PaymentStatus"
+    ELSE 'PENDING'::"PaymentStatus"
+  END,
+
   'Nguyen Van ' || ou.rn,
   '09000000' || ou.rn,
   '123 Nguyen Trai',
@@ -165,7 +181,6 @@ SELECT
   NOW() - ((ou.rn * 2) || ' days')::interval,
   NOW() - ((ou.rn * 2) || ' days')::interval
 FROM order_users ou;
-
 -- ================= ORDER ITEMS =================
 INSERT INTO order_items (
   id, order_id, product_id, product_name_at_time, product_image_at_time,

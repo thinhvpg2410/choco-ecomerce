@@ -49,15 +49,38 @@ export default async function ProductPage({
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
-      <HeroBanner
-        image="https://images.unsplash.com/photo-1549007994-cb92caebd54b"
-        title="Sản phẩm"
-      />
+      <div>
+        <div className="px-6 py-3 bg-[#f5efe6]">
+        {/* Breadcrumb */}
+            <div className="w-full mx-auto py-2 text-base text-[#3b1d14] flex items-center gap-2 font-serif">
+                <a href="/" className="flex items-center">
+                    <img src="/image/home.png" alt="home" className="w-5 h-5"/>
+                </a>
+                <span>›</span>
+                <a href="/product" className="hover:text-[#6b4f3b]">Sản phẩm</a>
+            </div>
+
+            {/* Banner */}
+            <div className="relative overflow-hidden rounded-sm">
+                <img
+                src="/image/bg.jpeg"
+                alt="privacy"
+                className="w-full h-[300px] object-cover"
+                />
+                <div className="absolute inset-0 bg-[#3b1d14]/60"></div>
+                <div className="absolute inset-4 border border-[#e7c27d] pointer-events-none"></div>
+                <h1 className="absolute inset-0 flex items-center justify-center 
+                            font-serif text-[#e7c27d] text-5xl tracking-widest uppercase">
+                SẢN PHẨM
+                </h1>
+            </div>
+        </div>
+      </div>
 
       <div className="container mx-auto px-6 pt-10">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Tất cả sản phẩm <span className="text-pink-600">({total})</span>
+          <h1 className="text-3xl font-bold text-[#3b1d14]">
+            Tất cả sản phẩm <span className="text-[#D4AF37]">({total})</span>
           </h1>
         </div>
 
@@ -67,7 +90,7 @@ export default async function ProductPage({
         {/* Product list bên dưới — full width */}
         {products.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border">
-            <p className="text-gray-500">Không có sản phẩm nào.</p>
+            <p className="text-[#3b1d14]">Không có sản phẩm nào.</p>
           </div>
         ) : (
           <>

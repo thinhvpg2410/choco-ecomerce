@@ -104,6 +104,10 @@ export interface Product {
   // Quan hệ — backend đã trả về trong toProductResponse()
   category?: { id: string; name: string };
   brand?: { id: string; name: string };
+
+  // Đánh giá
+  average_rating?: number; // Điểm đánh giá trung bình từ review
+  review_count?: number; // Số lượng đánh giá đã nhận
 }
 
 // ================= PRODUCT IMAGE =================
@@ -212,7 +216,28 @@ export interface Coupon {
   updated_at?: string;
 }
 
-// ================= CART & CART ITEM (Giữ nguyên nhưng thêm updated_at) =================
+
+export interface CartApiResponse {
+  success: boolean;
+  message: string;
+  data: CartData;
+}
+
+export interface CartData {
+  user_id: string;
+  items: CartItemResponse[];
+  total_amount: number;
+  updatedAt?: string;
+}
+
+export interface CartItemResponse {
+  product_id: string;
+  quantity: number;
+  price: number;
+  subtotal?: number;      
+}
+
+
 export interface Cart {
   id: string;
   user_id: string;
@@ -224,9 +249,8 @@ export interface CartItem {
   id: string;
   cart_id: string;
   product_id: string;
-  variant_id?: string;
   quantity: number;
-  price: number; // Giá lúc thêm vào giỏ
+  price: number;
   created_at: string;
   updated_at?: string;
 }

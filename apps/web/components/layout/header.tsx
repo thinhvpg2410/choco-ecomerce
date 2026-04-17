@@ -83,26 +83,80 @@ const handleLogout = async () => {
     "block px-3 py-1.5 rounded-md text-sm transition-all duration-200 hover:bg-pink-50 hover:text-pink-600";
 
   return (
-    <header className="border-b bg-white relative z-[1000]">
+    <header className="border-b bg-white relative z-[1000] sticky top-0 z-50 bg-white">
       <div className="container mx-auto grid grid-cols-3 h-16 items-center">
         {/* LEFT */}
         <div className="flex items-center">
           <Link
             href="/"
-            className="text-xl font-bold text-pink-600 hover:opacity-80 transition"
+            className="hover:opacity-80 transition"
           >
-            🍬 ChocoShop
+            <img src="/image/logo.png" alt="Choco Kingdom" className="h-20" />
           </Link>
         </div>
 
         {/* CENTER */}
         <div className="flex items-center justify-center gap-2">
-          <Link href="/about" className={`${navItemClass} whitespace-nowrap`}>
+          <Link href="/information/aboutUs" className={`${navItemClass} whitespace-nowrap`}>
             Giới thiệu
           </Link>
           <Link href="/product" className={`${navItemClass} whitespace-nowrap`}>
             Sản phẩm
           </Link>
+
+          {/*POLICY - CÁC CHÍNH SÁCH*/}
+          <NavigationMenu>
+            <NavigationMenuList>
+              <NavigationMenuItem>
+                <NavigationMenuTrigger className={navItemClass}>
+                  Chính sách
+                </NavigationMenuTrigger>
+                <NavigationMenuContent
+                  className="p-2"
+                  style={{
+                    width: "var(--radix-navigation-menu-trigger-width)",
+                  }}
+                >
+                  <ul className="space-y-1">
+                    <li>
+                          <NavigationMenuLink asChild>
+                            <Link
+                              href={"/information/shippingPolicy"}
+                              className={`${dropdownItemClass} whitespace-nowrap`}
+                            >
+                              Chính sách vận chuyển
+                            </Link>
+                          </NavigationMenuLink>
+                          <NavigationMenuLink asChild>
+                            <Link
+                              href={"/information/privacyPolicy"}
+                              className={`${dropdownItemClass} whitespace-nowrap`}
+                            >
+                              Chính sách bảo mật
+                            </Link>
+                          </NavigationMenuLink>
+                          <NavigationMenuLink asChild>
+                            <Link
+                              href={"/information/returnPolicy"}
+                              className={`${dropdownItemClass} whitespace-nowrap`}
+                            >
+                              Chính sách đổi trả
+                            </Link>
+                          </NavigationMenuLink>
+                          <NavigationMenuLink asChild>
+                            <Link
+                              href={"/information/termsOfUse"}
+                              className={`${dropdownItemClass} whitespace-nowrap`}
+                            >
+                              Chính sách sử dụng
+                            </Link>
+                          </NavigationMenuLink>
+                      </li>
+                  </ul>
+                </NavigationMenuContent>
+              </NavigationMenuItem>
+            </NavigationMenuList>
+          </NavigationMenu>
 
           {/* CATEGORY — NavigationMenu riêng */}
           <NavigationMenu>
@@ -197,7 +251,8 @@ const handleLogout = async () => {
             </div>
 
             {/* DROPDOWN */}
-            {openCart && (
+            <a href="/cart">
+              {openCart && (
               <div
                 className="
         absolute right-0 mt-3 w-80 p-3 rounded-xl shadow-lg border bg-white z-[9999]
@@ -247,6 +302,8 @@ const handleLogout = async () => {
                 </div>
               </div>
             )}
+            </a>
+            
           </div>
 
           {isLoading ? (
