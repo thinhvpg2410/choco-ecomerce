@@ -26,23 +26,48 @@ VALUES
   (uuid_generate_v4(), 'user3', 'user3@gmail.com', '$2b$10$hashedpassword123456', '0900000004', 'user', 'active', NOW(), NOW());
 
 -- ================= CATEGORIES =================
-INSERT INTO categories (id, name, slug, description, image_url, sort_order, is_active, created_at, updated_at)
-VALUES
-  ('c1c82495-2b7b-41d5-b1c0-0a534fae82f4', 'Snacks', 'snacks', 'Sweet and savory snacks.', 'https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg', 1, true, NOW(), NOW()),
-  ('6d4833c7-9c37-4145-a8f9-8d0f1af1a4da', 'Beverages', 'beverages', 'Refreshing drinks and beverages.', 'https://images.pexels.com/photos/416528/pexels-photo-416528.jpeg', 2, true, NOW(), NOW()),
-  ('f2f2311c-2d65-4ea1-8d3d-09b9d8d0f8ed', 'Dairy', 'dairy', 'Milk, cheese, yogurt and dairy products.', 'https://images.pexels.com/photos/821365/pexels-photo-821365.jpeg', 3, true, NOW(), NOW()),
-  ('fa1f0304-afc3-4f07-856a-1a1f002b88ce', 'Bakery', 'bakery', 'Fresh bread, pastries and cakes.', 'https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg', 4, true, NOW(), NOW()),
-  ('97de0179-9a46-4b14-90d8-57d127a4f9ea', 'Frozen Foods', 'frozen-foods', 'Ready-to-eat frozen meals and desserts.', 'https://images.pexels.com/photos/1132274/pexels-photo-1132274.jpeg', 5, true, NOW(), NOW());
+INSERT INTO categories (id, name, slug, description, image_url,parent_id, sort_order, is_active, created_at, updated_at)
+
+values
+('cat-banh-quy', 'Bánh quy', 'banh-quy', 'Các loại bánh quy giòn và ngọt', NULL, NULL, 6, true, NOW(), NOW()),
+('cat-banh-kem', 'Bánh kem', 'banh-kem', 'Bánh kem sinh nhật và tiệc', NULL, NULL, 7, true, NOW(), NOW()),
+('cat-keo-deo', 'Kẹo dẻo', 'keo-deo', 'Kẹo dẻo nhiều hương vị', NULL, NULL, 8, true, NOW(), NOW()),
+('cat-keo-caramel', 'Kẹo caramel', 'keo-caramel', 'Kẹo caramel mềm và ngọt', NULL, NULL, 9, true, NOW(), NOW()),
+('cat-socola-den', 'Socola đen', 'socola-den', 'Socola đen nguyên chất', NULL, NULL, 10, true, NOW(), NOW()),
+('cat-socola-sua', 'Socola sữa', 'socola-sua', 'Socola sữa thơm béo', NULL, NULL, 11, true, NOW(), NOW()),
+('cat-snack-khoai-tay', 'Snack khoai tây', 'snack-khoai-tay', 'Snack khoai tây chiên giòn', NULL, NULL, 12, true, NOW(), NOW()),
+('cat-snack-bap', 'Snack bắp', 'snack-bap', 'Snack làm từ bắp giòn rụm', NULL, NULL, 13, true, NOW(), NOW()),
+('cat-keo-xep', 'Kẹo xốp', 'keo-xep', 'Kẹo xốp mềm, nhẹ', NULL, NULL, 14, true, NOW(), NOW()),
+('cat-qua-vat', 'Quà vặt', 'qua-vat', 'Tổng hợp đồ ăn vặt khác', NULL, NULL, 15, true, NOW(), NOW());
+('cat-banh', 'Bánh', 'banh', 'Các loại bánh ngọt và bánh snack', NULL, NULL, 1, true, NOW(), NOW()),
+('cat-keo', 'Kẹo', 'keo', 'Các loại kẹo ngọt', NULL, NULL, 2, true, NOW(), NOW()),
+('cat-socola', 'Socola', 'socola', 'Sản phẩm socola cao cấp', NULL, NULL, 3, true, NOW(), NOW()),
+('cat-snack', 'Snack', 'snack', 'Đồ ăn vặt snack', NULL, NULL, 4, true, NOW(), NOW()),
+('cat-cao-su', 'Kẹo cao su', 'keo-cao-su', 'Kẹo cao su các loại', NULL, NULL, 5, true, NOW(), NOW());
 
 -- ================= BRANDS =================
 INSERT INTO brands (id, name, slug, description, logo_url, is_active, created_at, updated_at)
-VALUES
-  ('b8bfc78f-9313-48ed-8d76-0d2d2f6b1a75', 'ChocoDelight', 'chocodelight', 'Premium chocolates and snacks.', 'https://images.pexels.com/photos/5583073/pexels-photo-5583073.jpeg', true, NOW(), NOW()),
-  ('d6c0a18f-0c79-4e4c-8e4b-7c20c042e0b2', 'FreshFarm', 'freshfarm', 'Natural and healthy grocery products.', 'https://images.pexels.com/photos/2255937/pexels-photo-2255937.jpeg', true, NOW(), NOW()),
-  ('a15fb8ae-bfb3-4f7e-bb9d-aa2a97ac7fb9', 'Bakers Best', 'bakers-best', 'Fresh bakery items and pastries.', 'https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg', true, NOW(), NOW()),
-  ('d1f8c390-23f9-4ad5-96de-2ee5a2f9b9aa', 'CoolSip', 'coolsip', 'Refreshing beverages for every occasion.', 'https://images.pexels.com/photos/416528/pexels-photo-416528.jpeg', true, NOW(), NOW()),
-  ('2dffd103-84a0-4803-a8c7-0ce5f7d4a950', 'GreenLeaf', 'greenleaf', 'Organic and plant-based foods.', 'https://images.pexels.com/photos/2255937/pexels-photo-2255937.jpeg', true, NOW(), NOW());
-
+values
+('brand-kitkat', 'KitKat', 'kitkat', 'Thanh socola wafer nổi tiếng của Nestlé', NULL, true, NOW(), NOW()),
+('brand-snickers', 'Snickers', 'snickers', 'Thanh socola nhân nougat, đậu phộng', NULL, true, NOW(), NOW()),
+('brand-mms', 'M&M''s', 'mms', 'Kẹo socola phủ đường nhiều màu', NULL, true, NOW(), NOW()),
+('brand-oreo', 'Oreo', 'oreo', 'Bánh quy kẹp kem sữa nổi tiếng', NULL, true, NOW(), NOW()),
+('brand-pocky', 'Pocky', 'pocky', 'Bánh que phủ socola từ Nhật Bản', NULL, true, NOW(), NOW()),
+('brand-pringles', 'Pringles', 'pringles', 'Snack khoai tây dạng lon đặc trưng', NULL, true, NOW(), NOW()),
+('brand-toblerone', 'Toblerone', 'toblerone', 'Socola Thụy Sĩ hình tam giác', NULL, true, NOW(), NOW()),
+('brand-lotte', 'Lotte', 'lotte', 'Tập đoàn bánh kẹo Hàn Quốc', NULL, true, NOW(), NOW()),
+('brand-glico', 'Glico', 'glico', 'Thương hiệu snack và bánh Nhật Bản', NULL, true, NOW(), NOW()),
+('brand-meiji', 'Meiji', 'meiji', 'Socola và sữa Nhật Bản cao cấp', NULL, true, NOW(), NOW()),
+('brand-nestle', 'Nestlé', 'nestle', 'Tập đoàn thực phẩm toàn cầu Thụy Sĩ', NULL, true, NOW(), NOW()),
+('brand-mars', 'Mars', 'mars', 'Thương hiệu socola và kẹo Mỹ', NULL, true, NOW(), NOW()),
+('brand-mentos', 'Mentos', 'mentos', 'Kẹo ngậm mát lạnh nhiều hương vị', NULL, true, NOW(), NOW()),
+('brand-alpenliebe', 'Alpenliebe', 'alpenliebe', 'Kẹo caramel và kẹo cứng phổ biến', NULL, true, NOW(), NOW()),
+('brand-kinh-do', 'Kinh Đô', 'kinh-do', 'Bánh kẹo Việt Nam quen thuộc', NULL, true, NOW(), NOW());
+('brand-danisa', 'Danisa', 'danisa', 'Bánh quy cao cấp Đan Mạch', NULL, true, NOW(), NOW()),
+('brand-haribo', 'Haribo', 'haribo', 'Kẹo dẻo nổi tiếng Đức', NULL, true, NOW(), NOW()),
+('brand-ferrero', 'Ferrero', 'ferrero', 'Socola Ý cao cấp', NULL, true, NOW(), NOW()),
+('brand-lays', 'Lays', 'lays', 'Snack khoai tây giòn', NULL, true, NOW(), NOW()),
+('brand-orion', 'Orion', 'orion', 'Bánh kẹo Hàn Quốc - Việt Nam', NULL, true, NOW(), NOW());
 -- ================= COUPONS =================
 INSERT INTO coupons (
   id, code, coupon_type, discount_percent, discount_amount, min_order_amount, 
@@ -62,45 +87,66 @@ brand_ids AS (
   SELECT id FROM brands ORDER BY name
 )
 INSERT INTO products (
-  id, name, slug, short_description, description, sku, price, sale_price, cost_price, stock,
-  image_url, category_id, brand_id, ingredients, nutrition_info, origin, weight,
-  weight_unit, package_type, is_active, is_featured, is_best_seller, is_new,
-  average_rating, review_count, created_at, updated_at
+  id, name, slug, short_description, description, sku,
+  price, sale_price, cost_price, stock, image_url,
+  category_id, brand_id,
+  ingredients, nutrition_info,
+  origin, weight, weight_unit, package_type,
+  is_active, is_featured, is_best_seller, is_new,
+  created_at, updated_at, average_rating, review_count
 )
-SELECT
-  uuid_generate_v4(),
-  'Product ' || i,
-  'product-' || lpad(i::text, 4, '0'),
-  'High quality ' || (SELECT name FROM categories ORDER BY sort_order LIMIT 1 OFFSET ((i-1)%5)) || ' product',
-  'Delicious and fresh ' || (SELECT name FROM categories ORDER BY sort_order LIMIT 1 OFFSET ((i-1)%5)) || ' with premium ingredients.',
-  'SKU-' || lpad(i::text, 4, '0'),
-  (random() * 300000 + 50000)::numeric(12,2),
-  CASE WHEN i % 4 = 0 THEN (random() * 20000 + 20000)::numeric(12,2) ELSE NULL END,
-  (random() * 20000 + 20000)::numeric(12,2),
-  (random() * 200 + 20)::int,
-  'https://picsum.photos/id/' || (100 + i) || '/600/600',
-  (SELECT id FROM category_ids OFFSET ((i - 1) % 5) LIMIT 1),
-  (SELECT id FROM brand_ids OFFSET ((i - 1) % 5) LIMIT 1),
-  'Premium ingredients for product ' || i,
-  jsonb_build_object(
-    'calories', (random() * 400 + 100)::int,
-    'fat', (random() * 20 + 1)::numeric(5,2),
-    'protein', (random() * 15 + 1)::numeric(5,2),
-    'carbs', (random() * 50 + 5)::numeric(5,2)
-  ),
-  CASE WHEN i % 3 = 0 THEN 'Vietnam' ELSE 'Imported' END,
-  (random() * 900 + 100)::numeric(8,2),
-  'g',
-  CASE WHEN i % 2 = 0 THEN 'Box' ELSE 'Bag' END,
-  true,
-  (i % 7 = 0),
-  (i % 10 = 0),
-  (i > 40),
-  (3.0 + (i % 5) * 0.3)::numeric(4,2),
-  (random() * 30)::int,
-  NOW() - ((50 - i) || ' days')::interval,
-  NOW() - ((50 - i) || ' days')::interval
-FROM generate_series(1, 50) AS s(i);
+values
+(uuid_generate_v4(), 'Bánh Oreo Original', 'banh-oreo-original', 'Bánh quy kẹp kem sữa', 'Bánh quy socola đen kẹp lớp kem sữa béo ngậy.', 'BR-ORE-001', 35000, 32000, 20000, 200,'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776455334/1_gtgszz.jpg', 'cat-banh-quy', 'brand-oreo', 'Bột mì, cacao, kem sữa', '{"energy":"480kcal"}', 'USA', 133, 'g', 'Gói', true, true, true, false, NOW(), NOW(), 4.7, 5000),
+(uuid_generate_v4(), 'KitKat Chocolate 4 Finger', 'kitkat-chocolate-4-finger', 'Socola wafer giòn tan', 'Thanh socola giòn với lớp wafer đặc trưng KitKat.', 'KK-004', 12000, 10000, 7000, 500, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456600/2_yct7eq.jpg', 'cat-socola', 'brand-kitkat', 'Socola, bột mì, sữa', '{"energy":"520kcal"}', 'Japan', 45, 'g', 'Thanh', true, false, true, true, NOW(), NOW(), 4.6, 8000),
+(uuid_generate_v4(), 'Snickers Peanut Chocolate Bar', 'snickers-peanut-bar', 'Socola nhân đậu phộng', 'Socola caramel, nougat và đậu phộng giòn.', 'SN-001', 18000, 16000, 12000, 300, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456599/3_eiwjpm.jpg', 'cat-socola', 'brand-snickers', 'Đậu phộng, socola, caramel', '{"energy":"530kcal"}', 'USA', 50, 'g', 'Thanh', true, false, false, true, NOW(), NOW(), 4.5, 4200),
+(uuid_generate_v4(), 'Haribo Goldbears', 'haribo-goldbears', 'Kẹo dẻo gấu nhiều vị', 'Kẹo dẻo hình gấu nổi tiếng Đức.', 'HB-001', 45000, 42000, 30000, 150, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456580/4_g368f4.jpg', 'cat-keo-deo', 'brand-haribo', 'Gelatin, đường, hương trái cây', '{"energy":"350kcal"}', 'Germany', 200, 'g', 'Gói', true, true, false, false, NOW(), NOW(), 4.8, 3000),
+(uuid_generate_v4(), 'Pringles Original', 'pringles-original', 'Snack khoai tây dạng lon', 'Khoai tây chiên giòn đặc trưng Pringles.', 'PR-001', 65000, 60000, 45000, 120, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456519/5_ogne7y.jpg', 'cat-snack-khoai-tay', 'brand-pringles', 'Khoai tây, dầu thực vật, muối', '{"energy":"540kcal"}', 'USA', 165, 'g', 'Lon', true, true, true, false, NOW(), NOW(), 4.6, 2500),
+(uuid_generate_v4(), 'Pocky Chocolate Stick', 'pocky-chocolate-stick', 'Bánh que phủ socola', 'Bánh que giòn phủ socola Nhật Bản.', 'PK-001', 28000, 25000, 18000, 180, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456518/6_wycqsg.jpg', 'cat-snack', 'brand-pocky', 'Bột mì, socola, đường', '{"energy":"430kcal"}', 'Japan', 40, 'g', 'Hộp', true, false, true, false, NOW(), NOW(), 4.7, 6000),
+(uuid_generate_v4(), 'M&M Chocolate Candy', 'mm-chocolate-candy', 'Kẹo socola nhiều màu', 'Socola phủ đường giòn nhiều màu sắc.', 'MM-001', 30000, 27000, 20000, 250, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456476/7_izgmur.jpg', 'cat-keo', 'brand-mms', 'Socola, đường, màu thực phẩm', '{"energy":"490kcal"}', 'USA', 100, 'g', 'Gói', true, false, false, true, NOW(), NOW(), 4.6, 7000),
+(uuid_generate_v4(), 'Toblerone Milk Chocolate', 'toblerone-milk-chocolate', 'Socola tam giác Thụy Sĩ', 'Socola sữa với mật ong và hạnh nhân.', 'TBL-001', 90000, 85000, 65000, 90, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456453/8_hcoyni.jpg', 'cat-socola-sua', 'brand-toblerone', 'Socola sữa, mật ong, hạnh nhân', '{"energy":"560kcal"}', 'Switzerland', 100, 'g', 'Thanh', true, true, false, true, NOW(), NOW(), 4.9, 1500),
+(uuid_generate_v4(), 'Lotte Pepero Almond', 'lotte-pepero-almond', 'Bánh que phủ hạnh nhân', 'Bánh que socola phủ hạnh nhân giòn.', 'LT-001', 20000, 18000, 12000, 400, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456414/9_ndpuko.jpg', 'cat-snack', 'brand-lotte', 'Bột mì, socola, hạnh nhân', '{"energy":"410kcal"}', 'Korea', 32, 'g', 'Hộp', true, true, true, false, NOW(), NOW(), 4.5, 5000),
+(uuid_generate_v4(), 'Mentos Mint Fresh', 'mentos-mint-fresh', 'Kẹo ngậm bạc hà', 'Kẹo ngậm mát lạnh vị bạc hà.', 'MT-001', 15000, 13000, 9000, 500, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456413/10_yyiunw.jpg', 'cat-cao-su', 'brand-mentos', 'Đường, bạc hà', '{"energy":"380kcal"}', 'Netherlands', 50, 'g', 'Gói', true, false, false, false, NOW(), NOW(), 4.4, 9000),
+(uuid_generate_v4(), 'Alpenliebe Caramel Candy', 'alpenliebe-caramel', 'Kẹo caramel ngọt mềm', 'Kẹo caramel tan chảy trong miệng.', 'AL-001', 12000, 10000, 7000, 600, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456413/11_s9xuvx.jpg', 'cat-keo-caramel', 'brand-alpenliebe', 'Đường, sữa, caramel', '{"energy":"400kcal"}', 'Germany', 40, 'g', 'Gói', true, false, false, false, NOW(), NOW(), 4.3, 8000),
+(uuid_generate_v4(), 'Kinh Đô Snack Mix', 'kinh-do-snack-mix', 'Snack tổng hợp Việt Nam', 'Snack giòn nhiều vị quen thuộc.', 'KD-001', 25000, 22000, 15000, 350, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456412/12_wuf0yi.jpg', 'cat-snack', 'brand-kinh-do', 'Bột mì, dầu ăn, gia vị', '{"energy":"450kcal"}', 'Vietnam', 60, 'g', 'Gói', true, true, true, false, NOW(), NOW(), 4.2, 12000),
+(uuid_generate_v4(), 'Ferrero Rocher Chocolate', 'ferrero-rocher', 'Socola hạt phỉ cao cấp', 'Socola Ý với nhân hạt phỉ giòn.', 'FR-001', 120000, 110000, 85000, 80, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456410/13_svtuxl.jpg', 'cat-socola', 'brand-ferrero', 'Socola, hazelnut, wafer', '{"energy":"600kcal"}', 'Italy', 200, 'g', 'Hộp', true, true, false, true, NOW(), NOW(), 4.9, 2000),
+(uuid_generate_v4(), 'Orion Choco Pie', 'orion-choco-pie', 'Bánh marshmallow socola', 'Bánh mềm kẹp marshmallow phủ socola.', 'OR-001', 45000, 40000, 30000, 500, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456409/14_v93asi.jpg', 'cat-banh', 'brand-orion', 'Bột mì, marshmallow, socola', '{"energy":"420kcal"}', 'Korea', 360, 'g', 'Hộp', true, true, true, true, NOW(), NOW(), 4.7, 15000),
+(uuid_generate_v4(), 'Bánh Quy Danisa Butter Cookies', 'banh-quy-danisa-butter-cookies', 'Bánh quy bơ truyền thống Đan Mạch', 'Hương vị bơ thơm lừng, giòn tan trong miệng.', 'BQ-DAN-454', 185000.00, 175000.00, 130000.00, 100, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456408/15_gyr7x6.jpg', 'cat-banh-quy', 'brand-danisa', 'Bột mì, bơ, đường, trứng', '{"energy": "500kcal", "fat": "25g"}', 'Denmark', 454, 'g', 'Hộp', true, true, false, true, NOW(), NOW(), 4.8, 1200),
+(uuid_generate_v4(), 'Bánh Oreo Kẹp Kem Sữa', 'banh-oreo-kep-kem-sua', 'Bánh quy socola kẹp kem sữa', 'Xoay bánh, liếm kem, chấm sữa.', 'BQ-OREO-133', 18000.00, NULL, 12000.00, 500, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456407/16_kfuasu.jpg', 'cat-banh-quy', 'brand-oreo', 'Bột mì, đường, dầu thực vật, bột cacao', '{"sugar": "38g"}', 'Vietnam', 133, 'g', 'Gói', true, false, true, false, NOW(), NOW(), 4.5, 3500),
+(uuid_generate_v4(), 'Bánh Que Pocky Socola', 'banh-que-pocky-socola', 'Bánh que giòn phủ lớp socola', 'Sản phẩm nổi tiếng từ Glico Nhật Bản.', 'BQ-POCKY-CHO', 22000.00, 20000.00, 15000.00, 300, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456406/17_j928bb.jpg', 'cat-banh', 'brand-pocky', 'Bột mì, đường, cacao', '{"length": "15cm"}', 'Japan', 40, 'g', 'Hộp', true, true, false, true, NOW(), NOW(), 4.9, 2100),
+(uuid_generate_v4(), 'Kẹo Dẻo Haribo Goldbears', 'keo-deo-haribo-goldbears', 'Kẹo dẻo hình gấu nổi tiếng thế giới', 'Hương vị trái cây tự nhiên, dai ngon.', 'KE-HARI-GOLD', 45000.00, NULL, 30000.00, 200, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456404/19_bz0jwp.jpg', 'cat-keo-deo', 'brand-haribo', 'Nước ép trái cây, gelatin, đường', '{"flavor": "Mixed Fruit"}', 'Germany', 80, 'g', 'Gói', true, true, true, false, NOW(), NOW(), 4.7, 850),
+(uuid_generate_v4(), 'Kẹo Alpenliebe Caramel', 'keo-alpenliebe-caramel', 'Kẹo sữa caramen mềm ngọt', 'Hương vị sữa và caramen hòa quyện.', 'KE-ALPEN-CARA', 15000.00, 12000.00, 8000.00, 1000, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456398/26_nyj2lb.jpg', 'cat-keo-caramel', 'brand-alpenliebe', 'Đường, siro glucose, sữa đặc', '{"pieces": "16 viên"}', 'Vietnam', 52, 'g', 'Thỏi', true, false, false, true, NOW(), NOW(), 4.3, 1500),
+(uuid_generate_v4(), 'Kẹo Cao Su Mentos Pure Fresh', 'keo-cao-su-mentos-pure-fresh', 'Kẹo cao su không đường hương bạc hà', 'Lõi lỏng tươi mát, sảng khoái.', 'KE-MENTOS-WHITE', 25000.00, NULL, 15000.00, 150, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456519/5_ogne7y.jpg', 'cat-cao-su', 'brand-mentos', 'Xylitol, sorbitol, cốt gôm', '{"sugar_free": "Yes"}', 'Vietnam', 56, 'g', 'Hũ', true, false, true, false, NOW(), NOW(), 4.6, 920),
+(uuid_generate_v4(), 'Socola KitKat 4 Thanh', 'socola-kitkat-4-thanh', 'Bánh xốp phủ socola sữa', 'Nghỉ ngơi một chút, có ngay KitKat.', 'SO-KITKAT-4F', 15000.00, 13000.00, 9000.00, 400, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456403/20_roczy4.jpg', 'cat-socola-sua', 'brand-kitkat', 'Đường, sữa bột, bơ cacao', '{"energy": "210kcal"}', 'Malaysia', 38, 'g', 'Thanh', true, true, false, true, NOW(), NOW(), 4.8, 5000),
+(uuid_generate_v4(), 'Socola Snickers Nhân Đậu Phộng', 'socola-snickers-dau-phong', 'Socola nhân đậu phộng và caramel', 'Giúp bạn nạp năng lượng tức thì.', 'SO-SNICKERS-50', 20000.00, NULL, 14000.00, 350, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456402/21_rrpy7b.jpg', 'cat-socola', 'brand-snickers', 'Lạc, socola sữa, caramel', '{"protein": "4g"}', 'USA', 50, 'g', 'Thanh', true, true, false, false, NOW(), NOW(), 4.7, 3200),
+(uuid_generate_v4(), 'Socola Ferrero Rocher 16 Viên', 'socola-ferrero-rocher-16', 'Socola nhân hạt dẻ cao cấp', 'Lớp vỏ giòn bọc nhân hạt dẻ tan chảy.', 'SO-FER-16', 250000.00, 235000.00, 180000.00, 50, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456400/23_c0pj8q.jpg', 'cat-socola', 'brand-ferrero', 'Socola sữa, hạt dẻ, dầu thực vật', '{"box_type": "Plastic"}', 'Italy', 200, 'g', 'Hộp', true, true, true, true, NOW(), NOW(), 5.0, 1100),
+(uuid_generate_v4(), 'Snack Khoai Tây Lays Classic', 'snack-khoai-tay-lays-classic', 'Snack khoai tây vị tự nhiên', 'Khoai tây thật, giòn tan.', 'SN-LAYS-CL', 20000.00, NULL, 12000.00, 600, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456406/17_j928bb.jpg', 'cat-snack-khoai-tay', 'brand-lays', 'Khoai tây, dầu thực vật, muối', '{"fat": "10g"}', 'Vietnam', 54, 'g', 'Gói', true, false, false, false, NOW(), NOW(), 4.4, 6000),
+(uuid_generate_v4(), 'Snack Khoai Tây Pringles Original', 'snack-pringles-original', 'Snack khoai tây dạng lon', 'Thiết kế lon giúp miếng bánh luôn nguyên vẹn.', 'SN-PRING-ORI', 55000.00, 49000.00, 35000.00, 200, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456599/3_eiwjpm.jpg', 'cat-snack-khoai-tay', 'brand-pringles', 'Bột khoai tây, dầu, bột bắp', '{"height": "20cm"}', 'USA', 107, 'g', 'Lon', true, true, false, true, NOW(), NOW(), 4.6, 2800),
+(uuid_generate_v4(), 'Bánh Meiji Hello Panda', 'banh-meiji-hello-panda', 'Bánh quy nhân kem socola', 'Hình gấu dễ thương, nhân kem đậm đà.', 'BQ-MEIJI-PANDA', 35000.00, NULL, 22000.00, 180, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456400/23_c0pj8q.jpg', 'cat-banh', 'brand-meiji', 'Bột mì, kem socola, sữa', '{"flavor": "Chocolate"}', 'Japan', 50, 'g', 'Hộp', true, false, true, false, NOW(), NOW(), 4.8, 1400),
+(uuid_generate_v4(), 'Oreo Double Cream', 'oreo-double-cream', 'Bánh Oreo nhân kem đôi', 'Bánh quy socola với lớp kem sữa nhân đôi béo ngậy.', 'OR-DC-001', 40000, 37000, 25000, 300, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456398/26_nyj2lb.jpg', 'cat-banh-quy', 'brand-oreo', 'Bột mì, cacao, kem sữa', '{"energy":"500kcal"}', 'USA', 150, 'g', 'Gói', true, true, true, false, NOW(), NOW(), 4.8, 6000),
+(uuid_generate_v4(), 'KitKat Matcha', 'kitkat-matcha', 'KitKat vị trà xanh Nhật', 'Socola KitKat vị matcha thanh mát.', 'KK-MA-001', 15000, 13000, 9000, 400, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456401/22_nouywr.jpg', 'cat-socola', 'brand-kitkat', 'Matcha, socola, bột mì', '{"energy":"510kcal"}', 'Japan', 45, 'g', 'Thanh', true, false, true, true, NOW(), NOW(), 4.7, 9000),
+(uuid_generate_v4(), 'Snickers Almond', 'snickers-almond', 'Snickers hạnh nhân', 'Socola Snickers kết hợp hạnh nhân giòn.', 'SN-AL-001', 20000, 18000, 13000, 280, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456405/18_j1cwok.jpg', 'cat-socola', 'brand-snickers', 'Hạnh nhân, socola, caramel', '{"energy":"540kcal"}', 'USA', 52, 'g', 'Thanh', true, true, false, false, NOW(), NOW(), 4.6, 3000),
+(uuid_generate_v4(), 'Haribo Sour Worms', 'haribo-sour-worms', 'Kẹo dẻo chua Haribo', 'Kẹo dẻo hình giun vị chua ngọt.', 'HB-SW-001', 48000, 45000, 32000, 200, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456406/17_j928bb.jpg', 'cat-keo-deo', 'brand-haribo', 'Gelatin, đường, acid citric', '{"energy":"360kcal"}', 'Germany', 200, 'g', 'Gói', true, true, true, false, NOW(), NOW(), 4.7, 4000),
+(uuid_generate_v4(), 'Pringles BBQ', 'pringles-bbq', 'Snack khoai tây vị BBQ', 'Khoai tây chiên vị thịt nướng BBQ.', 'PR-BBQ-001', 70000, 65000, 50000, 150, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456519/5_ogne7y.jpg', 'cat-snack-khoai-tay', 'brand-pringles', 'Khoai tây, BBQ seasoning', '{"energy":"550kcal"}', 'USA', 165, 'g', 'Lon', true, true, true, true, NOW(), NOW(), 4.5, 3500),
+(uuid_generate_v4(), 'Pocky Strawberry', 'pocky-strawberry', 'Bánh que vị dâu', 'Bánh que phủ socola dâu ngọt dịu.', 'PK-ST-001', 30000, 27000, 19000, 220, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456407/16_kfuasu.jpg', 'cat-snack', 'brand-pocky', 'Bột mì, dâu, đường', '{"energy":"420kcal"}', 'Japan', 40, 'g', 'Hộp', true, true, false, false, NOW(), NOW(), 4.6, 7000),
+(uuid_generate_v4(), 'M&M Peanut', 'mm-peanut', 'Kẹo socola đậu phộng', 'M&M nhân đậu phộng giòn.', 'MM-PN-001', 32000, 29000, 21000, 260, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456399/24_yvhtzt.jpg', 'cat-keo', 'brand-mms', 'Đậu phộng, socola', '{"energy":"500kcal"}', 'USA', 100, 'g', 'Gói', true, false, true, true, NOW(), NOW(), 4.7, 8000),
+(uuid_generate_v4(), 'Toblerone Dark', 'toblerone-dark', 'Socola đen Thụy Sĩ', 'Socola đen hạnh nhân mật ong.', 'TBL-DK-001', 95000, 90000, 70000, 90, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456404/19_bz0jwp.jpg', 'cat-socola-den', 'brand-toblerone', 'Cacao, mật ong, hạnh nhân', '{"energy":"570kcal"}', 'Switzerland', 100, 'g', 'Thanh', true, true, false, true, NOW(), NOW(), 4.8, 2000),
+(uuid_generate_v4(), 'Lotte Choco Pie Strawberry', 'lotte-choco-pie-strawberry', 'Choco Pie dâu', 'Bánh marshmallow vị dâu phủ socola.', 'LT-CP-002', 45000, 40000, 30000, 500, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456401/22_nouywr.jpg', 'cat-banh-kem', 'brand-lotte', 'Bột mì, dâu, marshmallow', '{"energy":"430kcal"}', 'Korea', 360, 'g', 'Hộp', true, true, true, false, NOW(), NOW(), 4.6, 12000),
+(uuid_generate_v4(), 'Mentos Fruit', 'mentos-fruit', 'Kẹo trái cây Mentos', 'Kẹo ngậm nhiều vị trái cây.', 'MT-FR-001', 16000, 14000, 10000, 600, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776455334/1_gtgszz.jpg', 'cat-cao-su', 'brand-mentos', 'Đường, hương trái cây', '{"energy":"390kcal"}', 'Netherlands', 50, 'g', 'Gói', true, false, false, false, NOW(), NOW(), 4.3, 9000),
+(uuid_generate_v4(), 'Alpenliebe Strawberry', 'alpenliebe-strawberry', 'Kẹo caramel dâu', 'Kẹo caramel vị dâu ngọt dịu.', 'AL-ST-001', 12000, 10000, 7000, 700, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456413/10_yyiunw.jpg', 'cat-keo-caramel', 'brand-alpenliebe', 'Đường, sữa, dâu', '{"energy":"410kcal"}', 'Germany', 40, 'g', 'Gói', true, false, true, false, NOW(), NOW(), 4.4, 8500),
+(uuid_generate_v4(), 'Kinh Đô Bánh Quy Bơ', 'kinh-do-banh-quy-bo', 'Bánh quy Việt Nam', 'Bánh quy bơ giòn truyền thống.', 'KD-BQ-002', 30000, 27000, 20000, 400, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456398/26_nyj2lb.jpg', 'cat-banh-quy', 'brand-kinh-do', 'Bột mì, bơ, trứng', '{"energy":"460kcal"}', 'Vietnam', 120, 'g', 'Gói', true, true, false, false, NOW(), NOW(), 4.2, 10000),
+(uuid_generate_v4(), 'Ferrero Rondnoir', 'ferrero-rondnoir', 'Socola Ferrero đen', 'Socola đen nhân kem cacao.', 'FR-RD-001', 130000, 120000, 90000, 70, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456397/27_rumfzd.jpg', 'cat-socola-den', 'brand-ferrero', 'Cacao, socola đen', '{"energy":"610kcal"}', 'Italy', 200, 'g', 'Hộp', true, true, false, true, NOW(), NOW(), 4.9, 1800),
+(uuid_generate_v4(), 'Orion Custard Cake', 'orion-custard-cake', 'Bánh custard mềm', 'Bánh mềm nhân custard thơm béo.', 'OR-CC-001', 50000, 45000, 32000, 450, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456406/17_j928bb.jpg', 'cat-banh', 'brand-orion', 'Bột mì, trứng, custard', '{"energy":"420kcal"}', 'Korea', 300, 'g', 'Hộp', true, true, true, false, NOW(), NOW(), 4.5, 11000),
+(uuid_generate_v4(), 'Pringles Sour Cream', 'pringles-sour-cream', 'Snack vị kem chua', 'Khoai tây vị sour cream thơm béo.', 'PR-SC-001', 68000, 63000, 48000, 140, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456407/16_kfuasu.jpg', 'cat-snack-khoai-tay', 'brand-pringles', 'Khoai tây, kem chua', '{"energy":"530kcal"}', 'USA', 165, 'g', 'Lon', true, true, false, true, NOW(), NOW(), 4.6, 3200),
+(uuid_generate_v4(), 'Snickers Mini Pack', 'snickers-mini-pack', 'Gói Snickers mini', 'Nhiều thanh Snickers nhỏ tiện lợi.', 'SN-MN-001', 45000, 42000, 30000, 300, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456599/3_eiwjpm.jpg', 'cat-socola', 'brand-snickers', 'Socola, đậu phộng', '{"energy":"520kcal"}', 'USA', 150, 'g', 'Gói', true, true, true, false, NOW(), NOW(), 4.5, 5000),
+(uuid_generate_v4(), 'Haribo Cola Candy', 'haribo-cola-candy', 'Kẹo dẻo vị cola', 'Kẹo dẻo hình chai cola.', 'HB-CL-001', 46000, 43000, 31000, 220, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456580/4_g368f4.jpg', 'cat-keo-deo', 'brand-haribo', 'Gelatin, cola flavor', '{"energy":"355kcal"}', 'Germany', 200, 'g', 'Gói', true, true, false, false, NOW(), NOW(), 4.6, 3500),
+(uuid_generate_v4(), 'Pocky Cookies Cream', 'pocky-cookies-cream', 'Pocky cookies & cream', 'Bánh que vị cookies & cream.', 'PK-CC-001', 32000, 29000, 20000, 230, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456414/9_ndpuko.jpg', 'cat-snack', 'brand-pocky', 'Bột mì, cream', '{"energy":"440kcal"}', 'Japan', 40, 'g', 'Hộp', true, true, true, true, NOW(), NOW(), 4.7, 6500),
+(uuid_generate_v4(), 'M&M Crispy', 'mm-crispy', 'Kẹo M&M giòn', 'Socola giòn bên trong.', 'MM-CR-001', 33000, 30000, 22000, 240, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456413/10_yyiunw.jpg', 'cat-keo', 'brand-mms', 'Socola, gạo giòn', '{"energy":"495kcal"}', 'USA', 100, 'g', 'Gói', true, true, false, false, NOW(), NOW(), 4.6, 7200),
+(uuid_generate_v4(), 'Toblerone White', 'toblerone-white', 'Socola trắng Thụy Sĩ', 'Socola trắng mật ong hạnh nhân.', 'TBL-WH-001', 92000, 87000, 66000, 85, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456519/5_ogne7y.jpg', 'cat-socola-sua', 'brand-toblerone', 'Socola trắng, mật ong', '{"energy":"550kcal"}', 'Switzerland', 100, 'g', 'Thanh', true, true, true, false, NOW(), NOW(), 4.8, 1900),
+(uuid_generate_v4(), 'Lotte Choco Pie Banana', 'lotte-choco-pie-banana', 'Choco Pie vị chuối', 'Bánh marshmallow vị chuối.', 'LT-CP-003', 45000, 40000, 30000, 500, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776455334/1_gtgszz.jpg', 'cat-banh-kem', 'brand-lotte', 'Bột mì, chuối, marshmallow', '{"energy":"425kcal"}', 'Korea', 360, 'g', 'Hộp', true, true, false, false, NOW(), NOW(), 4.5, 10000),
+(uuid_generate_v4(), 'Mentos Tropical', 'mentos-tropical', 'Kẹo nhiệt đới', 'Kẹo vị trái cây nhiệt đới.', 'MT-TR-001', 16000, 14000, 10000, 600, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456399/24_yvhtzt.jpg', 'cat-cao-su', 'brand-mentos', 'Đường, tropical flavor', '{"energy":"395kcal"}', 'Netherlands', 50, 'g', 'Gói', true, false, true, false, NOW(), NOW(), 4.4, 8800),
+(uuid_generate_v4(), 'Alpenliebe Coffee Candy', 'alpenliebe-coffee', 'Kẹo caramel cà phê', 'Kẹo vị cà phê đậm đà.', 'AL-CF-001', 13000, 11000, 8000, 650, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456400/23_c0pj8q.jpg', 'cat-keo-caramel', 'brand-alpenliebe', 'Đường, cà phê, sữa', '{"energy":"405kcal"}', 'Germany', 40, 'g', 'Gói', true, false, false, true, NOW(), NOW(), 4.5, 7800),
+(uuid_generate_v4(), 'Ferrero Collection', 'ferrero-collection', 'Hộp socola tổng hợp', 'Ferrero mix nhiều loại socola.', 'FR-CL-001', 140000, 130000, 100000, 60, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456405/18_j1cwok.jpg', 'cat-socola', 'brand-ferrero', 'Socola, hazelnut', '{"energy":"620kcal"}', 'Italy', 300, 'g', 'Hộp', true, true, false, true, NOW(), NOW(), 4.9, 2500),
+(uuid_generate_v4(), 'Orion Pie Mini', 'orion-pie-mini', 'Choco Pie mini', 'Bánh pie nhỏ tiện lợi.', 'OR-PM-001', 30000, 27000, 20000, 500, 'https://res.cloudinary.com/dmp8j2ai5/image/upload/v1776456406/17_j928bb.jpg', 'cat-banh', 'brand-orion', 'Bột mì, marshmallow', '{"energy":"410kcal"}', 'Korea', 180, 'g', 'Gói', true, true, true, false, NOW(), NOW(), 4.4, 13000);
 
 -- ================= PRODUCT IMAGES (Sử dụng bảng riêng) =================
 INSERT INTO product_images (id, product_id, image_url, sort_order, is_main, created_at)
@@ -112,12 +158,20 @@ SELECT
   (row_number() OVER (PARTITION BY p.id ORDER BY img) = 1),
   NOW()
 FROM products p,
-  unnest(ARRAY[
-    p.image_url,
-    'https://picsum.photos/id/' || (200 + (p.id::text::int % 100)) || '/600/600',
-    'https://picsum.photos/id/' || (300 + (p.id::text::int % 100)) || '/600/600',
-    'https://picsum.photos/id/' || (400 + (p.id::text::int % 100)) || '/600/600'
-  ]) AS img;
+unnest(ARRAY[
+  p.image_url,
+  'https://picsum.photos/id/' ||
+  (200 + (abs(('x' || substr(md5(p.id::text), 1, 8))::bit(32)::int) % 100)) ||
+  '/600/600',
+
+  'https://picsum.photos/id/' ||
+  (300 + (abs(('x' || substr(md5(p.id::text), 1, 8))::bit(32)::int) % 100)) ||
+  '/600/600',
+
+  'https://picsum.photos/id/' ||
+  (400 + (abs(('x' || substr(md5(p.id::text), 1, 8))::bit(32)::int) % 100)) ||
+  '/600/600'
+]) AS img;
 
 -- ================= CARTS =================
 INSERT INTO carts (id, user_id, created_at, updated_at)
@@ -222,13 +276,42 @@ SELECT
   u.id,
   p.id,
   NULL,
-  ((random() * 4) + 1)::int,
-  'Great product, fast delivery and good quality.',
-  true,
-  NOW() - ((random() * 20)::int || ' days')::interval
-FROM users u
-JOIN products p ON random() < 0.08;
 
+  (floor(random() * 5) + 1)::int AS rating,
+
+  (ARRAY[
+    'Sản phẩm tuyệt vời, giao hàng nhanh!',
+    'Chất lượng rất tốt, sẽ mua lại.',
+    'Ngon và tươi, rất đáng khuyên dùng.',
+    'Đóng gói đẹp và an toàn.',
+    'Đáng tiền, rất hài lòng!',
+    'Không tệ, nhưng có thể tốt hơn.',
+    'Hương vị và kết cấu tuyệt vời!',
+    'Giao hàng siêu nhanh, rất thích!',
+    'Sản phẩm đúng như mô tả.',
+    'Tốt nhưng giao hàng hơi chậm.',
+    'Hương vị rất ngon, đúng chuẩn mình mong đợi.',
+    'Đóng gói chắc chắn, không bị móp méo khi nhận hàng.',
+    'Chất lượng ổn định, mua nhiều lần vẫn hài lòng.',
+    'Ăn rất vừa miệng, không quá ngọt.',
+    'Giá hợp lý so với chất lượng sản phẩm.',
+    'Mùi vị thơm, ăn rất cuốn.',
+    'Hàng mới, hạn sử dụng xa nên rất yên tâm.',
+    'Sẽ giới thiệu cho bạn bè mua.',
+    'Trải nghiệm tốt từ đặt hàng đến nhận hàng.',
+    'Sản phẩm đáng tiền trong tầm giá.'
+  ])[floor(random() * 20 + 1)] AS comment,
+
+  true,
+  NOW() - (floor(random() * 20) || ' days')::interval
+
+FROM products p
+CROSS JOIN LATERAL (
+  SELECT u.id
+  FROM users u
+  ORDER BY random()
+  LIMIT (floor(random() * 2) + 2)
+) u;
 -- ================= BANNERS =================
 INSERT INTO banners (
   id, description, image_url, product_id, is_active, sort_order, created_at, updated_at

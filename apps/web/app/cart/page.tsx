@@ -236,14 +236,12 @@ export default function CartPage() {
                   className="w-full h-full object-cover rounded"
                 />
               </div>
-
               <div>
                 <Link href={`/product/${item.product_id}`} className="group">
                   <p className="font-medium hover:text-[#3b1d14] transition-colors">
                     {productsMap[item.product_id]?.name ?? item.product?.name ?? "No product"}
                   </p>
                 </Link>
-
               </div>
             </div>
 
@@ -290,7 +288,7 @@ export default function CartPage() {
         ))}
       </div>
       {/* Tổng tiền */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50 rounded-md">
+      <div className="sticked bg-white border-t shadow-lg z-50 rounded-md">
         <div className="max-w-6xl mx-auto p-4 flex items-center justify-between gap-10 text-lg">
           <div className="font-bold ">
             Tổng:
