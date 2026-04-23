@@ -212,68 +212,25 @@ export default function CartPage() {
                   }
                 />
               </div>
-
-              <div className="col-span-4 flex items-center gap-4">
-                <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                  <img
-                    src={product.image_url || "https://via.placeholder.com/80"}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <Link
-                  href={`/product/${item.product_id}`}
-                  className="font-medium hover:text-[#3b1d14]"
-                >
-                  {product.name || "Sản phẩm"}
+              <div>
+                <Link href={`/product/${item.product_id}`} className="group">
+                  <p className="font-medium hover:text-[#3b1d14] transition-colors">
+                    {productsMap[item.product_id]?.name ?? item.product?.name ?? "No product"}
+                  </p>
                 </Link>
-              </div>
-
-              <div className="col-span-2 text-center font-semibold">
-                {fmt(item.price)}
-              </div>
-
-              <div className="col-span-2 text-center">
-                <div className="inline-flex border border-[#f0ede8] rounded-[10px] bg-[#fafafa] overflow-hidden">
-                  <button
-                    onClick={() => updateQty(item.product_id, -1)}
-                    disabled={item.quantity <= 1}
-                    className="w-8 h-8 hover:bg-pink-50 disabled:opacity-40"
-                  >
-                    −
-                  </button>
-                  <span className="px-6 font-bold">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQty(item.product_id, 1)}
-                    disabled={item.quantity >= (product.stock ?? 100)}
-                    className="w-8 h-8 hover:bg-pink-50 disabled:opacity-40"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <div className="col-span-2 text-center text-red-500 font-semibold">
-                {fmt(item.price * item.quantity)}
-              </div>
-
-              <div
-                onClick={() => handleRemove(item.product_id)}
-                className="col-span-1 text-center text-red-500 hover:text-red-700 cursor-pointer font-medium"
-              >
-                Xóa
               </div>
             </div>
           );
         })}
       </div>
-
-      {/* Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
-        <div className="max-w-6xl mx-auto p-5 flex items-center justify-between">
-          <div className="text-lg font-bold">
-            Tổng cộng:{" "}
-            <span className="text-2xl text-red-500">{fmt(subtotal)}</span>
+      {/* Tổng tiền */}
+      <div className="sticked bg-white border-t shadow-lg z-50 rounded-md">
+        <div className="max-w-6xl mx-auto p-4 flex items-center justify-between gap-10 text-lg">
+          <div className="font-bold ">
+            Tổng:
+            <span className="text-xl font-bold text-red-500 p-3">
+              {fmt(subtotal)}
+            </span>
           </div>
 
           <Button

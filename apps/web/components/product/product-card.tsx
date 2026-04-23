@@ -85,7 +85,7 @@ export function ProductCard({ product }: Props) {
             </p>
           )}
           {/* Tên 2 dòng rồi ... */}
-          <h3 className="text-2xl font-semibold text-[#3b1d14] line-clamp-2 group-hover:text-[#a67c2d] transition-colors">
+          <h3 className="text-2xl h-16 font-semibold text-[#3b1d14] line-clamp-2 group-hover:text-[#a67c2d] transition-colors">
             {product.name}
           </h3>
 

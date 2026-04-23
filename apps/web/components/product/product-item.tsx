@@ -85,7 +85,7 @@ export function ProductItem({ product }: Props) {
             {/* 2. RATING REVIEWS */}
             <div className="flex items-center text-lg justify-between font-semibold">
             <div className="flex items-center gap-3">
-                <span className="text-[#3b1d14] underline underline-offset-4 ">
+                <span className="text-[#3b1d14] ">
                 {product.average_rating?.toFixed(1) || "0.0"}
                 </span>
                 <div className="flex text-yellow-400 px-1">
@@ -96,7 +96,7 @@ export function ProductItem({ product }: Props) {
                 ))}
                 </div>
                 <span className="text-gray-300 px-1">|</span>
-                <span className="text-[#3b1d14] px-1 underline underline-offset-4">
+                <span className="text-[#3b1d14] px-1">
                 {product.review_count || 0}
                 </span>
                 <span className="text-gray-500">Đánh giá</span>

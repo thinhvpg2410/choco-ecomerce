@@ -7,8 +7,9 @@ import { ShoppingCart, Check, Heart } from "lucide-react";
 import { ProductItem } from "@/components/product/product-item";
 import { Product } from "@/types/type";
 import { is } from "zod/v4/locales";
+import ReviewList from "@/components/review/review-list";
 interface Props {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 export default async function ProductDetailPage({ params }: Props) {
@@ -39,19 +40,20 @@ export default async function ProductDetailPage({ params }: Props) {
                 <img
                   src={product.image_url}
                   alt={product.name}
-                  className="w-full h-full object-contain transition-all duration-700 hover:scale-110"
+                  className="w-full h-full object-contain transition-all duration-700 hover:scale-110 rounded-2xl hover:rounded-3xl"
                 />
               </div>
-
-              {/* Wishlist button */}
-              <button className="absolute top-6 right-6 p-3 bg-white rounded-full shadow-md hover:bg-pink-50 transition">
-                <Heart className="w-5 h-5 text-gray-600 hover:text-pink-500" />
-              </button>
             </div>
           </div>
 
           {/* RIGHT - PRODUCT INFO */}
             <ProductItem product={product as any} />
+        </div>
+        <div className="mt-16 mx-auto">
+          <h2 className="text-2xl font-bold text-[#3b1d14] mb-6">
+            Đánh giá sản phẩm
+          </h2>
+          <ReviewList productId={id} />
         </div>
       </div>
     </div>
