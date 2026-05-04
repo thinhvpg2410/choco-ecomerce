@@ -19,9 +19,12 @@ export async function getProducts(params: {
   is_best_seller?: boolean;
 }): Promise<ProductResponse> {
   try {
+    console.log("getProducts params:", params);
+
+
     const query: Record<string, unknown> = {
       page: params.page || 1,
-      limit: 12, // number, không phải string
+      limit: 12,
       search: params.search,
       min_price: params.min_price,
       max_price: params.max_price,
@@ -32,10 +35,11 @@ export async function getProducts(params: {
     if (params.is_new) query.is_new = true;
     if (params.is_best_seller) query.is_best_seller = true;
 
+
     const res = await api.get("/products", {
       params: query,
       headers: {
-        "Cache-Control": "no-cache", // ← quan trọng: bỏ qua cache HTTP
+        "Cache-Control": "no-cache",
         Pragma: "no-cache",
       },
     });
@@ -50,7 +54,19 @@ export async function getProducts(params: {
       limit: Number(pagination?.limit ?? 12),
     };
   } catch (error: any) {
-    console.error("❌ Get products error:", error?.response?.data || error);
     return { products: [], total: 0, page: 1, limit: 12 };
   }
 }
+
+export const uploadProductImage = async (productId: string, file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await api.post(`/products/${productId}/upload-image`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+
+  return response.data;
+};

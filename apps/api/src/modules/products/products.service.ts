@@ -7,6 +7,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { isUuid } from '../../common/utils/is-uuid';
+import { UploadService } from '../../common/upload/upload.service';
 
 const productPublicSelect = {
   id: true,
@@ -61,6 +62,7 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
+    private readonly uploadService: UploadService,
   ) {}
 
   async findAll(query: QueryProductDto, viewer?: JwtRequestUser) {
@@ -486,6 +488,23 @@ export class ProductsService {
     if (!brand) {
       throw new NotFoundException('Brand not found');
     }
+  }
+  async uploadImage(productId: string, file: Express.Multer.File) {
+    this.validateProductId(productId);
+    const imageUrl = await this.uploadService.uploadImage(file, 'products');
+    const updatedProduct = await this.prisma.product.update({
+      where: { id: productId },
+      data: {
+        imageUrl,
+      },
+      select: productPublicSelect,
+    });
+    await this.cache.invalidateAfterProductWrite(productId);
+    return {
+      success: true,
+      message: 'Product image uploaded successfully',
+      data: this.toProductResponse(updatedProduct),
+    };
   }
 
   private toProductResponse(product: ProductPublicRow) {

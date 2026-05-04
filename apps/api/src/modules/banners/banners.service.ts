@@ -2,10 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBannerDto } from './dto/create-banner.dto';
 import { UpdateBannerDto } from './dto/update-banner.dto';
+import { UploadService } from '../../common/upload/upload.service';
 
 @Injectable()
 export class BannersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploadService: UploadService,
+  ) {}
 
   async create(dto: CreateBannerDto) {
     return this.prisma.banner.create({
@@ -29,6 +33,14 @@ export class BannersService {
     return this.prisma.banner.update({
       where: { id },
       data: dto,
+    });
+  }
+
+  async uploadImage(id: string, file: Express.Multer.File) {
+    const imageUrl = await this.uploadService.uploadImage(file, 'banners');
+    return this.prisma.banner.update({
+      where: { id },
+      data: { imageUrl },
     });
   }
 

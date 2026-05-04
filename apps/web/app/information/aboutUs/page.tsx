@@ -16,9 +16,7 @@ return (
                     <img src="/image/home.png" alt="home" className="w-5 h-5"/>
                 </a>
                 <span>›</span>
-                <a href="/information" className="hover:text-[#6b4f3b]">Giới thiệu</a>
-                <span>›</span>
-                <a href="/information/privacyPolicy" className="hover:text-[#6b4f3b]">Về chúng tôi</a>
+                <a href="/information/aboutUs" className="hover:text-[#6b4f3b]">Giới thiệu</a>
             </div>
 
             {/* Banner */}

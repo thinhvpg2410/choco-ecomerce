@@ -6,10 +6,14 @@ import {
   Param,
   Patch,
   Post,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -50,6 +54,29 @@ export class BannersController {
   @ApiBody({ type: UpdateBannerDto })
   async update(@Param('id') id: string, @Body() dto: UpdateBannerDto) {
     return this.bannersService.update(id, dto);
+  }
+
+  @Post(':id/upload-image')
+  @ApiBearerAuth()
+  @Roles(UserRole.admin)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async uploadImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.bannersService.uploadImage(id, file);
   }
 
   @Delete(':id')

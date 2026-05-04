@@ -10,12 +10,14 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { isUuid } from '../../common/utils/is-uuid';
+import { UploadService } from '../../common/upload/upload.service';
 
 @Injectable()
 export class CategoriesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
+    private readonly uploadService: UploadService,
   ) {}
 
   async findAll(viewer?: JwtRequestUser) {
@@ -161,6 +163,21 @@ export class CategoriesService {
     await this.cache.invalidateAfterCategoryWrite();
     return { success: true, message: 'Category deleted successfully' };
   }
+  async uploadImage(categoryId: string, file: Express.Multer.File): Promise<any> {
+    this.validateUuid(categoryId);
+    const imageUrl = await this.uploadService.uploadImage(file, 'categories');
+    const updatedCategory = await this.prisma.category.update({
+      where: { id: categoryId },
+      data: { imageUrl },
+    });
+    await this.cache.invalidateAfterCategoryWrite();
+    return {
+      success: true,
+      message: 'Category image uploaded successfully',
+      data: this.toCategoryResponse(updatedCategory),
+    };
+  }
+
 
   private validateUuid(id: string): void {
     if (!isUuid(id)) {
