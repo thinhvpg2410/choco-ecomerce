@@ -12,7 +12,7 @@ export interface Brand {
 export const getBrands = async (): Promise<Brand[]> => {
   try {
     const res = await api.get("/brands");
-    // Điều chỉnh theo cấu trúc response thực tế của bạn
+    console.log("🏷️ brands raw:", res.data); // ← thêm dòng này
     return res.data?.data || res.data || [];
   } catch (error: any) {
     console.error("❌ Get brands error:", error?.response?.data || error);
@@ -31,4 +31,17 @@ export const getBrandById = async (
     console.error("❌ Get brand by id error:", error);
     return null;
   }
+};
+
+export const uploadBrandLogo = async (brandId: string, file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await api.post(`/brands/${brandId}/upload-logo`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+
+  return response.data;
 };

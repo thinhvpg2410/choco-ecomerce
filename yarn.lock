@@ -2609,6 +2609,13 @@
   resolved "https://registry.npmjs.org/@types/ms/-/ms-2.1.0.tgz"
   integrity sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==
 
+"@types/multer@^2.1.0":
+  version "2.1.0"
+  resolved "https://registry.npmjs.org/@types/multer/-/multer-2.1.0.tgz"
+  integrity sha512-zYZb0+nJhOHtPpGDb3vqPjwpdeGlGC157VpkqNQL+UU2qwoacoQ7MpsAmUptI/0Oa127X32JzWDqQVEXp2RcIA==
+  dependencies:
+    "@types/express" "*"
+
 "@types/node@*", "@types/node@^22.10.7", "@types/node@>=18":
   version "22.19.13"
   resolved "https://registry.npmjs.org/@types/node/-/node-22.19.13.tgz"
@@ -3264,7 +3271,7 @@ anymatch@^3.0.3:
     normalize-path "^3.0.0"
     picomatch "^2.0.4"
 
-"api@file:C:\\Users\\Asus\\Enyu\\KTVTKPM\\choco-ecomerce\\apps\\api":
+"api@file:H:\\hk2nam4\\KienTrucTKPM\\choco-ecomerce\\apps\\api":
   version "0.0.1"
   resolved "file:apps/api"
   dependencies:
@@ -3468,9 +3475,7 @@ axe-core@^4.10.0:
   integrity sha512-BASOg+YwO2C+346x3LZOeoovTIoTrRqEsqMa6fmfAV0P+U9mFr9NsyOEpiYvFjbc64NMrSswhV50WdXzdb/Z5A==
 
 axios@^1.14.0, axios@^1.15.0:
-  version "1.15.0"
-  resolved "https://registry.npmmirror.com/axios/-/axios-1.15.0.tgz"
-  integrity sha512-wWyJDlAatxk30ZJer+GeCWS209sA42X+N5jU2jy6oHTp7ufw8uzUTVFBX9+wTfAlhiJXGS0Bq7X6efruWjuK9Q==
+  version "1.14.0"
   dependencies:
     follow-redirects "^1.15.11"
     form-data "^4.0.5"
@@ -4192,6 +4197,13 @@ clone@^1.0.2:
   version "1.0.4"
   resolved "https://registry.npmjs.org/clone/-/clone-1.0.4.tgz"
   integrity sha512-JQHZ2QMW6l3aH/j6xCqQThY/9OH4D/9ls34cgkUBiEeocRTU04tHfKPBsUK1PqZCUQM7GiA0IIXJSuXHI64Kbg==
+
+cloudinary@^2.10.0:
+  version "2.10.0"
+  resolved "https://registry.npmjs.org/cloudinary/-/cloudinary-2.10.0.tgz"
+  integrity sha512-sY09kYg7wprkndAOjZBAYqFZqwL+SxnEGcAvksOvFA+5upnFn949UjkEkHKNSwkBtW/xRDd0p6NgbSXZcxkI3w==
+  dependencies:
+    lodash "^4.17.23"
 
 clsx@^2.1.1:
   version "2.1.1"
@@ -5690,6 +5702,11 @@ fs.realpath@^1.0.0:
   version "1.0.0"
   resolved "https://registry.npmjs.org/fs.realpath/-/fs.realpath-1.0.0.tgz"
   integrity sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==
+
+fsevents@^2.3.2:
+  version "2.3.3"
+  resolved "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz"
+  integrity sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==
 
 function-bind@^1.1.2:
   version "1.1.2"
@@ -7289,7 +7306,7 @@ lodash.once@^4.0.0:
   resolved "https://registry.npmjs.org/lodash.once/-/lodash.once-4.1.1.tgz"
   integrity sha512-Sb487aTOCr9drQVL8pIxOzVhafOjZN9UU54hiN8PU3uAiSV7lx1yYNpbNmex2PK6dSJoNTSJUUswT651yww3Mg==
 
-lodash@^4.17.21, lodash@^4.17.4, lodash@4.17.23:
+lodash@^4.17.21, lodash@^4.17.23, lodash@^4.17.4, lodash@4.17.23:
   version "4.17.23"
   resolved "https://registry.npmjs.org/lodash/-/lodash-4.17.23.tgz"
   integrity sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==
@@ -7568,7 +7585,7 @@ msw@^2.10.4:
     until-async "^3.0.2"
     yargs "^17.7.2"
 
-multer@2.1.1:
+multer@^2.1.1, multer@2.1.1:
   version "2.1.1"
   resolved "https://registry.npmjs.org/multer/-/multer-2.1.1.tgz"
   integrity sha512-mo+QTzKlx8R7E5ylSXxWzGoXoZbOsRMpyitcht8By2KHvMbf3tjwosZ/Mu/XYU6UuJ3VZnODIrak5ZrPiPyB6A==
@@ -9921,7 +9938,7 @@ web-streams-polyfill@^3.0.3:
   resolved "https://registry.npmjs.org/web-streams-polyfill/-/web-streams-polyfill-3.3.3.tgz"
   integrity sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==
 
-"web@file:C:\\Users\\Asus\\Enyu\\KTVTKPM\\choco-ecomerce\\apps\\web":
+"web@file:H:\\hk2nam4\\KienTrucTKPM\\choco-ecomerce\\apps\\web":
   version "0.1.0"
   resolved "file:apps/web"
   dependencies:

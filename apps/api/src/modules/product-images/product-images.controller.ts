@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ProductImagesService } from './product-images.service';
 import { CreateProductImageDto } from './dto/create-product-image.dto';
 import { UpdateProductImageDto } from './dto/update-product-image.dto';
@@ -28,6 +29,38 @@ export class ProductImagesController {
   @ApiBody({ type: CreateProductImageDto })
   async create(@Body() dto: CreateProductImageDto) {
     return this.service.create(dto);
+  }
+
+  @Post('upload')
+  @ApiBearerAuth()
+  @Roles(UserRole.admin)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file', 'productId'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+        productId: {
+          type: 'string',
+          format: 'uuid',
+        },
+        sortOrder: {
+          type: 'integer',
+        },
+      },
+    },
+  })
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: { productId: string; sortOrder?: string },
+  ) {
+    const sortOrder = body.sortOrder ? parseInt(body.sortOrder, 10) : undefined;
+    return this.service.uploadAndCreate(file, body.productId, sortOrder);
   }
 
   @Patch(':id')

@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
 import { useEffect, useState } from "react";
-
+import { getCart, getProductById } from "@/services/cart.service";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -15,6 +15,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
   NavigationMenuLink,
+  NavigationMenuViewport
 } from "@/components/ui/navigation-menu";
 
 import {
@@ -39,22 +40,8 @@ import { getBrands, type Brand } from "@/services/brand.service";
 export function Header() {
   const [openCart, setOpenCart] = useState(false);
   const router = useRouter();
-  const mockCartItems = [
-    {
-      id: "1",
-      name: "Socola Đen 70%",
-      image: "/choco1.jpg",
-      price: 50000,
-      quantity: 2,
-    },
-    {
-      id: "2",
-      name: "Socola Hạnh Nhân",
-      image: "/choco2.jpg",
-      price: 75000,
-      quantity: 1,
-    },
-  ];
+  const [cartItems, setCartItems] = useState<any[]>([]);
+const [productsMap, setProductsMap] = useState<Record<string, any>>({});
 
   const { user, isAuthenticated, isLoading } = useSelector(
     (state: RootState) => state.auth,
@@ -69,9 +56,38 @@ export function Header() {
     getBrands().then(setBrands);
   }, []);
 
+  useEffect(() => {
+  const loadCart = async () => {
+    try {
+      const res: any = await getCart();
+
+      let items = res?.data?.items || res?.items || res || [];
+
+      setCartItems(items);
+
+      const productIds = [...new Set(items.map((i: any) => i.product_id))];
+
+      const map: Record<string, any> = {};
+
+      await Promise.all(
+        productIds.map(async (id: string) => {
+          const p = await getProductById(id);
+          if (p) map[id] = p;
+        })
+      );
+
+      setProductsMap(map);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  loadCart();
+}, []);
+
  // Thay handleLogout:
 const handleLogout = async () => {
-  await authLogout(); // gọi API + clear token trong 1 chỗ
+  await authLogout(); 
   dispatch(logout());
   window.location.href = "/";
 };
@@ -159,80 +175,79 @@ const handleLogout = async () => {
           </NavigationMenu>
 
           {/* CATEGORY — NavigationMenu riêng */}
-          <NavigationMenu>
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger className={navItemClass}>
-                  Loại
-                </NavigationMenuTrigger>
-                <NavigationMenuContent
-                  className="p-2"
-                  style={{
-                    width: "var(--radix-navigation-menu-trigger-width)",
-                  }}
+<NavigationMenu>
+  <NavigationMenuList>
+    <NavigationMenuItem>
+      <NavigationMenuTrigger className={navItemClass}>
+        Loại
+      </NavigationMenuTrigger>
+      <NavigationMenuContent
+        className="p-6 w-[520px] max-h-[420px] overflow-y-auto shadow-xl"
+        style={{
+          width: "520px",
+          left: "50%",
+          transform: "translateX(-50%)",
+        }}
+      >
+        <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+          {categories.length > 0 ? (
+            categories.map((cat) => (
+              <NavigationMenuLink key={cat.id} asChild>
+                <Link
+                  href={`/products?category=${cat.slug ?? cat.id}`}
+                  className={`${dropdownItemClass} whitespace-nowrap py-2 px-4 rounded-lg hover:bg-pink-50 transition-colors`}
                 >
-                  <ul className="space-y-1">
-                    {categories.length > 0 ? (
-                      categories.map((cat) => (
-                        <li key={cat.id}>
-                          <NavigationMenuLink asChild>
-                            <Link
-                              href={`/products?category=${cat.slug ?? cat.id}`}
-                              className={dropdownItemClass}
-                            >
-                              {cat.name}
-                            </Link>
-                          </NavigationMenuLink>
-                        </li>
-                      ))
-                    ) : (
-                      <li className="px-3 py-1.5 text-sm text-gray-400">
-                        Đang tải...
-                      </li>
-                    )}
-                  </ul>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-          </NavigationMenu>
-
+                  {cat.name}
+                </Link>
+              </NavigationMenuLink>
+            ))
+          ) : (
+            <div className="col-span-2 py-4 text-center text-gray-400">
+              Đang tải...
+            </div>
+          )}
+        </div>
+      </NavigationMenuContent>
+    </NavigationMenuItem>
+  </NavigationMenuList>
+</NavigationMenu>
           {/* BRAND — NavigationMenu riêng */}
-          <NavigationMenu>
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger className={navItemClass}>
-                  Thương hiệu
-                </NavigationMenuTrigger>
-                <NavigationMenuContent
-                  className="p-2"
-                  style={{
-                    width: "var(--radix-navigation-menu-trigger-width)",
-                  }}
+<NavigationMenu>
+  <NavigationMenuList>
+    <NavigationMenuItem>
+      <NavigationMenuTrigger className={navItemClass}>
+        Thương hiệu
+      </NavigationMenuTrigger>
+      <NavigationMenuContent
+        className="p-6 w-[520px] max-h-[420px] overflow-y-auto shadow-xl"
+        style={{
+          width: "520px",
+          left: "50%",
+          transform: "translateX(-50%)",
+        }}
+      >
+        <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+          {brands.length > 0 ? (
+            brands.map((brand) => (
+              <NavigationMenuLink key={brand.id} asChild>
+                <Link
+                  href={`/products?brand=${brand.slug ?? brand.id}`}
+                  className={`${dropdownItemClass} whitespace-nowrap py-2 px-4 rounded-lg hover:bg-pink-50 transition-colors`}
                 >
-                  <ul className="space-y-1">
-                    {brands.length > 0 ? (
-                      brands.map((brand) => (
-                        <li key={brand.id}>
-                          <NavigationMenuLink asChild>
-                            <Link
-                              href={`/products?brand=${brand.slug ?? brand.id}`}
-                              className={dropdownItemClass}
-                            >
-                              {brand.name}
-                            </Link>
-                          </NavigationMenuLink>
-                        </li>
-                      ))
-                    ) : (
-                      <li className="px-3 py-1.5 text-sm text-gray-400">
-                        Đang tải...
-                      </li>
-                    )}
-                  </ul>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-          </NavigationMenu>
+                  {brand.name}
+                </Link>
+              </NavigationMenuLink>
+            ))
+          ) : (
+            <div className="col-span-2 py-4 text-center text-gray-400">
+              Đang tải...
+            </div>
+          )}
+        </div>
+      </NavigationMenuContent>
+    </NavigationMenuItem>
+  </NavigationMenuList>
+</NavigationMenu>
         </div>
 
         {/* RIGHT */}
@@ -246,7 +261,7 @@ const handleLogout = async () => {
             <div className="relative cursor-pointer">
               <ShoppingCart className="w-5 h-5 transition hover:text-pink-600 hover:scale-110" />
               <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white rounded-full px-1">
-                {mockCartItems.length}
+                {cartItems.length}
               </span>
             </div>
 
@@ -261,33 +276,34 @@ const handleLogout = async () => {
               >
                 <div className="font-semibold mb-2">Giỏ hàng</div>
 
-                {mockCartItems.length === 0 ? (
+                {cartItems.length === 0 ? (
                   <div className="text-sm text-gray-400">Chưa có sản phẩm</div>
                 ) : (
                   <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {mockCartItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition"
-                      >
-                        <img
-                          src={item.image}
-                          className="w-12 h-12 object-cover rounded-md border"
-                        />
+                   {cartItems.map((item) => {
+  const product = productsMap[item.product_id] || {};
 
-                        <div className="flex-1">
-                          <div className="text-sm font-medium line-clamp-1">
-                            {item.name}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            x{item.quantity}
-                          </div>
-                          <div className="text-sm text-pink-600 font-semibold">
-                            {(item.price * item.quantity).toLocaleString()}đ
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+  return (
+    <div key={item.product_id} className="flex gap-3 p-2">
+      <img
+        src={product.image_url || "/no-image.png"}
+        className="w-12 h-12 object-cover rounded-md"
+      />
+
+      <div className="flex-1">
+        <div className="text-sm font-medium">
+          {product.name || "Sản phẩm"}
+        </div>
+        <div className="text-xs text-gray-500">
+          x{item.quantity}
+        </div>
+        <div className="text-sm text-pink-600 font-semibold">
+          {(item.price * item.quantity).toLocaleString()}đ
+        </div>
+      </div>
+    </div>
+  );
+})}
                   </div>
                 )}
 

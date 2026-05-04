@@ -6,11 +6,15 @@ import {
   Req,
   Body,
   Param,
+  Post,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -36,6 +40,30 @@ export class UsersController {
     return {
       success: true,
       message: 'Profile updated successfully',
+      data: user,
+    };
+  }
+
+  @Post('me/avatar')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async uploadAvatar(@Req() req: Request, @UploadedFile() file: Express.Multer.File) {
+    const { sub } = req.user as { sub: string };
+    const user = await this.usersService.uploadAvatar(sub, file);
+    return {
+      success: true,
+      message: 'Avatar uploaded successfully',
       data: user,
     };
   }

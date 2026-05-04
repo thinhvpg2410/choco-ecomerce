@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -10,6 +11,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import {
   CategoryDetailResponseDto,
@@ -55,6 +57,29 @@ export class CategoriesController {
     @Body() updateCategoryDto: UpdateCategoryDto,
   ) {
     return this.categoriesService.update(categoryId, updateCategoryDto);
+  }
+
+  @Post(':id/upload-image')
+  @ApiBearerAuth()
+  @Roles(UserRole.admin)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async uploadImage(
+    @Param('id') categoryId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.categoriesService.uploadImage(categoryId, file);
   }
 
   @ApiOperation({ summary: 'Delete category (admin only)' })

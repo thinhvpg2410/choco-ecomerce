@@ -10,10 +10,15 @@ import { UserResponseDto } from './dto/user-response.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { isUuid } from '../../common/utils/is-uuid';
+import { UploadService } from '../../common/upload/upload.service';
+import { extractCloudinaryPublicId } from '../../common/utils/extract-public-id';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploadService: UploadService,
+  ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
     const existingUser = await this.prisma.user.findUnique({
@@ -118,6 +123,36 @@ export class UsersService {
       data: {
         status: UserStatus.inactive,
         refreshTokenHash: null,
+      },
+    });
+
+    return this.toUserResponse(updatedUser);
+  }
+
+  async uploadAvatar(userId: string, file: Express.Multer.File) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    // 1. xoá ảnh cũ từ URL
+    if (user.avatarUrl) {
+      const publicId = extractCloudinaryPublicId(user.avatarUrl);
+
+      if (publicId) {
+        await this.uploadService.deleteImage(publicId);
+      }
+    }
+
+    // 2. upload ảnh mới
+    const url = await this.uploadService.uploadImage(file, 'users');
+
+    // 3. update DB
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        avatarUrl: url,
       },
     });
 

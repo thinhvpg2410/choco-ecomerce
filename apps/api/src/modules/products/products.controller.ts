@@ -7,7 +7,10 @@ import {
   Post,
   Put,
   Query,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ProductsService } from './products.service';
 import { QueryProductDto } from './dto/query-product.dto';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -17,6 +20,7 @@ import { UserRole } from '@prisma/client';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
@@ -91,6 +95,29 @@ export class ProductsController {
     @Body() updateProductDto: UpdateProductDto,
   ) {
     return this.productsService.update(productId, updateProductDto);
+  }
+
+  @Post(':id/upload-image')
+  @ApiBearerAuth()
+  @Roles(UserRole.admin)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async uploadImage(
+    @Param('id') productId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.productsService.uploadImage(productId, file);
   }
 
   @ApiOperation({ summary: 'Soft delete product (admin only)' })

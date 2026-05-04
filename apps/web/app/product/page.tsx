@@ -28,6 +28,7 @@ export default async function ProductPage({
   noStore();
 
   const params = await searchParams;
+  console.log("📌 searchParams:", params);
 
   const currentPage =
     Number.isInteger(Number(params.page)) && Number(params.page) > 0

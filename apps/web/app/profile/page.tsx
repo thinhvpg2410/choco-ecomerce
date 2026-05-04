@@ -7,6 +7,7 @@ import { login } from "@/store/authSlice";
 import {
   getMe,
   updateMe,
+  uploadAvatar,
   type UpdateUserPayload,
 } from "@/services/user.service";
 import {
@@ -20,6 +21,7 @@ import {
   AddressFormModal,
   type AddressFormData,
 } from "@/components/address/AddressModal";
+import ImageUpload from "@/components/upload/ImageUpload";
 import { Camera, Pencil, Trash2, Plus, MapPin } from "lucide-react";
 
 function Initials({ name, size = 96 }: { name?: string; size?: number }) {
@@ -74,18 +76,16 @@ export default function ProfilePage() {
       .finally(() => setAddrLoading(false));
   }, []);
 
-  // Pick file → preview local (chưa upload, chỉ base64 preview)
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      setAvatarPreview(result);
-      // Lưu tạm base64, sau này thay bằng upload URL thật
-      setProfile((p) => ({ ...p, avatar_url: result }));
-    };
-    reader.readAsDataURL(file);
+  // Upload avatar
+  const handleAvatarSelect = async (file: File) => {
+    try {
+      const updatedUser = await uploadAvatar(file);
+      dispatch(login(updatedUser as any));
+      setProfile((p) => ({ ...p, avatar_url: updatedUser.avatar_url }));
+      setAvatarPreview(updatedUser.avatar_url ?? "");
+    } catch (error) {
+      console.error('Upload avatar failed:', error);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -150,7 +150,7 @@ export default function ProfilePage() {
           {/* Avatar + name row */}
           <div className="px-6 pb-5">
             <div className="flex items-end gap-4 -mt-12 mb-5">
-              {/* Avatar với nút camera */}
+              {/* Avatar với ImageUpload */}
               <div className="relative flex-shrink-0">
                 <div className="w-24 h-24 rounded-full border-4 border-white shadow-md overflow-hidden bg-white">
                   {avatarPreview ? (
@@ -166,20 +166,6 @@ export default function ProfilePage() {
                     />
                   )}
                 </div>
-                {/* Nút camera đè lên góc dưới phải */}
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  className="absolute bottom-0.5 right-0.5 w-7 h-7 bg-pink-500 hover:bg-pink-600 rounded-full flex items-center justify-center shadow-md transition-colors"
-                >
-                  <Camera className="w-3.5 h-3.5 text-white" />
-                </button>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
               </div>
 
               {/* Name + role */}
@@ -197,6 +183,15 @@ export default function ProfilePage() {
                   {reduxUser?.role === "admin" ? "🛡 Admin" : "✦ Thành viên"}
                 </span>
               </div>
+            </div>
+
+            {/* ImageUpload component */}
+            <div className="mb-4">
+              <ImageUpload
+                onImageSelect={handleAvatarSelect}
+                currentImageUrl={avatarPreview}
+                label="Cập nhật avatar"
+              />
             </div>
 
             {/* Form fields */}
