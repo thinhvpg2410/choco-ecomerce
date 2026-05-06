@@ -51,40 +51,55 @@ export function AddressPicker({ value, onChange }: Props) {
   }, []);
 
   const onSelectProvince = async (p: Province) => {
-    setSelProvince(p);
-    setSelDistrict(null);
-    setSelWard(null);
-    setDistricts([]);
-    setWards([]);
-    setTab("quan");
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `https://provinces.open-api.vn/api/p/${p.code}?depth=2`,
-      );
-      const data = await res.json();
-      setDistricts(data.districts ?? []);
-    } finally {
-      setLoading(false);
-    }
-  };
+  setSelProvince(p);
+  setSelDistrict(null);
+  setSelWard(null);
+  setDistricts([]);
+  setWards([]);
+  setTab("quan");
+
+  setLoading(true);
+  try {
+    const res = await fetch(
+      `https://provinces.open-api.vn/api/p/${p.code}?depth=2`
+    );
+    const data = await res.json();
+    setDistricts(data.districts ?? []);
+  } finally {
+    setLoading(false);
+  }
+
+  // 🔥 emit luôn (quan trọng)
+  onChange({
+    province: p,
+    district: null as any,
+    ward: null as any,
+  });
+};
 
   const onSelectDistrict = async (d: District) => {
-    setSelDistrict(d);
-    setSelWard(null);
-    setWards([]);
-    setTab("phuong");
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `https://provinces.open-api.vn/api/d/${d.code}?depth=2`,
-      );
-      const data = await res.json();
-      setWards(data.wards ?? []);
-    } finally {
-      setLoading(false);
-    }
-  };
+  setSelDistrict(d);
+  setSelWard(null);
+  setWards([]);
+  setTab("phuong");
+
+  setLoading(true);
+  try {
+    const res = await fetch(
+      `https://provinces.open-api.vn/api/d/${d.code}?depth=2`
+    );
+    const data = await res.json();
+    setWards(data.wards ?? []);
+  } finally {
+    setLoading(false);
+  }
+
+  onChange({
+    province: selProvince!,
+    district: d,
+    ward: null as any,
+  });
+};
 
   const onSelectWard = (w: Ward) => {
     setSelWard(w);

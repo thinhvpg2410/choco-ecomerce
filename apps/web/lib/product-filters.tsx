@@ -336,7 +336,7 @@ export default function ProductFilters() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3  w-full overflow-hidden">
           <ScrollFilterRow
             title="Danh mục"
             items={categories.map((c) => ({ ...c, id: String(c.id) }))}

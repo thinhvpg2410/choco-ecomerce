@@ -143,7 +143,7 @@ export function SignupForm({
 
           <div className="relative hidden bg-muted md:block">
             <img
-              src="/placeholder.svg"
+              src="/image/newlog.jpg"
               alt="Image"
               className="absolute inset-0 h-full w-full object-cover"
             />

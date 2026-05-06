@@ -1,8 +1,8 @@
 import { IsString, IsUUID } from 'class-validator';
 
 export class CreateUserAddressDto {
-  @IsUUID()
-  userId: string;
+  // @IsUUID()
+  // userId: string;
 
   @IsString()
   receiverName: string;

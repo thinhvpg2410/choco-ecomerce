@@ -7,11 +7,20 @@ import { UpdateUserAddressDto } from './dto/update-user-address.dto';
 export class UserAddressesService {
   constructor(private prisma: PrismaService) {}
 
-  create(createUserAddressDto: CreateUserAddressDto) {
-    return this.prisma.userAddress.create({
-      data: createUserAddressDto,
-    });
-  }
+  // create(createUserAddressDto: CreateUserAddressDto) {
+  //   return this.prisma.userAddress.create({
+  //     data: createUserAddressDto,
+  //   });
+  // }
+
+  create(userId: string, dto: CreateUserAddressDto) {
+  return this.prisma.userAddress.create({
+    data: {
+      userId,
+      ...dto,
+    },
+  });
+}
 
   findAll(userId: string) {
     return this.prisma.userAddress.findMany({

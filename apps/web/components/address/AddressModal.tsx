@@ -8,8 +8,8 @@ import { AddressPicker, type AddressSelection } from "./AddressPicker";
 import { toast } from "sonner";
 
 export interface AddressFormData {
-  receiver_name: string;
-  receiver_phone: string;
+  receiverName: string;
+  receiverPhone: string;
   address: string; // số nhà, tên đường
   ward: string;
   district: string;
@@ -60,13 +60,13 @@ export function AddressFormModal({
     setSaving(true);
     try {
       await onSave({
-        receiver_name: receiverName,
-        receiver_phone: receiverPhone,
-        address: addrDetail,
-        ward: addrSel.ward.name,
-        district: addrSel.district.name,
-        city: addrSel.province.name,
-      });
+  receiverName: receiverName,
+  receiverPhone: receiverPhone,
+  address: addrDetail,
+  ward: addrSel.ward.name,
+  district: addrSel.district.name,
+  city: addrSel.province.name,
+});
       onClose();
     } catch {
       toast.error("Lưu địa chỉ thất bại");

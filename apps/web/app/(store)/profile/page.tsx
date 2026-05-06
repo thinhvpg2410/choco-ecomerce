@@ -59,6 +59,9 @@ export default function ProfilePage() {
   const [addrLoading, setAddrLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAddr, setEditingAddr] = useState<UserAddress | null>(null);
+  const [receiverPhone, setReceiverPhone] = useState("");
+  const [addrDetail, setAddrDetail] = useState("");
+  
 
   useEffect(() => {
     getMe().then((u) => {
@@ -75,6 +78,12 @@ export default function ProfilePage() {
       .then(setAddresses)
       .finally(() => setAddrLoading(false));
   }, []);
+
+//   useEffect(() => {
+//   setReceiverName(initial?.receiver_name ?? "");
+//   setReceiverPhone(initial?.receiver_phone ?? "");
+//   setAddrDetail(initial?.address ?? "");
+// }, [initial]);
 
   // Upload avatar
   const handleAvatarSelect = async (file: File) => {
@@ -109,16 +118,28 @@ export default function ProfilePage() {
   };
 
   const handleSaveAddress = async (data: AddressFormData) => {
+  try {
     if (editingAddr) {
+      // UPDATE
       const updated = await updateAddress(editingAddr.id, data);
+
       setAddresses((prev) =>
-        prev.map((a) => (a.id === updated.id ? updated : a)),
+        prev.map((a) => (a.id === updated.id ? updated : a))
       );
     } else {
+      // CREATE
       const created = await createAddress(data);
+
       setAddresses((prev) => [...prev, created]);
     }
-  };
+
+    // ✅ QUAN TRỌNG: reset UI
+    setModalOpen(false);
+    setEditingAddr(null);
+  } catch (error) {
+    console.error("Save address failed:", error);
+  }
+};
 
   const handleDeleteAddress = async (id: string) => {
     if (!confirm("Xóa địa chỉ này?")) return;
