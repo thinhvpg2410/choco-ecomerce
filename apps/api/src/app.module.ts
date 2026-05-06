@@ -17,11 +17,13 @@ import { BrandsModule } from './modules/brands/brands.module';
 import { UserAddressesModule } from './modules/user-addresses/user-addresses.module';
 import { BannersModule } from './modules/banners/banners.module';
 import { ProductImagesModule } from './modules/product-images/product-images.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from './common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PrismaModule } from './prisma/prisma.module';
 import { AppCacheModule } from './common/cache/cache.module';
+import { PayPalModule } from './modules/paypal/paypal.module';
 
 @Module({
   imports: [
@@ -45,6 +47,8 @@ import { AppCacheModule } from './common/cache/cache.module';
     UserAddressesModule,
     BannersModule,
     ProductImagesModule,
+    AdminModule,
+    PayPalModule,
   ],
   controllers: [AppController],
   providers: [

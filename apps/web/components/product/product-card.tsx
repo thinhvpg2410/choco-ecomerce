@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { addToCart } from "@/services/cart.service";
-import { toast } from "sonner"; // sửa lỗi typo "sooner" → "sonner"
+import { toast } from "sonner";
 
 interface Props {
   product: Product;
@@ -21,7 +21,6 @@ export function ProductCard({ product }: Props) {
     product.sale_price != null && product.sale_price < product.price;
   const isOutOfStock = product.stock === 0;
   const isLowStock = product.stock > 0 && product.stock <= 5;
-  const isOkStock = product.stock > 5;
 
   const discountPercentage = hasSale
     ? Math.round(((product.price - product.sale_price!) / product.price) * 100)
@@ -29,22 +28,24 @@ export function ProductCard({ product }: Props) {
 
   const changeQty = (e: React.MouseEvent, delta: number) => {
     e.preventDefault();
-    setQty((v) => Math.min(product.stock, Math.max(1, v + delta)));
+    setQty((v) => Math.min(product.stock || 1, Math.max(1, v + delta)));
   };
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isAdding || isOutOfStock) return;
+    if (isAdding || isOutOfStock || !product?.id) return;
+
     setIsAdding(true);
     try {
-      await addToCart({ product_id: product.id, quantity: qty });
+      await addToCart({ product_id: String(product.id), quantity: qty });
       setIsAdded(true);
       toast.success(`Đã thêm ${qty} sản phẩm vào giỏ!`);
+
       setTimeout(() => {
         setIsAdded(false);
         setQty(1);
       }, 1800);
-    } catch {
+    } catch (err) {
       toast.error("Thêm vào giỏ thất bại, thử lại nhé!");
     } finally {
       setIsAdding(false);
@@ -52,136 +53,140 @@ export function ProductCard({ product }: Props) {
   };
 
   return (
-    <Link href={`/product/${product.id}`} className="group block">
-      <div className="bg-white rounded-2xl overflow-hidden border border-[#ebebeb] hover:shadow-[0_20px_48px_rgba(0,0,0,0.10)] transition-all duration-300 flex flex-col h-full">
-        {/* ẢNH */}
-        <div className="relative aspect-square overflow-hidden">
+    <Link href={`/product/${product.id}`} className="group block h-full">
+      <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col h-full relative">
+        {/* Ảnh + Overlay */}
+        <div className="relative aspect-[4/3.8] overflow-hidden bg-gray-50 flex-shrink-0">
           <img
             src={product.image_url}
             alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.08]"
           />
-          {/* overlay mờ dưới ảnh */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/[0.08] to-transparent pointer-events-none" />
 
+          {/* Overlay gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+          {/* Badges */}
           {hasSale && (
-            <span className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-full">
+            <span className="absolute top-4 left-4 bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded-2xl shadow z-10">
               -{discountPercentage}%
             </span>
           )}
           {product.is_new && !hasSale && (
-            <span className="absolute top-2.5 right-2.5 bg-violet-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-full">
+            <span className="absolute top-4 right-4 bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-2xl z-10">
               Mới
             </span>
           )}
+
+          {/* Overlay: Quantity + Add to Cart */}
+          <div className="absolute bottom-0 left-0 right-0 p-5 translate-y-6 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
+            {/* Quantity */}
+            <div
+              className={`flex items-center justify-between mb-4 ${isOutOfStock ? "opacity-40 pointer-events-none" : ""}`}
+            >
+              <span className="text-white text-sm font-medium">Số lượng</span>
+              <div className="flex items-center bg-white/95 backdrop-blur-sm border border-white/30 rounded-2xl overflow-hidden">
+                <button
+                  onClick={(e) => changeQty(e, -1)}
+                  disabled={qty <= 1}
+                  className="w-9 h-8 flex items-center justify-center text-lg text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition"
+                >
+                  −
+                </button>
+                <span className="w-10 text-center font-semibold text-gray-800">
+                  {qty}
+                </span>
+                <button
+                  onClick={(e) => changeQty(e, 1)}
+                  disabled={qty >= (product.stock || 1)}
+                  className="w-9 h-8 flex items-center justify-center text-lg text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Nút Add to Cart */}
+            <Button
+              onClick={handleAddToCart}
+              disabled={isAdding || isOutOfStock}
+              className={`w-full h-12 rounded-2xl text-sm font-bold tracking-wider overflow-hidden relative group/btn
+                ${
+                  isAdded
+                    ? "bg-emerald-600"
+                    : isOutOfStock
+                      ? "bg-gray-400 text-white"
+                      : "bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-700 hover:to-rose-700"
+                } text-white transition-all duration-300`}
+            >
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                {isAdded ? (
+                  <>
+                    <Check className="w-5 h-5" /> Đã thêm!
+                  </>
+                ) : isAdding ? (
+                  "Đang thêm..."
+                ) : isOutOfStock ? (
+                  "Hết hàng"
+                ) : (
+                  <>
+                    <ShoppingCart className="w-5 h-5" />
+                    Thêm vào giỏ
+                  </>
+                )}
+              </span>
+
+              {!isAdded && !isOutOfStock && (
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12 -translate-x-full group-hover/btn:translate-x-[200%] transition-transform duration-700" />
+              )}
+            </Button>
+          </div>
         </div>
 
-        {/* NỘI DUNG */}
-        <div className="p-3.5 flex flex-col gap-1 flex-1">
-          {/* Brand */}
+        {/* Thông tin sản phẩm */}
+        <div className="p-5 flex-1 flex flex-col">
           {product.brand?.name && (
-            <p className="text-[10.5px] text-[#b0aaa0] uppercase tracking-[.06em] font-semibold">
+            <p className="text-xs text-amber-700/70 uppercase tracking-widest font-semibold">
               {product.brand.name}
             </p>
           )}
-          {/* Tên 2 dòng rồi ... */}
-          <h3 className="text-2xl h-16 font-semibold text-[#3b1d14] line-clamp-2 group-hover:text-[#a67c2d] transition-colors">
+
+          {/* 🔥 Phần tên sản phẩm - ĐÃ FIX */}
+          <h3 className="text-xl font-semibold text-gray-800 line-clamp-2 min-h-[3.2em] mt-2 mb-3 group-hover:text-amber-800 transition-colors">
             {product.name}
           </h3>
 
-          {/* Giá */}
-          <div className="flex items-baseline gap-0.5">
-            {hasSale ? (
-              <>
-                <span className="text-xl font-extrabold text-rose-600">
-                  {product.sale_price!.toLocaleString("vi-VN")}đ
-                </span>
-                {/* <span className="text-[11.5px] text-[#d1ccc4] line-through">
+          <div className="mt-auto">
+            <div className="flex items-baseline gap-2">
+              {hasSale ? (
+                <>
+                  <span className="text-2xl font-bold text-rose-600">
+                    {product.sale_price!.toLocaleString("vi-VN")}đ
+                  </span>
+                  <span className="text-sm text-gray-400 line-through">
+                    {product.price.toLocaleString("vi-VN")}đ
+                  </span>
+                </>
+              ) : (
+                <span className="text-2xl font-bold text-rose-600">
                   {product.price.toLocaleString("vi-VN")}đ
-                </span> */}
-              </>
-            ) : (
-              <span className="text-xl font-extrabold text-rose-600">
-                {product.price.toLocaleString("vi-VN")}đ
-              </span>
-            )}
-          </div>
-
-          {/* Tồn kho */}
-          {isOkStock && (
-            <p className="text-base font-extrabold text-[#8D6E63]">
-              Còn {product.stock} sản phẩm
-            </p>
-          )}
-          {isLowStock && (
-            <p className="text-base font-extrabold text-amber-500">
-              Còn {product.stock} sản phẩm
-            </p>
-          )}
-          {isOutOfStock && (
-            <p className="text-base font-extrabold text-red-500">Hết hàng</p>
-          )}
-
-          {/* Divider */}
-          <div className="h-px bg-[#f3f0eb] my-0.5" />
-
-          {/* Quantity picker */}
-          <div
-            className={`flex items-center justify-between ${isOutOfStock ? "opacity-35 pointer-events-none" : ""}`}
-          >
-            <span className="text-sm text-[#6b4f3b]">
-              Số lượng
-            </span>
-            <div className="flex items-center border-[1.5px] border-[#f0ede8] rounded-[10px] overflow-hidden bg-[#fafafa]">
-              <button
-                onClick={(e) => changeQty(e, -1)}
-                disabled={qty <= 1}
-                className="w-[30px] h-[28px] flex items-center justify-center text-base font-medium text-gray-700 hover:bg-pink-50 hover:text-pink-600 disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
-              >
-                −
-              </button>
-              <span className="min-w-[28px] text-center text-[13px] font-bold text-[#1a1a1a]">
-                {qty}
-              </span>
-              <button
-                onClick={(e) => changeQty(e, 1)}
-                disabled={qty >= product.stock}
-                className="w-[30px] h-[28px] flex items-center justify-center text-base font-medium text-gray-700 hover:bg-pink-50 hover:text-pink-600 disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
-              >
-                +
-              </button>
+                </span>
+              )}
             </div>
-          </div>
 
-          {/* Nút thêm giỏ */}
-          <Button
-            onClick={handleAddToCart}
-            disabled={isAdding || isOutOfStock}
-            className={`mt-2 w-full rounded-xl text-[13px] font-bold tracking-wide transition-all duration-300
-              ${
-                isAdded
-                  ? "bg-emerald-500 hover:bg-emerald-500"
-                  : isOutOfStock
-                    ? "bg-gray-200 text-gray-400 cursor-not-allowed hover:bg-gray-200"
-                    : "bg-gradient-to-br from-orange-500 to-pink-500 hover:opacity-90 active:scale-[.98]"
-              } text-white`}
-          >
-            {isAdded ? (
-              <>
-                <Check className="w-4 h-4" /> Đã thêm {qty} vào giỏ!
-              </>
-            ) : isAdding ? (
-              "Đang thêm..."
-            ) : isOutOfStock ? (
-              <>
-                <ShoppingCart className="w-4 h-4" /> Hết hàng
-              </>
+            {/* Stock */}
+            {isOutOfStock ? (
+              <p className="text-red-500 text-sm mt-1">Hết hàng</p>
+            ) : isLowStock ? (
+              <p className="text-amber-600 text-sm mt-1">
+                Chỉ còn {product.stock} sản phẩm
+              </p>
             ) : (
-              <>
-                <ShoppingCart className="w-4 h-4" /> Thêm vào giỏ
-              </>
+              <p className="text-emerald-600 text-sm mt-1">
+                Còn {product.stock} sản phẩm
+              </p>
             )}
-          </Button>
+          </div>
         </div>
       </div>
     </Link>

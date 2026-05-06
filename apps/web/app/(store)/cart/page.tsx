@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { addToCart, getCart, getProductById, updateCartItem } from "@/services/cart.service";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getCart, getProductById, removeFromCart, updateCartItem } from "@/services/cart.service";
 import { CartItem } from "@/types/type";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { removeFromCart } from "@/services/cart.service";
+import { toast } from "sonner";
 import Link from "next/link";
 
 
 export default function CartPage() {
+  const router = useRouter();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
   const [productsMap, setProductsMap] = useState<Record<string, any>>({});
-  const [isAdding, setIsAdding] = useState(false);
-  const [qty, setQty] = useState(1);
 
   useEffect(() => {
     (async () => {
@@ -49,8 +49,9 @@ export default function CartPage() {
   }, []);
 
   // Lọc ra các item đã chọn
-  const selectedItems = items.filter((item) =>
-    selected.includes(String(item.product_id))
+  const selectedItems = useMemo(
+    () => items.filter((item) => selected.includes(String(item.product_id))),
+    [items, selected],
   );
 
   // Xóa sản phẩm khỏi giỏ
@@ -69,31 +70,34 @@ export default function CartPage() {
   };
   
   // Xử lý mua ngay
-  const handleBuyNow = async () => {
-  if (selectedItems.length === 0) {
-    alert("Vui lòng chọn sản phẩm trước khi thanh toán");
-    return;
-  }
+  const handleBuyNow = () => {
+    if (selectedItems.length === 0) {
+      toast.error("Vui lòng chọn sản phẩm trước khi thanh toán");
+      return;
+    }
 
-  const checkoutData = selectedItems.map((item) => ({
-    product_id: item.product_id,
-    name: item.product?.name ?? productsMap[item.product_id]?.name,
-    image: item.product?.image_url ?? productsMap[item.product_id]?.image_url,
-    price: item.price,
-    quantity: item.quantity,
-    stock: item.product?.stock ?? 100,
-  }));
+    const checkoutData = selectedItems.map((item) => ({
+      product_id: item.product_id,
+      name: item.product?.name ?? productsMap[item.product_id]?.name,
+      image: item.product?.image_url ?? productsMap[item.product_id]?.image_url,
+      price: item.price,
+      quantity: item.quantity,
+      stock: item.product?.stock ?? 100,
+    }));
 
-  localStorage.setItem(
-    "checkout_cart",
-    JSON.stringify({
-      items: checkoutData,
-      subtotal,
-    })
-  );
+    const cartItemIds = selectedItems.map((item) => item.product_id);
 
-  window.location.href = "/checkout";
-};
+    localStorage.setItem(
+      "checkout_cart",
+      JSON.stringify({
+        items: checkoutData,
+        subtotal,
+        cart_item_ids: cartItemIds,
+      }),
+    );
+
+    router.push("/checkout");
+  };
 
   // Tính tổng tiền của các sản phẩm đã chọn
   const subtotal = selectedItems.reduce(
@@ -104,18 +108,40 @@ export default function CartPage() {
   // Định dạng tiền Việt
   const fmt = (n: number) => n.toLocaleString("vi-VN") + "đ";
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-14">
+        <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
+      </div>
+    );
+  }
 
-  // Chọn tất cả 
+  if (!items.length) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4 text-center">
+        <div className="w-24 h-24 rounded-full bg-rose-50 flex items-center justify-center">
+          <ShoppingBag className="w-10 h-10 text-rose-500" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900">Giỏ hàng của bạn đang trống</h2>
+        <p className="max-w-sm text-sm text-gray-500">
+          Thêm sản phẩm yêu thích vào giỏ rồi quay lại đây để thanh toán nhanh chóng.
+        </p>
+        <Link href="/" className="px-6 py-3 rounded-full bg-rose-500 text-white font-semibold hover:bg-rose-600">
+          Tiếp tục mua sắm
+        </Link>
+      </div>
+    );
+  }
+
   const isAllSelected =
     items.length > 0 &&
-    items.every((item) => selected.includes(item.product_id));
+    items.every((item) => selected.includes(String(item.product_id)));
 
   const toggleSelectAll = () => {
-    if (items.every((item) => selected.includes(item.product_id))) {
+    if (isAllSelected) {
       setSelected([]);
     } else {
-      setSelected(items.map((i) => i.product_id));
+      setSelected(items.map((i) => String(i.product_id)));
     }
   };
   

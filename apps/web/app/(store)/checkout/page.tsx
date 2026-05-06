@@ -13,18 +13,22 @@ import {
   Loader2,
   X,
 } from "lucide-react";
+
+import api from "@/services/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { createOrder } from "@/services/order.service";
 import { createPayment } from "@/services/payment.service";
-import { getCart } from "@/services/cart.service";
 import type { CartItem } from "@/types/type";
 import {
   AddressFormModal,
   type AddressFormData,
 } from "@/components/address/AddressModal";
+
+// ==================== PAYPAL ====================
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -33,6 +37,7 @@ export default function CheckoutPage() {
   const [loadingCart, setLoadingCart] = useState(true);
   const [addrOpen, setAddrOpen] = useState(false);
   const [savedAddr, setSavedAddr] = useState<AddressFormData | null>(null);
+  const [cartItemIds, setCartItemIds] = useState<string[]>([]);
 
   const [voucherInput, setVoucherInput] = useState("");
   const [voucherApplied, setVoucherApplied] = useState<{
@@ -41,16 +46,36 @@ export default function CheckoutPage() {
     label: string;
   } | null>(null);
   const [voucherError, setVoucherError] = useState("");
-  const [payMethod, setPayMethod] = useState<"COD">("COD");
+  const [payMethod, setPayMethod] = useState<"COD" | "PAYPAL">("COD");
   const [note, setNote] = useState("");
   const [placing, setPlacing] = useState(false);
 
+  // PayPal Configuration
+  const paypalOptions = {
+    "client-id":
+      "ASFKGN8SnTQC9y2NLY2uY1Y3x28pKrY2V8Z4iqDAWYMaQPXmBFhkYrpXShl4JNbEYGRlUruBdjWi2ryl", // ← Thay bằng Client ID thật của bạn
+    currency: "USD", // Khuyến nghị dùng USD
+    intent: "capture" as const,
+  };
+
   useEffect(() => {
     const data = localStorage.getItem("checkout_cart");
+    const savedAddress = localStorage.getItem("checkout_shipping");
 
     if (data) {
       const parsed = JSON.parse(data);
+
       setItems(parsed.items ?? []);
+
+      const safeIds = (parsed.cart_item_ids ?? [])
+        .filter((id: any) => id !== null && id !== undefined && id !== "")
+        .map((id: any) => String(id));
+
+      setCartItemIds(safeIds);
+    }
+
+    if (savedAddress) {
+      setSavedAddr(JSON.parse(savedAddress));
     }
 
     setLoadingCart(false);
@@ -87,6 +112,7 @@ export default function CheckoutPage() {
       : v.pct
         ? Math.round((subtotal * v.pct) / 100)
         : (v.fixed ?? 0);
+
     setVoucherApplied({
       code,
       discount: disc,
@@ -99,29 +125,46 @@ export default function CheckoutPage() {
     toast.success(`Áp dụng mã ${code} thành công!`);
   };
 
-  const placeOrder = async () => {
+  const placeOrder = async (paymentId?: string, paypalOrderId?: string) => {
     if (!savedAddr) {
       toast.error("Vui lòng thêm địa chỉ giao hàng");
       return;
     }
+
     if (items.length === 0) {
       toast.error("Giỏ hàng trống");
       return;
     }
+
     setPlacing(true);
+
     try {
       const shippingAddress = `${savedAddr.address}, ${savedAddr.ward}, ${savedAddr.district}, ${savedAddr.city}`;
-      const order = await createOrder({
+
+      const payload = {
         receiver_name: savedAddr.receiver_name,
         receiver_phone: savedAddr.receiver_phone,
         shipping_address: shippingAddress,
         payment_method: payMethod,
         note: note || undefined,
+        cart_item_ids: cartItemIds,
+        paypal_order_id: paypalOrderId,
+      };
+
+      const order = await createOrder(payload);
+
+      // Tạo payment record
+      await createPayment({
+        order_id: order.id,
+        payment_method: payMethod,
+        transaction_id: paymentId,
       });
-      await createPayment({ order_id: order.id, payment_method: payMethod });
+
       toast.success("Đặt hàng thành công!");
+      localStorage.removeItem("checkout_cart");
       router.push(`/order/${order.id}`);
     } catch (err: any) {
+      console.error(err);
       toast.error(
         err?.response?.data?.message || "Đặt hàng thất bại, thử lại nhé!",
       );
@@ -134,6 +177,35 @@ export default function CheckoutPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-pink-500" />
+      </div>
+    );
+  }
+
+  if (!items.length) {
+    return (
+      <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center px-4">
+        <div className="max-w-xl w-full rounded-3xl bg-white p-10 text-center shadow-lg">
+          <div className="mx-auto mb-6 h-20 w-20 rounded-full bg-rose-50 flex items-center justify-center">
+            <ShoppingBag className="w-10 h-10 text-rose-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Không có sản phẩm để thanh toán
+          </h2>
+          <p className="mt-3 text-sm text-gray-500">
+            Vui lòng chọn sản phẩm trong giỏ hàng để tới trang thanh toán.
+          </p>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Button
+              onClick={() => router.push("/cart")}
+              className="bg-gray-900 hover:bg-gray-800 text-white"
+            >
+              Quay lại giỏ hàng
+            </Button>
+            <Button onClick={() => router.push("/")} variant="outline">
+              Tiếp tục mua sắm
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -167,8 +239,8 @@ export default function CheckoutPage() {
                   <img
                     src={item.image}
                     alt={item.name}
-                  className="w-full h-full object-cover rounded"
-                />
+                    className="w-full h-full object-cover rounded"
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-gray-900 truncate">
@@ -295,28 +367,68 @@ export default function CheckoutPage() {
               onClick={() => setPayMethod("COD")}
               iconBg="bg-orange-50"
               icon={<ShoppingBag className="w-4 h-4 text-orange-500" />}
-              name="Thanh toán khi nhận hàng"
-              desc="Trả tiền mặt khi nhận · COD"
+              name="Thanh toán khi nhận hàng (COD)"
+              desc="Trả tiền mặt khi nhận hàng"
             />
+
             <PayOption
-              selected={false}
-              disabled
-              iconBg="bg-violet-50"
-              icon={<CreditCard className="w-4 h-4 text-violet-500" />}
-              name="VNPay / Thẻ ngân hàng"
-              desc="Thanh toán online qua VNPay"
-              soon
-            />
-            <PayOption
-              selected={false}
-              disabled
-              iconBg="bg-pink-50"
-              icon={<CreditCard className="w-4 h-4 text-pink-500" />}
-              name="Momo / ZaloPay"
-              desc="Ví điện tử"
-              soon
+              selected={payMethod === "PAYPAL"}
+              onClick={() => setPayMethod("PAYPAL")}
+              iconBg="bg-blue-50"
+              icon={<CreditCard className="w-4 h-4 text-blue-600" />}
+              name="Thanh toán qua PayPal"
+              desc="Thanh toán an toàn, nhanh chóng bằng PayPal"
             />
           </div>
+
+          {/* PayPal Buttons */}
+          {payMethod === "PAYPAL" && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+              <PayPalScriptProvider options={paypalOptions}>
+                <PayPalButtons
+                  style={{ layout: "vertical", shape: "rect", color: "blue" }}
+                  createOrder={async () => {
+  try {
+    const usdAmount = Math.max(0.01, Math.round((total / 23000) * 100) / 100); // đảm bảo tối thiểu 0.01 USD
+
+    console.log(`🔄 Gửi amount = ${usdAmount} USD (từ ${total}đ)`);
+
+    const response = await api.post("/paypal/create-order", {
+      amount: usdAmount,
+      currency: "USD",
+      description: `Đơn hàng Choco Kingdom #${Date.now()}`,
+    });
+
+    console.log("✅ PayPal Order created:", response.data);
+    return response.data.id;
+  } catch (err: any) {
+    console.error("❌ Create Order Failed:", err.response?.data || err);
+    
+    const errorMsg = err.response?.data?.message || err.message;
+    toast.error(`Lỗi tạo đơn PayPal: ${errorMsg}`);
+    throw err;
+  }
+}}
+                  onApprove={async (data, actions) => {
+                    try {
+                      const details = await actions.order.capture();
+                      console.log("✅ Payment captured:", details);
+
+                      toast.success("Thanh toán PayPal thành công!");
+                      await placeOrder(details.id, data.orderID);
+                    } catch (err) {
+                      console.error("onApprove Error:", err);
+                      toast.error("Xác nhận thanh toán thất bại");
+                    }
+                  }}
+                  onError={(err) => {
+                    console.error("PayPal SDK Error:", err);
+                    toast.error("Lỗi PayPal. Vui lòng thử lại sau.");
+                  }}
+                />
+              </PayPalScriptProvider>
+            </div>
+          )}
         </Section>
 
         {/* Lời nhắn */}
@@ -333,59 +445,62 @@ export default function CheckoutPage() {
           />
         </Section>
 
-        {/* Tổng */}
-        <Section
-          icon={<CreditCard className="w-4 h-4 text-rose-500" />}
-          iconBg="bg-rose-50"
-          title="Chi tiết thanh toán"
-        >
-          <div className="flex flex-col gap-2.5">
-            <SumRow
-              label={`Tạm tính (${items.length} sản phẩm)`}
-              value={fmt(subtotal)}
-            />
-            <SumRow label="Phí vận chuyển" value={fmt(SHIPPING)} />
-            {voucherApplied && (
-              <SumRow
-                label="Giảm giá voucher"
-                value={`-${fmt(voucherApplied.discount)}`}
-                green
-              />
-            )}
-            <div className="h-px bg-gray-100 my-0.5" />
-            <div className="flex items-center justify-between">
-              <span className="text-[15px] font-extrabold text-gray-900 tracking-tight">
-                Tổng cộng
-              </span>
-              <span className="text-[22px] font-black text-rose-500 tracking-tight">
-                {fmt(total)}
-              </span>
-            </div>
-          </div>
-          <Button
-            onClick={placeOrder}
-            disabled={placing}
-            className="w-full mt-4 h-14 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white text-[15px] font-black tracking-tight flex items-center justify-center gap-2 transition-all active:scale-[.99]"
+        {/* Tổng tiền - Chỉ hiển thị khi chọn COD */}
+        {payMethod === "COD" && (
+          <Section
+            icon={<CreditCard className="w-4 h-4 text-rose-500" />}
+            iconBg="bg-rose-50"
+            title="Chi tiết thanh toán"
           >
-            {placing ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" /> Đang xử lý...
-              </>
-            ) : (
-              <>
-                <Check className="w-5 h-5" /> Đặt hàng · {fmt(total)}
-              </>
-            )}
-          </Button>
-        </Section>
+            <div className="flex flex-col gap-2.5">
+              <SumRow
+                label={`Tạm tính (${items.length} sản phẩm)`}
+                value={fmt(subtotal)}
+              />
+              <SumRow label="Phí vận chuyển" value={fmt(SHIPPING)} />
+              {voucherApplied && (
+                <SumRow
+                  label="Giảm giá voucher"
+                  value={`-${fmt(voucherApplied.discount)}`}
+                  green
+                />
+              )}
+              <div className="h-px bg-gray-100 my-0.5" />
+              <div className="flex items-center justify-between">
+                <span className="text-[15px] font-extrabold text-gray-900 tracking-tight">
+                  Tổng cộng
+                </span>
+                <span className="text-[22px] font-black text-rose-500 tracking-tight">
+                  {fmt(total)}
+                </span>
+              </div>
+            </div>
+
+            <Button
+              onClick={() => placeOrder()}
+              disabled={placing}
+              className="w-full mt-4 h-14 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white text-[15px] font-black tracking-tight flex items-center justify-center gap-2 transition-all active:scale-[.99]"
+            >
+              {placing ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" /> Đang xử lý...
+                </>
+              ) : (
+                <>
+                  <Check className="w-5 h-5" /> Đặt hàng · {fmt(total)}
+                </>
+              )}
+            </Button>
+          </Section>
+        )}
       </div>
 
-      {/* Modal địa chỉ dùng chung */}
       {addrOpen && (
         <AddressFormModal
           initial={savedAddr}
           onSave={async (data: any) => {
             setSavedAddr(data);
+            localStorage.setItem("checkout_shipping", JSON.stringify(data));
           }}
           onClose={() => setAddrOpen(false)}
           title="Địa chỉ nhận hàng"
@@ -395,7 +510,7 @@ export default function CheckoutPage() {
   );
 }
 
-// ── Sub-components ──────────────────────────────────────────────────────────
+// ── Sub Components ──────────────────────────────────────────────────────────
 function Section({
   icon,
   iconBg,

@@ -1,5 +1,5 @@
 import api from "@/services/axios";
-import type { Order, OrderStatus } from "@/types/type";
+import type { Order, OrderStatus, PaymentStatus } from "@/types/type";
 
 export interface CreateOrderDto {
   receiver_name: string;
@@ -7,6 +7,7 @@ export interface CreateOrderDto {
   shipping_address: string;
   payment_method: string;
   note?: string;
+  cart_item_ids?: string[];
 }
 
 export interface OrderApiItem {
@@ -22,6 +23,7 @@ export interface OrderApiResponse {
   items: OrderApiItem[];
   total_amount: number;
   status: OrderStatus;
+  payment_status?: PaymentStatus;
   receiver_name: string;
   receiver_phone: string;
   shipping_address: string;

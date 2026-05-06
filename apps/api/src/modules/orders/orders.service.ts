@@ -29,11 +29,22 @@ export class OrdersService {
         throw new BadRequestException('Cart is empty');
       }
 
+      const selectedCartItems =
+        createOrderDto.cart_item_ids && createOrderDto.cart_item_ids.length > 0
+          ? cart.items.filter((item) =>
+              (createOrderDto.cart_item_ids ?? []).includes(item.productId),
+            )
+          : cart.items;
+
+      if (!selectedCartItems.length) {
+        throw new BadRequestException('No cart items selected for order');
+      }
+
       const orderItemsData: Prisma.OrderItemCreateWithoutOrderInput[] = [];
 
       let totalAmount = 0;
 
-      for (const cartItem of cart.items) {
+      for (const cartItem of selectedCartItems) {
         const product = await tx.product.findFirst({
           where: { id: cartItem.productId, isActive: true },
         });
@@ -43,7 +54,9 @@ export class OrdersService {
         }
 
         if (product.stock < cartItem.quantity) {
-          throw new ConflictException(`Not enough stock for product: ${product.name}`);
+          throw new ConflictException(
+            `Not enough stock for product: ${product.name}`,
+          );
         }
 
         const stockUpdate = await tx.product.updateMany({
@@ -56,7 +69,9 @@ export class OrdersService {
         });
 
         if (stockUpdate.count !== 1) {
-          throw new ConflictException(`Not enough stock for product: ${product.name}`);
+          throw new ConflictException(
+            `Not enough stock for product: ${product.name}`,
+          );
         }
 
         const unitPrice = Number(product.price);
@@ -82,12 +97,19 @@ export class OrdersService {
           receiverName: createOrderDto.receiver_name,
           receiverPhone: createOrderDto.receiver_phone,
           shippingAddress: createOrderDto.shipping_address,
+          paymentMethod: createOrderDto.payment_method,
+          note: createOrderDto.note,
           items: { create: orderItemsData },
         },
         include: { items: true },
       });
 
-      await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+      await tx.cartItem.deleteMany({
+        where: {
+          cartId: cart.id,
+          id: { in: selectedCartItems.map((item) => item.id) },
+        },
+      });
 
       return order;
     });
@@ -114,7 +136,11 @@ export class OrdersService {
     };
   }
 
-  async findById(orderId: string, requesterId: string, requesterRole: UserRole) {
+  async findById(
+    orderId: string,
+    requesterId: string,
+    requesterRole: UserRole,
+  ) {
     this.validateOrderId(orderId);
     this.validateUserId(requesterId);
 
@@ -153,7 +179,10 @@ export class OrdersService {
     };
   }
 
-  async updateOrderStatus(orderId: string, updateOrderStatusDto: UpdateOrderStatusDto) {
+  async updateOrderStatus(
+    orderId: string,
+    updateOrderStatusDto: UpdateOrderStatusDto,
+  ) {
     this.validateOrderId(orderId);
     try {
       const order = await this.prisma.order.update({
@@ -187,20 +216,27 @@ export class OrdersService {
     return {
       id: order.id,
       user_id: order.userId,
-      items: order.items?.map((item) => ({
-        product_id: item.productId,
-        variant_id: item.variantId,
-        name: item.productNameAtTime,
-        image: item.productImageAtTime,
-        price: Number(item.price),
-        sale_price: item.salePrice ? Number(item.salePrice) : null,
-        quantity: item.quantity,
-      })) || [],
+
+      items:
+        order.items?.map((item) => ({
+          product_id: item.productId,
+          name: item.productNameAtTime,
+          image: item.productImageAtTime,
+          price: Number(item.price),
+          sale_price: item.salePrice ? Number(item.salePrice) : null,
+          quantity: item.quantity,
+        })) || [],
+
       total_amount: Number(order.totalAmount),
+
+      payment_method: order.paymentMethod,
+      payment_status: order.paymentStatus, 
       status: order.status,
+
       receiver_name: order.receiverName,
       receiver_phone: order.receiverPhone,
       shipping_address: order.shippingAddress,
+      note: order.note,
       createdAt: order.createdAt,
     };
   }

@@ -7,7 +7,7 @@ import { getProducts } from "@/services/product.service";
 import { generatePagination } from "@/lib/pagination";
 import Link from "next/link";
 import { unstable_noStore as noStore } from "next/cache";
-import ProductFilters from "../../lib/product-filters"; // ← sửa đường dẫn nếu cần
+import ProductFilters from "../../../lib/product-filters"; // ← sửa đường dẫn nếu cần
 
 type SearchParams = {
   page?: string;
