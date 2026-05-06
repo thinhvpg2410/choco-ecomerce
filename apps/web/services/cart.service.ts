@@ -42,10 +42,30 @@ export const getCart = async (): Promise<Cart | null> => {
 export const addToCart = async (dto: AddToCartDto): Promise<Cart | null> => {
   try {
     const res = await api.post("/cart/add", dto);
-    return res.data?.data || null;
+
+    const cart = res.data?.data;
+
+    // 🔥 SYNC LOCAL STORAGE
+    if (cart?.items) {
+      localStorage.setItem(
+        "checkout_cart",
+        JSON.stringify({
+          items: cart.items.map((i: any) => ({
+            id: i.product_id,
+            name: i.product_name,
+            price: i.price,
+            quantity: i.quantity,
+            image: i.image,
+          })),
+          cart_item_ids: cart.items.map((i: any) => String(i.product_id)),
+        }),
+      );
+    }
+
+    return cart || null;
   } catch (error: any) {
     console.error("❌ Add to cart error:", error?.response?.data || error);
-    throw error; // throw để component bắt và hiện toast lỗi
+    throw error;
   }
 };
 

@@ -32,7 +32,6 @@ export class CartService {
       where: {
         cartId: cart.id,
         productId: product.id,
-        variantId: addToCartDto.variant_id ?? null,
       },
     });
 
@@ -73,7 +72,6 @@ export class CartService {
       where: {
         cartId: cart.id,
         productId: updateCartItemDto.product_id,
-        variantId: updateCartItemDto.variant_id ?? null,
       },
     });
 

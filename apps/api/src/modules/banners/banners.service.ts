@@ -1,3 +1,4 @@
+// src/modules/banners/banners.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBannerDto } from './dto/create-banner.dto';
@@ -12,15 +13,28 @@ export class BannersService {
   ) {}
 
   async create(dto: CreateBannerDto) {
-    return this.prisma.banner.create({
-      data: dto,
+    return this.prisma.banner.create({ data: dto });
+  }
+
+  async findAll(isActiveOnly: boolean = false) {
+    return this.prisma.banner.findMany({
+      where: isActiveOnly ? { isActive: true } : {},
+      orderBy: { sortOrder: 'asc' },
+      select: {
+        id: true,
+        description: true,
+        imageUrl: true, 
+        productId: true, 
+        isActive: true, 
+        sortOrder: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 
-  async findAll() {
-    return this.prisma.banner.findMany({
-      orderBy: { sortOrder: 'asc' },
-    });
+  async findActiveBanners() {
+    return this.findAll(true);
   }
 
   async findOne(id: string) {
@@ -40,7 +54,7 @@ export class BannersService {
     const imageUrl = await this.uploadService.uploadImage(file, 'banners');
     return this.prisma.banner.update({
       where: { id },
-      data: { imageUrl },
+      data: { imageUrl }, // ← sửa thành imageUrl
     });
   }
 

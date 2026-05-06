@@ -1,3 +1,4 @@
+// src/modules/banners/banners.controller.ts
 import {
   Body,
   Controller,
@@ -6,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
@@ -15,6 +17,7 @@ import {
   ApiBody,
   ApiConsumes,
   ApiOkResponse,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { BannersService } from './banners.service';
@@ -29,13 +32,21 @@ export class BannersController {
   constructor(private readonly bannersService: BannersService) {}
 
   @Get()
-  @ApiOkResponse({ description: 'List banners' })
-  async findAll() {
-    return this.bannersService.findAll();
+  @ApiOkResponse({ description: 'Lấy danh sách banner' })
+  @ApiQuery({ name: 'active', required: false, type: Boolean })
+  async findAll(@Query('active') active?: string) {
+    const isActiveOnly = active === 'true';
+    return this.bannersService.findAll(isActiveOnly);
+  }
+
+  @Get('active')
+  @ApiOkResponse({ description: 'Lấy banner đang active (dùng cho homepage)' })
+  async findActiveBanners() {
+    return this.bannersService.findActiveBanners();
   }
 
   @Get(':id')
-  @ApiOkResponse({ description: 'Banner details' })
+  @ApiOkResponse({ description: 'Chi tiết banner' })
   async findOne(@Param('id') id: string) {
     return this.bannersService.findOne(id);
   }
@@ -65,10 +76,7 @@ export class BannersController {
     schema: {
       type: 'object',
       properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-        },
+        file: { type: 'string', format: 'binary' },
       },
     },
   })

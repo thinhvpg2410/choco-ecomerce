@@ -51,8 +51,9 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
       toast.success(`Chào mừng ${user.username} quay trở lại!`);
 
-      // Dùng replace để xóa trang login khỏi lịch sử trình duyệt
-      router.replace("/");
+      // Chuyển hướng dựa trên role của user
+      const redirectPath = user.role === "admin" ? "/admin" : "/";
+      router.replace(redirectPath);
       router.refresh();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Đăng nhập thất bại");
