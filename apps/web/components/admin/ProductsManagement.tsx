@@ -204,25 +204,33 @@ export function ProductsManagement() {
                     <TableRow key={p.id}>
                       {/* PRODUCT */}
                       <TableCell className="flex items-center gap-3">
-                        <img
-                          src={p.image_url || "/image/fallback.png"}
-                          className="w-10 h-10 rounded object-cover"
-                        />
+                        <div className="flex gap-1">
+                          <img
+                            src={p.image_url || "/image/fallback.png"}
+                            className="w-10 h-10 rounded object-cover border"
+                            alt={p.name}
+                          />
+                          {p._count?.productImages > 0 && (
+                            <div className="text-xs bg-muted px-1.5 rounded flex items-center">
+                              +{p._count.productImages}
+                            </div>
+                          )}
+                        </div>
                         <div>
-                          <p className="font-medium">{p.name}</p>
-                          <div className="flex gap-1">
-                            {p.is_best_seller && (
-                              <Star className="w-3 h-3 text-yellow-500" />
-                            )}
-                            {p.is_new && (
-                              <Sparkles className="w-3 h-3 text-blue-500" />
-                            )}
-                          </div>
+                          <p className="font-medium line-clamp-1">{p.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {p.sku}
+                          </p>
                         </div>
                       </TableCell>
 
                       <TableCell>{p.sku}</TableCell>
-                      <TableCell>${p.price}</TableCell>
+                      <TableCell>
+                        {Number(p.price).toLocaleString("vi-VN", {
+                          style: "currency",
+                          currency: "VND",
+                        })}
+                      </TableCell>
 
                       <TableCell>
                         <Badge variant={stock.variant}>{stock.label}</Badge>

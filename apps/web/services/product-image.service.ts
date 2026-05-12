@@ -1,31 +1,28 @@
-import axios from '@/services/axios';
+import api from "@/services/axios";
 
 export const productImageService = {
-  async uploadImage(file: File, productId: string, sortOrder?: number) {
+  // Upload ảnh phụ
+  async uploadImage(file: File, productId: string, sortOrder: number = 0) {
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('productId', productId);
-    if (sortOrder !== undefined) {
-      formData.append('sortOrder', sortOrder.toString());
-    }
+    formData.append("file", file);
+    formData.append("productId", productId);
+    formData.append("sortOrder", sortOrder.toString());
 
-    const response = await axios.post('/product-images/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    const res = await api.post("/product-images/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
-
-    return response.data;
+    return res.data;
   },
 
-  async getProductImages(productId?: string) {
-    const params = productId ? { product_id: productId } : {};
-    const response = await axios.get('/product-images', { params });
-    return response.data;
+  // Lấy danh sách ảnh phụ của sản phẩm
+  async getProductImages(productId: string) {
+    const res = await api.get(`/product-images?product_id=${productId}`);
+    return res.data;
   },
 
-  async deleteProductImage(id: string) {
-    const response = await axios.delete(`/product-images/${id}`);
-    return response.data;
+  // Xóa ảnh phụ
+  async deleteImage(id: string) {
+    const res = await api.delete(`/product-images/${id}`);
+    return res.data;
   },
 };

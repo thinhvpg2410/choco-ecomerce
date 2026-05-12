@@ -113,45 +113,52 @@ export class ProductsService {
       await this.ensureBrandExists(createProductDto.brand_id);
     }
 
-    const createdProduct = await this.prisma.product.create({
+    const createdProduct: ProductPublicRow = await this.prisma.product.create({
       data: {
         name: createProductDto.name,
-        slug: createProductDto.slug,
+        slug:
+          createProductDto.slug ||
+          createProductDto.name
+            .toLowerCase()
+            .trim()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-'),
+
         shortDescription: createProductDto.short_description,
         description: createProductDto.description,
         sku: createProductDto.sku,
+
         price: createProductDto.price,
         salePrice: createProductDto.sale_price,
         costPrice: createProductDto.cost_price,
+
         stock: createProductDto.stock,
-        imageUrl: createProductDto.image_url,
+
+        imageUrl:
+          createProductDto.image_url || 'https://placehold.co/600x600/png',
+
         categoryId: createProductDto.category_id,
         brandId: createProductDto.brand_id,
+
         ingredients: createProductDto.ingredients,
         nutritionInfo: createProductDto.nutrition_info,
         origin: createProductDto.origin,
+
         weight: createProductDto.weight,
         weightUnit: createProductDto.weight_unit,
         packageType: createProductDto.package_type,
+
         isActive: createProductDto.is_active ?? true,
         isFeatured: createProductDto.is_featured ?? false,
         isBestSeller: createProductDto.is_best_seller ?? false,
         isNew: createProductDto.is_new ?? false,
       },
-      include: {
-        category: true,
-        brand: true,
-        productImages: {
-          orderBy: { sortOrder: 'asc' },
-          select: {
-            id: true,
-            imageUrl: true,
-            sortOrder: true,
-            isMain: true,
-            createdAt: true,
-          },
-        },
-      },
+
+      select: productPublicSelect,
     });
 
     await this.cache.invalidateAfterProductWrite(createdProduct.id);

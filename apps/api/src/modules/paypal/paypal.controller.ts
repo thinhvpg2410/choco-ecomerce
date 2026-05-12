@@ -18,4 +18,11 @@ export class PayPalController {
   async createOrder(@Body() dto: CreatePayPalOrderDto) {
     return this.paypalService.createOrder(dto);
   }
+
+  @Post('capture-order')
+  async captureOrder(@Body() body: { orderId: string }) {
+    return this.paypalService.captureOrder(body.orderId);
+  }
 }
+
+

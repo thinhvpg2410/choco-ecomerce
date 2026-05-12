@@ -61,7 +61,10 @@ export class ReviewsService {
         data: this.toReviewResponse(review),
       };
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException('You have already reviewed this product');
       }
       throw error;
@@ -89,6 +92,16 @@ export class ReviewsService {
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
+
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+        },
       }),
       this.prisma.review.count({ where: { productId } }),
     ]);
@@ -108,7 +121,12 @@ export class ReviewsService {
     };
   }
 
-  async update(reviewId: string, userId: string, role: UserRole, dto: UpdateReviewDto) {
+  async update(
+    reviewId: string,
+    userId: string,
+    role: UserRole,
+    dto: UpdateReviewDto,
+  ) {
     this.assertUuid(reviewId, 'Review not found');
     this.assertUuid(userId, 'User not found');
 
@@ -184,11 +202,14 @@ export class ReviewsService {
     };
   }
 
-  private async hasDeliveredPurchase(userId: string, productId: string): Promise<boolean> {
+  private async hasDeliveredPurchase(
+    userId: string,
+    productId: string,
+  ): Promise<boolean> {
     const order = await this.prisma.order.findFirst({
       where: {
         userId,
-        status: OrderStatus.DELIVERED,
+        //status: OrderStatus.DELIVERED,
         items: { some: { productId } },
       },
       select: { id: true },
@@ -209,7 +230,9 @@ export class ReviewsService {
 
     const count = agg._count._all;
     const average =
-      count === 0 || agg._avg.rating === null ? null : Number(agg._avg.rating.toFixed(2));
+      count === 0 || agg._avg.rating === null
+        ? null
+        : Number(agg._avg.rating.toFixed(2));
 
     await tx.product.update({
       where: { id: productId },
@@ -226,33 +249,40 @@ export class ReviewsService {
     }
   }
 
-  private toReviewResponse(review: {
-    id: string;
-    userId: string;
-    productId: string;
-    rating: number;
-    comment: string | null;
-    createdAt: Date;
-  }) {
-    const row: {
-      id: string;
-      user_id: string;
-      product_id: string;
-      rating: number;
-      created_at: string;
-      comment?: string;
-    } = {
+  private toReviewResponse(review: any) {
+    return {
       id: review.id,
       user_id: review.userId,
       product_id: review.productId,
       rating: review.rating,
+      comment: review.comment ?? undefined,
       created_at: review.createdAt.toISOString(),
+
+      user: review.user
+        ? {
+            id: review.user.id,
+            full_name: review.user.username,
+            avatar_url: review.user.avatarUrl,
+          }
+        : null,
     };
+  }
 
-    if (review.comment !== null && review.comment !== '') {
-      row.comment = review.comment;
-    }
+  async getMyReviewForProduct(userId: string, productId: string) {
+    this.assertUuid(userId, 'User not found');
+    this.assertUuid(productId, 'Product not found');
 
-    return row;
+    const review = await this.prisma.review.findFirst({
+      where: {
+        userId,
+        productId,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Review fetched successfully',
+      data: review ? this.toReviewResponse(review) : null,
+    };
   }
 }

@@ -12,6 +12,7 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Public } from '../../common/decorators/public.decorator';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -31,6 +32,7 @@ import { UserRole } from '@prisma/client';
 export class BannersController {
   constructor(private readonly bannersService: BannersService) {}
 
+  @Public()
   @Get()
   @ApiOkResponse({ description: 'Lấy danh sách banner' })
   @ApiQuery({ name: 'active', required: false, type: Boolean })
@@ -39,12 +41,14 @@ export class BannersController {
     return this.bannersService.findAll(isActiveOnly);
   }
 
+  @Public()
   @Get('active')
   @ApiOkResponse({ description: 'Lấy banner đang active (dùng cho homepage)' })
   async findActiveBanners() {
     return this.bannersService.findActiveBanners();
   }
 
+  @Public()
   @Get(':id')
   @ApiOkResponse({ description: 'Chi tiết banner' })
   async findOne(@Param('id') id: string) {

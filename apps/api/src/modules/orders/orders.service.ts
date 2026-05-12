@@ -29,11 +29,11 @@ export class OrdersService {
         throw new BadRequestException('Cart is empty');
       }
 
+      const cartItemIds = createOrderDto.cart_item_ids ?? [];
+
       const selectedCartItems =
-        createOrderDto.cart_item_ids && createOrderDto.cart_item_ids.length > 0
-          ? cart.items.filter((item) =>
-              (createOrderDto.cart_item_ids ?? []).includes(item.productId),
-            )
+        cartItemIds.length > 0
+          ? cart.items.filter((item) => cartItemIds.includes(item.productId))
           : cart.items;
 
       if (!selectedCartItems.length) {
@@ -41,7 +41,6 @@ export class OrdersService {
       }
 
       const orderItemsData: Prisma.OrderItemCreateWithoutOrderInput[] = [];
-
       let totalAmount = 0;
 
       for (const cartItem of selectedCartItems) {
@@ -50,7 +49,9 @@ export class OrdersService {
         });
 
         if (!product) {
-          throw new NotFoundException('Product not found');
+          throw new NotFoundException(
+            `Product not found: ${cartItem.productId}`,
+          );
         }
 
         if (product.stock < cartItem.quantity) {
@@ -59,22 +60,13 @@ export class OrdersService {
           );
         }
 
-        const stockUpdate = await tx.product.updateMany({
-          where: {
-            id: product.id,
-            isActive: true,
-            stock: { gte: cartItem.quantity },
-          },
+        // Cập nhật stock
+        await tx.product.update({
+          where: { id: product.id },
           data: { stock: { decrement: cartItem.quantity } },
         });
 
-        if (stockUpdate.count !== 1) {
-          throw new ConflictException(
-            `Not enough stock for product: ${product.name}`,
-          );
-        }
-
-        const unitPrice = Number(product.price);
+        const unitPrice = Number(product.salePrice ?? product.price);
         totalAmount += unitPrice * cartItem.quantity;
 
         orderItemsData.push({
@@ -87,23 +79,26 @@ export class OrdersService {
         });
       }
 
+      // Tạo Order
       const order = await tx.order.create({
         data: {
           userId,
           totalAmount,
-          shippingFee: 0,
-          finalAmount: totalAmount,
+          shippingFee: 30000,
+          finalAmount: totalAmount + 30000,
           status: OrderStatus.PENDING,
           receiverName: createOrderDto.receiver_name,
           receiverPhone: createOrderDto.receiver_phone,
           shippingAddress: createOrderDto.shipping_address,
           paymentMethod: createOrderDto.payment_method,
           note: createOrderDto.note,
+          paypalOrderId: createOrderDto.paypal_order_id, // ← Quan trọng nhất
           items: { create: orderItemsData },
         },
         include: { items: true },
       });
 
+      // Xóa items đã mua trong giỏ hàng
       await tx.cartItem.deleteMany({
         where: {
           cartId: cart.id,
@@ -230,7 +225,7 @@ export class OrdersService {
       total_amount: Number(order.totalAmount),
 
       payment_method: order.paymentMethod,
-      payment_status: order.paymentStatus, 
+      payment_status: order.paymentStatus,
       status: order.status,
 
       receiver_name: order.receiverName,

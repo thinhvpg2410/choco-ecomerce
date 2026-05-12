@@ -35,6 +35,7 @@ import {
   ShoppingCart,
   Ticket,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 
 import { logout } from "@/store/authSlice";
@@ -98,46 +99,80 @@ export default function AdminPage() {
     <AdminProtectedRoute>
       <SidebarProvider>
         {/* MAIN WRAPPER - QUAN TRỌNG */}
-        <div className="flex w-full min-h-screen bg-background">
-          {/* ───────── SIDEBAR ───────── */}
-          <Sidebar variant="sidebar" collapsible="icon">
-            <SidebarContent>
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-base font-bold px-2 py-3">
-                  🍫 Admin Panel
-                </SidebarGroupLabel>
+        <div className="flex w-full h-screen overflow-hidden bg-background">
+          <Sidebar
+            variant="sidebar"
+            collapsible="icon"
+            className="h-screen border-r bg-background"
+          >
+            <div className="flex flex-col h-full">
+              {/* LOGO */}
+              <div className="px-4 py-5 border-b">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
 
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {menuItems.map((item) => (
-                      <SidebarMenuItem key={item.id}>
-                        <SidebarMenuButton
-                          onClick={() => setActiveSection(item.id)}
-                          isActive={activeSection === item.id}
-                          className="cursor-pointer"
-                        >
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            </SidebarContent>
+                  <div className="flex flex-col leading-tight">
+                    <span className="font-bold text-[15px]">
+                      Admin
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Quản lý Choco Kingdom
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-            {/* FOOTER */}
-            <SidebarFooter className="p-3 border-t">
-              <SidebarMenuButton
-                onClick={handleLogout}
-                className="text-red-600 hover:bg-red-50 hover:text-red-700"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Đăng xuất</span>
-              </SidebarMenuButton>
-            </SidebarFooter>
+              {/* MENU */}
+              <div className="flex-1 overflow-y-auto py-3">
+                <SidebarContent>
+                  <SidebarGroup>
+                  
+
+                    <SidebarGroupContent>
+                      <SidebarMenu className="space-y-1 px-2">
+                        {menuItems.map((item) => (
+                          <SidebarMenuItem key={item.id}>
+                            <SidebarMenuButton
+                              onClick={() => setActiveSection(item.id)}
+                              isActive={activeSection === item.id}
+                              className="
+                      h-11 rounded-xl cursor-pointer
+                      transition-all
+                      hover:bg-muted
+                      data-[active=true]:bg-primary
+                      data-[active=true]:text-primary-foreground
+                    "
+                            >
+                              <item.icon className="h-4 w-4" />
+                              <span className="font-medium">{item.label}</span>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        ))}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                </SidebarContent>
+              </div>
+
+              {/* LOGOUT BOTTOM */}
+              <div className="p-3 border-t">
+                <SidebarMenuButton
+                  onClick={handleLogout}
+                  className="
+          h-11 w-full rounded-xl
+          text-red-600
+          hover:bg-red-50
+          hover:text-red-700
+        "
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Đăng xuất</span>
+                </SidebarMenuButton>
+              </div>
+            </div>
           </Sidebar>
-
           {/* ───────── CONTENT ───────── */}
           <main className="flex-1 flex flex-col min-w-0">
             {/* HEADER */}

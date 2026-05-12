@@ -7,7 +7,9 @@ export class CreateOrderDto {
   @IsNotEmpty()
   receiver_name: string;
 
-  @ApiProperty({ description: 'Phone number in international format, e.g. +84901234567' })
+  @ApiProperty({
+    description: 'Phone number in international format, e.g. +84901234567',
+  })
   @Matches(/^\+?[0-9]{9,15}$/, { message: 'receiver_phone format is invalid' })
   receiver_phone: string;
 
@@ -26,8 +28,17 @@ export class CreateOrderDto {
   @IsString()
   note?: string;
 
-  @ApiProperty({ required: false, type: [String], description: 'Selected cart item IDs to create order from' })
+  @ApiProperty({
+    required: false,
+    type: [String],
+    description: 'Selected cart item IDs to create order from',
+  })
   @IsOptional()
   @IsString({ each: true })
   cart_item_ids?: string[];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  paypal_order_id?: string;
 }

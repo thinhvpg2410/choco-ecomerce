@@ -81,4 +81,26 @@ export class PayPalService {
       throw new Error(error.response?.data?.message || error.message);
     }
   }
+  async captureOrder(orderId: string) {
+    try {
+      const accessToken = await this.getAccessToken();
+
+      const { data } = await axios.post(
+        `${this.baseUrl}/v2/checkout/orders/${orderId}/capture`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      return data;
+    } catch (error: any) {
+      console.error('❌ Capture Error:', error.response?.data || error.message);
+
+      throw new Error(error.response?.data?.message || error.message);
+    }
+  }
 }

@@ -38,6 +38,7 @@ export function ProductCard({ product }: Props) {
     setIsAdding(true);
     try {
       await addToCart({ product_id: String(product.id), quantity: qty });
+      window.dispatchEvent(new Event("cart-updated"));
       setIsAdded(true);
       toast.success(`Đã thêm ${qty} sản phẩm vào giỏ!`);
 

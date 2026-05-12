@@ -21,7 +21,7 @@ export class CreateProductDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  slug: string;
+  slug?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -67,10 +67,10 @@ export class CreateProductDto {
   @IsString({ each: true })
   images?: string[];
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  image_url: string;
+  image_url?: string;
 
   @ApiProperty({ format: 'uuid' })
   @IsUUID('4')

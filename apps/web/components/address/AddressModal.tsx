@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,14 +10,21 @@ import { toast } from "sonner";
 export interface AddressFormData {
   receiverName: string;
   receiverPhone: string;
-  address: string; // số nhà, tên đường
+  address: string;
   ward: string;
   district: string;
   city: string;
 }
 
 interface Props {
-  initial?: Partial<AddressFormData> | null;
+  initial?: {
+    receiver_name?: string;
+    receiver_phone?: string;
+    address?: string;
+    ward?: string;
+    district?: string;
+    city?: string;
+  } | null;
   onSave: (data: AddressFormData) => Promise<void>;
   onClose: () => void;
   title?: string;
@@ -39,6 +46,25 @@ export function AddressFormModal({
   const [addrSel, setAddrSel] = useState<AddressSelection | null>(null);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (initial?.city && initial?.district && initial?.ward) {
+      setAddrSel({
+        province: {
+          code: 0,
+          name: initial.city,
+        },
+        district: {
+          code: 0,
+          name: initial.district,
+        },
+        ward: {
+          code: 0,
+          name: initial.ward,
+        },
+      });
+    }
+  }, [initial]);
+  
   const handleSave = async () => {
     if (!receiverName.trim()) {
       toast.error("Nhập họ tên người nhận");
@@ -59,9 +85,9 @@ export function AddressFormModal({
 
     setSaving(true);
     try {
-      await onSave({
-  receiverName: receiverName,
-  receiverPhone: receiverPhone,
+await onSave({
+  receiverName,
+  receiverPhone,
   address: addrDetail,
   ward: addrSel.ward.name,
   district: addrSel.district.name,

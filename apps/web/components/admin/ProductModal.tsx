@@ -20,13 +20,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { X, Camera, Package } from "lucide-react";
+
 import {
   createProduct,
   updateProduct,
   uploadProductImage,
 } from "@/services/admin.product.service";
-import ImageUpload from "@/components/upload/ImageUpload";
-import { Camera, Package, Tag } from "lucide-react";
+
+import { productImageService } from "@/services/product-image.service";
+import { sl } from "zod/v4/locales";
 
 type Props = {
   open: boolean;
@@ -45,12 +48,13 @@ export default function ProductModal({
   categories = [],
   brands = [],
 }: Props) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<any>({
     name: "",
     sku: "",
+    slug:"",
     price: 0,
-    sale_price: null as number | null,
-    cost_price: null as number | null,
+    sale_price: null,
+    cost_price: null,
     stock: 0,
     image_url: "",
     short_description: "",
@@ -69,14 +73,38 @@ export default function ProductModal({
   });
 
   const [imagePreview, setImagePreview] = useState<string>("");
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [selectedMainImage, setSelectedMainImage] = useState<File | null>(null);
+
+  // Ảnh phụ
+  const [additionalImages, setAdditionalImages] = useState<File[]>([]);
+  const [existingAdditionalImages, setExistingAdditionalImages] = useState<
+    any[]
+  >([]);
+
   const [isSaving, setIsSaving] = useState(false);
+
+  const generateSlug = (name: string) => {
+    const slug = name
+      .toLowerCase()
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
+
+    return `${slug}-${Date.now()}`;
+  };
+
+  
 
   useEffect(() => {
     if (editing) {
-      const newForm = {
+      setForm({
         name: editing.name || "",
         sku: editing.sku || "",
+        slug: editing.slug || "",
         price: Number(editing.price) || 0,
         sale_price: editing.sale_price ? Number(editing.sale_price) : null,
         cost_price: editing.cost_price ? Number(editing.cost_price) : null,
@@ -84,8 +112,8 @@ export default function ProductModal({
         image_url: editing.image_url || "",
         short_description: editing.short_description || "",
         description: editing.description || "",
-        category_id: editing.category_id || "",
-        brand_id: editing.brand_id || "",
+        category_id: editing.category?.id || editing.category_id || "",
+        brand_id: editing.brand?.id || editing.brand_id || "",
         ingredients: editing.ingredients || "",
         origin: editing.origin || "",
         weight: Number(editing.weight) || 0,
@@ -95,14 +123,14 @@ export default function ProductModal({
         is_featured: editing.is_featured ?? false,
         is_best_seller: editing.is_best_seller ?? false,
         is_new: editing.is_new ?? false,
-      };
-      setForm(newForm);
+      });
       setImagePreview(editing.image_url || "");
-      setSelectedImageFile(null);
+      loadAdditionalImages(editing.id);
     } else {
       setForm({
         name: "",
         sku: "",
+        slug: "",
         price: 0,
         sale_price: null,
         cost_price: null,
@@ -123,36 +151,57 @@ export default function ProductModal({
         is_new: false,
       });
       setImagePreview("");
-      setSelectedImageFile(null);
+      setExistingAdditionalImages([]);
     }
+    setSelectedMainImage(null);
+    setAdditionalImages([]);
   }, [editing]);
 
-  const handleImageSelect = (file: File) => {
-    setSelectedImageFile(file);
-    const preview = URL.createObjectURL(file);
-    setImagePreview(preview);
-  };
-
-  const uploadImageIfNeeded = async (productId: string) => {
-    if (!selectedImageFile) return undefined;
-
-    const formData = new FormData();
-    formData.append("file", selectedImageFile);
-
-    const uploadedProduct = await uploadProductImage(productId, formData);
-    const imageUrl =
-      uploadedProduct?.image_url ||
-      uploadedProduct?.imageUrl ||
-      uploadedProduct?.url;
-
-    if (imageUrl) {
-      setForm((prev) => ({ ...prev, image_url: imageUrl }));
-      setImagePreview(imageUrl);
+  const loadAdditionalImages = async (productId: string) => {
+    try {
+      const data = await productImageService.getProductImages(productId);
+      setExistingAdditionalImages(
+        Array.isArray(data) ? data : data?.data || [],
+      );
+    } catch (err) {
+      console.error(err);
     }
-
-    return imageUrl;
   };
 
+  const handleMainImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedMainImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleAdditionalSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setAdditionalImages((prev) => [...prev, ...Array.from(e.target.files!)]);
+    }
+  };
+
+  const removeNewImage = (index: number) => {
+    setAdditionalImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = async (id: string) => {
+    if (!confirm("Xóa ảnh này?")) return;
+    try {
+      await productImageService.deleteImage(id);
+      setExistingAdditionalImages((prev) =>
+        prev.filter((img) => img.id !== id),
+      );
+      toast.success("Đã xóa ảnh");
+    } catch {
+      toast.error("Không thể xóa ảnh");
+    }
+  };
+
+  
+
+  
   const handleSubmit = async () => {
     if (
       !form.name ||
@@ -165,34 +214,54 @@ export default function ProductModal({
       return;
     }
 
+    if (!form.description || !form.package_type || !form.weight_unit) {
+      toast.error("Thiếu thông tin sản phẩm");
+      return;
+    }
+
+    if (!form.slug) {
+      toast.error("Slug không được để trống");
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const payload = { ...form };
+      let productId = editing?.id;
 
       if (editing) {
-        if (selectedImageFile) {
-          const imageUrl = await uploadImageIfNeeded(editing.id);
-          if (imageUrl) {
-            payload.image_url = imageUrl;
-          }
-        }
-        await updateProduct(editing.id, payload);
-        toast.success("Cập nhật sản phẩm thành công");
+        await updateProduct(editing.id, form);
       } else {
-        const createdProduct = await createProduct(payload);
-        if (selectedImageFile && createdProduct?.id) {
-          const imageUrl = await uploadImageIfNeeded(createdProduct.id);
-          if (imageUrl) {
-            await updateProduct(createdProduct.id, { image_url: imageUrl });
-          }
-        }
-        toast.success("Thêm sản phẩm mới thành công");
+        const created = await createProduct(form);
+        productId = created?.id || created?.data?.id;
       }
 
+      // Upload ảnh đại diện
+      if (selectedMainImage && productId) {
+        const fd = new FormData();
+        fd.append("file", selectedMainImage);
+        const res = await uploadProductImage(productId, fd);
+        const newUrl = res?.image_url || res?.url;
+        if (newUrl) await updateProduct(productId, { image_url: newUrl });
+      }
+
+      // Upload ảnh phụ
+      if (additionalImages.length > 0 && productId) {
+        for (let i = 0; i < additionalImages.length; i++) {
+          await productImageService.uploadImage(
+            additionalImages[i],
+            productId,
+            i,
+          );
+        }
+      }
+
+      toast.success(
+        editing ? "Cập nhật thành công!" : "Thêm sản phẩm thành công!",
+      );
       onSuccess();
       onClose();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Có lỗi xảy ra khi lưu");
+      toast.error(err.response?.data?.message || "Lưu thất bại");
     } finally {
       setIsSaving(false);
     }
@@ -200,49 +269,103 @@ export default function ProductModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="text-2xl font-semibold">
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl">
             {editing ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
           </DialogTitle>
         </DialogHeader>
 
         <div className="p-6 space-y-8">
-          {/* ==================== PHẦN ẢNH ==================== */}
+          {/* 1. Ảnh đại diện */}
           <div>
-            <Label className="text-base font-medium flex items-center gap-2 mb-3">
-              <Camera className="w-5 h-5" /> Ảnh sản phẩm chính
+            <Label className="text-lg font-medium mb-3 block">
+              Ảnh đại diện
             </Label>
             <div className="flex gap-6 items-start">
-              <div className="w-48 h-48 border-2 border-dashed border-gray-200 rounded-2xl overflow-hidden bg-gray-50 flex-shrink-0">
+              <div className="w-56 h-56 border-2 border-dashed rounded-2xl overflow-hidden bg-gray-50">
                 {imagePreview ? (
                   <img
                     src={imagePreview}
-                    alt="preview"
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
-                    <Package className="w-12 h-12 mb-2" />
-                    <p className="text-sm">Chưa có ảnh</p>
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <Package className="w-20 h-20" />
                   </div>
                 )}
               </div>
-
-              <div className="flex-1">
-                <ImageUpload
-                  onImageSelect={handleImageSelect}
-                  currentImageUrl={imagePreview}
-                  label="Click hoặc kéo thả ảnh vào đây"
+              <div>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleMainImageSelect}
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  Định dạng hỗ trợ: JPG, PNG, WebP • Tối đa 5MB
+                  JPG, PNG, WebP • Tối đa 5MB
                 </p>
               </div>
             </div>
           </div>
 
-          {/* ==================== THÔNG TIN CHÍNH ==================== */}
+          {/* 2. Ảnh phụ */}
+          <div>
+            <Label className="text-lg font-medium mb-3 block">
+              Ảnh phụ (Multiple)
+            </Label>
+            <Input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleAdditionalSelect}
+            />
+
+            {additionalImages.length > 0 && (
+              <div className="mt-4 grid grid-cols-6 gap-3">
+                {additionalImages.map((file, i) => (
+                  <div key={i} className="relative group">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      className="w-full h-24 object-cover rounded border"
+                    />
+                    <button
+                      onClick={() => removeNewImage(i)}
+                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {existingAdditionalImages.length > 0 && (
+              <div className="mt-6">
+                <p className="font-medium mb-3">
+                  Ảnh đã tải lên ({existingAdditionalImages.length})
+                </p>
+                <div className="grid grid-cols-6 gap-3">
+                  {existingAdditionalImages.map((img) => (
+                    <div key={img.id} className="relative group">
+                      <img
+                        src={img.imageUrl}
+                        //src={img.image_url}
+                        className="w-full h-24 object-cover rounded border"
+                      />
+                      <button
+                        onClick={() => removeExistingImage(img.id)}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 3. Thông tin chính */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="md:col-span-2">
               <Label>
@@ -250,10 +373,17 @@ export default function ProductModal({
               </Label>
               <Input
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="text-lg"
+                onChange={(e) => {
+                  const newName = e.target.value;
+                  setForm({
+                    ...form,
+                    name: newName,
+                    slug: generateSlug(newName),
+                  });
+                }}
                 placeholder="Ví dụ: Socola KitKat 5 thanh"
               />
+              
             </div>
 
             <div>
@@ -320,7 +450,6 @@ export default function ProductModal({
               />
             </div>
 
-            {/* Danh mục & Brand */}
             <div>
               <Label>
                 Danh mục <span className="text-red-500">*</span>
@@ -364,8 +493,8 @@ export default function ProductModal({
             </div>
           </div>
 
-          {/* ==================== MÔ TẢ ==================== */}
-          <div className="space-y-4">
+          {/* Mô tả */}
+          <div className="grid grid-cols-1 gap-5">
             <div>
               <Label>Mô tả ngắn</Label>
               <Textarea
@@ -388,17 +517,15 @@ export default function ProductModal({
             </div>
           </div>
 
-          {/* ==================== THÔNG TIN ĐẶC THÙ ==================== */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 border-t pt-6">
+          {/* Thông tin khác */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <Label>Xuất xứ</Label>
               <Input
                 value={form.origin}
                 onChange={(e) => setForm({ ...form, origin: e.target.value })}
-                placeholder="Việt Nam, Nhật Bản..."
               />
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Trọng lượng</Label>
@@ -434,7 +561,7 @@ export default function ProductModal({
                 onChange={(e) =>
                   setForm({ ...form, package_type: e.target.value })
                 }
-                placeholder="Hộp, Túi, Lon, Hũ..."
+                placeholder="Hộp, túi, lon..."
               />
             </div>
 
@@ -450,12 +577,12 @@ export default function ProductModal({
             </div>
           </div>
 
-          {/* ==================== TRẠNG THÁI ==================== */}
-          <div className="border-t pt-6">
+          {/* Trạng thái */}
+          <div>
             <Label className="text-base font-medium mb-4 block">
-              Trạng thái hiển thị
+              Trạng thái
             </Label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="flex items-center gap-3">
                 <Switch
                   checked={form.is_active}
@@ -490,12 +617,11 @@ export default function ProductModal({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-5 border-t bg-gray-50 rounded-b-xl">
-          <Button variant="outline" onClick={onClose} className="px-6" disabled={isSaving}>
+        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+          <Button variant="outline" onClick={onClose} disabled={isSaving}>
             Hủy
           </Button>
-          <Button onClick={handleSubmit} className="px-8" disabled={isSaving}>
+          <Button onClick={handleSubmit} disabled={isSaving}>
             {isSaving ? "Đang lưu..." : editing ? "Cập nhật" : "Thêm sản phẩm"}
           </Button>
         </div>

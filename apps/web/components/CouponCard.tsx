@@ -42,6 +42,8 @@ const typeConfig = {
     accentColor: "#3b82f6",
   },
 };
+const formatVND = (value: number) =>
+  new Intl.NumberFormat("vi-VN").format(value) + "đ";
 
 export function CouponCard({
   code,
@@ -75,8 +77,8 @@ export function CouponCard({
     coupon_type === "PERCENT"
       ? `Giảm ${discount_percent}%`
       : coupon_type === "FIXED"
-        ? `Giảm $${discount_amount}`
-        : "Miễn phí vận chuyển";
+        ? `Giảm ${formatVND(discount_amount || 0)}`
+        : "🚚 Miễn phí vận chuyển";
 
   return (
     <div
@@ -143,7 +145,7 @@ export function CouponCard({
             {discountLabel}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Đơn tối thiểu ${min_order_amount.toLocaleString()}
+            Đơn tối thiểu {formatVND(min_order_amount)}
           </p>
         </div>
 
@@ -176,28 +178,33 @@ export function CouponCard({
         </div>
 
         {/* Usage bar */}
-        {max_uses && (
-          <div className="mt-3">
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>
-                Đã dùng: {current_uses}/{max_uses}
-              </span>
-              <span>{usagePercent}%</span>
-            </div>
-            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-              <div
-                className={cn(
-                  "h-full rounded-full bg-gradient-to-r transition-all",
-                  config.gradient,
-                )}
-                style={{ width: `${usagePercent}%` }}
-              />
-            </div>
-          </div>
-        )}
+        <div className="mt-3 min-h-[42px]">
+          {max_uses ? (
+            <>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>
+                  Đã dùng: {current_uses}/{max_uses}
+                </span>
+                <span>{usagePercent}%</span>
+              </div>
+
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full rounded-full bg-gradient-to-r transition-all",
+                    config.gradient,
+                  )}
+                  style={{ width: `${usagePercent}%` }}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="h-full" />
+          )}
+        </div>
 
         {/* Expiration */}
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className="text-xs text-muted-foreground">
           HSD: {new Date(expiration_date).toLocaleDateString("vi-VN")}
         </p>
       </div>

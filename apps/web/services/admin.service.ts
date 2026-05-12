@@ -67,17 +67,7 @@ export const getAdminOrders = async (params: {
   }
 };
 
-// ==================== COUPONS ====================
-export const getAdminCoupons = async (params: any) => {
-  try {
-    const res = await api.get("/admin/coupons", { params }); // ← sửa
-    console.log("✅ Admin coupons loaded:", res.data);
-    return res.data.data || res.data;
-  } catch (error: any) {
-    console.error("❌ Get coupons error:", error?.response?.data || error);
-    throw error;
-  }
-};
+
 
 // ==================== STATISTICS ====================
 export const getAdminStatistics = async (year?: number) => {
@@ -93,21 +83,40 @@ export const getAdminStatistics = async (year?: number) => {
   }
 };
 
-// ==================== COUPON CRUD ====================
+// // ==================== COUPONS ====================
+export const getAdminCoupons = async (params: any) => {
+  try {
+    const res = await api.get("/coupons", { params });
+
+    console.log("✅ Admin coupons loaded:", res.data);
+
+    return res.data.data || [];
+  } catch (error: any) {
+    console.error("❌ Get coupons error:", error?.response?.data || error);
+    throw error;
+  }
+};
+
+// Coupon
 export const createCoupon = async (payload: any) => {
   try {
-    const res = await api.post("/admin/coupons", payload);
-    return res.data;
+    const res = await api.post("/coupons", payload);
+
+    return res.data.data || res.data;
   } catch (error: any) {
     console.error("❌ Create coupon error:", error?.response?.data || error);
     throw error;
   }
 };
 
-export const updateCoupon = async (couponId: string, payload: any) => {
+export const updateCoupon = async (
+  couponId: string,
+  payload: any,
+) => {
   try {
-    const res = await api.put(`/admin/coupons/${couponId}`, payload);
-    return res.data;
+    const res = await api.put(`/coupons/${couponId}`, payload);
+
+    return res.data.data || res.data;
   } catch (error: any) {
     console.error("❌ Update coupon error:", error?.response?.data || error);
     throw error;
@@ -116,7 +125,8 @@ export const updateCoupon = async (couponId: string, payload: any) => {
 
 export const deleteCoupon = async (couponId: string) => {
   try {
-    const res = await api.delete(`/admin/coupons/${couponId}`);
+    const res = await api.delete(`/coupons/${couponId}`);
+
     return res.data;
   } catch (error: any) {
     console.error("❌ Delete coupon error:", error?.response?.data || error);
@@ -141,6 +151,24 @@ export const updateOrderStatus = async (orderId: string, status: string) => {
   } catch (error: any) {
     console.error(
       "❌ Update order status error:",
+      error?.response?.data || error,
+    );
+    throw error;
+  }
+};
+export const updateOrderPaymentStatus = async (
+  orderId: string,
+  paymentStatus: string,
+) => {
+  try {
+    const res = await api.patch(`/admin/orders/${orderId}/payment-status`, {
+      paymentStatus,
+    });
+
+    return res.data;
+  } catch (error: any) {
+    console.error(
+      "❌ Update payment status error:",
       error?.response?.data || error,
     );
     throw error;
