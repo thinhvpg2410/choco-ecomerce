@@ -56,7 +56,7 @@ export default function CheckoutPage() {
     }[]
   >([]);
   const [voucherError, setVoucherError] = useState("");
-  const [payMethod, setPayMethod] = useState<"COD" | "PAYPAL">("COD");
+  const [payMethod, setPayMethod] = useState<"COD" | "PayPal">("COD");
   const [note, setNote] = useState("");
   const [placing, setPlacing] = useState(false);
 
@@ -248,8 +248,8 @@ console.log("📦 ITEMS STATE:", items);
       // Tạo payment record
       await createPayment({
         order_id: order.id,
-        payment_method: payMethod,
-        transaction_id: paymentId || paypalOrderId,
+        payment_method: payMethod === "COD" ? "COD" : "PayPal",
+        transaction_code: paymentId || paypalOrderId,
       });
 
       toast.success("Đặt hàng thành công!");
@@ -325,7 +325,6 @@ console.log("📦 ITEMS STATE:", items);
         >
           <div className="flex flex-col divide-y divide-gray-50">
             {items.map((item) => (
-              
               <div
                 key={item.id}
                 className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
@@ -536,8 +535,8 @@ console.log("📦 ITEMS STATE:", items);
             />
 
             <PayOption
-              selected={payMethod === "PAYPAL"}
-              onClick={() => setPayMethod("PAYPAL")}
+              selected={payMethod === "PayPal"}
+              onClick={() => setPayMethod("PayPal")}
               iconBg="bg-blue-50"
               icon={<CreditCard className="w-4 h-4 text-blue-600" />}
               name="Thanh toán qua PayPal"
@@ -546,7 +545,7 @@ console.log("📦 ITEMS STATE:", items);
           </div>
 
           {/* PayPal Buttons */}
-          {payMethod === "PAYPAL" && (
+          {payMethod === "PayPal" && (
             <div className="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
               <PayPalScriptProvider options={paypalOptions}>
                 <PayPalButtons

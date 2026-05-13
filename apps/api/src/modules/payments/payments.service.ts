@@ -57,14 +57,6 @@ export class PaymentsService {
       throw new ConflictException('Payment already exists for this order');
     }
 
-    if (dto.payment_method === PaymentMethod.BANKING && dto.transaction_code) {
-      return this.createCompletedBankingPayment(
-        order.id,
-        userId,
-        dto.transaction_code,
-      );
-    }
-
     if (dto.payment_method === PaymentMethod.COD) {
       return this.completeCodPayment(order.id);
     }
