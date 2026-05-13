@@ -277,3 +277,4 @@ export type OrderStatus =
   | "RETURNED"; // Thêm trạng thái trả hàng
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+ export type PaymentMethod = "COD" | "VNPay" | "Momo" | "BankTransfer" | "ZaloPay" | "Paypal"; // Thêm phương thức thanh toán phổ biến khác

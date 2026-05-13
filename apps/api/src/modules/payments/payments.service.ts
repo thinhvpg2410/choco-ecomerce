@@ -58,7 +58,11 @@ export class PaymentsService {
     }
 
     if (dto.payment_method === PaymentMethod.BANKING && dto.transaction_code) {
-      return this.createCompletedBankingPayment(order.id, userId, dto.transaction_code);
+      return this.createCompletedBankingPayment(
+        order.id,
+        userId,
+        dto.transaction_code,
+      );
     }
 
     if (dto.payment_method === PaymentMethod.COD) {
@@ -69,10 +73,22 @@ export class PaymentsService {
       return this.createPendingBankingPayment(order.id, order.totalAmount);
     }
 
+    if (dto.payment_method === PaymentMethod.PayPal) {
+      return this.createCompletedPaypalPayment(
+        order.id,
+        userId,
+        dto.transaction_code!,
+      );
+    }
+
     throw new BadRequestException('Unsupported payment flow');
   }
 
-  async findByOrderId(orderId: string, requesterId: string, requesterRole: UserRole) {
+  async findByOrderId(
+    orderId: string,
+    requesterId: string,
+    requesterRole: UserRole,
+  ) {
     this.assertUuid(orderId, 'Order not found');
     this.assertUuid(requesterId, 'User not found');
 
@@ -122,7 +138,9 @@ export class PaymentsService {
         where: { id: orderId },
         data: {
           status:
-            order.status === OrderStatus.PENDING ? OrderStatus.CONFIRMED : order.status,
+            order.status === OrderStatus.PENDING
+              ? OrderStatus.CONFIRMED
+              : order.status,
         },
       });
 
@@ -156,7 +174,7 @@ export class PaymentsService {
     };
   }
 
-  private async createCompletedBankingPayment(
+  private async createCompletedPaypalPayment(
     orderId: string,
     userId: string,
     transactionRef: string,
@@ -177,18 +195,22 @@ export class PaymentsService {
       const created = await tx.payment.create({
         data: {
           orderId,
-          paymentMethod: PaymentMethod.BANKING,
+          paymentMethod: PaymentMethod.PayPal,
           paymentStatus: PaymentStatus.PAID,
-          amount: order.totalAmount,
+          amount: order.finalAmount,
           transactionCode: transactionRef,
+          paidAt: new Date(),
         },
       });
 
       await tx.order.update({
         where: { id: orderId },
         data: {
+          paymentStatus: PaymentStatus.PAID,
           status:
-            order.status === OrderStatus.PENDING ? OrderStatus.CONFIRMED : order.status,
+            order.status === OrderStatus.PENDING
+              ? OrderStatus.CONFIRMED
+              : order.status,
         },
       });
 
@@ -197,7 +219,7 @@ export class PaymentsService {
 
     return {
       success: true,
-      message: 'Bank transfer payment completed',
+      message: 'PayPal payment completed',
       data: this.toPaymentResponse(payment),
     };
   }
@@ -240,7 +262,9 @@ export class PaymentsService {
         where: { id: orderId },
         data: {
           status:
-            order.status === OrderStatus.PENDING ? OrderStatus.CONFIRMED : order.status,
+            order.status === OrderStatus.PENDING
+              ? OrderStatus.CONFIRMED
+              : order.status,
         },
       });
 

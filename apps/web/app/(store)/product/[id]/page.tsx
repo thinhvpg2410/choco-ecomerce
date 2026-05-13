@@ -1,13 +1,13 @@
-// app/product/[id]/page.tsx   (hoặc app/products/[id]/page.tsx tùy route bạn đang dùng)
+// app/product/[id]/page.tsx
 
 import { notFound } from "next/navigation";
 import api from "@/services/axios";
-import { Button } from "@/components/ui/button";
-import { ShoppingCart, Check, Heart } from "lucide-react";
 import { ProductItem } from "@/components/product/product-item";
 import { Product } from "@/types/type";
-import { is } from "zod/v4/locales";
 import ReviewList from "@/components/review/review-list";
+import ProductImageGallery from "@/components/product/product-image-gallery";
+import SameBrandProducts from "@/components/product/same-brand-products";
+
 interface Props {
   params: { id: string };
 }
@@ -19,42 +19,71 @@ export default async function ProductDetailPage({ params }: Props) {
   try {
     const res = await api.get(`/products/${id}`);
     product = res.data.data || res.data.product;
-
     if (!product) return notFound();
   } catch (error) {
     console.error("Lỗi lấy chi tiết sản phẩm:", error);
     return notFound();
   }
 
-  const hasSale =
-    product.sale_price != null && product.sale_price < product.price;
-
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-6">
-        <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-start max-w-6xl mx-auto">
-          {/* LEFT - IMAGE SECTION */}
-          <div className="relative">
-            <div className="sticky top-24 bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100">
-              <div className="aspect-square bg-gradient-to-br from-pink-50 to-white flex items-center justify-center p-8">
-                <img
-                  src={product.image_url}
-                  alt={product.name}
-                  className="w-full h-full object-contain transition-all duration-700 hover:scale-110 rounded-2xl hover:rounded-3xl"
+    <div className="min-h-screen bg-[#fafafa]">
+      {/* ── BREADCRUMB ── */}
+      <div className="border-b border-gray-100 bg-white">
+        <div className="max-w-6xl mx-auto px-6 py-3 text-sm text-gray-400 flex items-center gap-2">
+          <span className="hover:text-rose-500 cursor-pointer transition-colors">
+            Trang chủ
+          </span>
+          <span>/</span>
+          <span className="hover:text-rose-500 cursor-pointer transition-colors">
+            Sản phẩm
+          </span>
+          <span>/</span>
+          <span className="text-gray-700 font-medium truncate max-w-[240px]">
+            {product.name}
+          </span>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+        {/* ── PRODUCT CARD ── */}
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="grid md:grid-cols-2 gap-0 items-start">
+            {/* LEFT — IMAGE */}
+            <div className="p-8 border-b md:border-b-0 md:border-r border-gray-100">
+              <div className="sticky top-24">
+                <ProductImageGallery
+                  productId={product.id}
+                  mainImage={product.image_url}
+                  productName={product.name}
                 />
               </div>
             </div>
-          </div>
 
-          {/* RIGHT - PRODUCT INFO */}
-            <ProductItem product={product as any} />
+            {/* RIGHT — ProductItem tự render toàn bộ: brand, tên, giá, mô tả, actions */}
+            <div className="p-8 lg:p-10">
+              <ProductItem product={product as any} />
+            </div>
+          </div>
         </div>
-        <div className="mt-16 mx-auto">
-          <h2 className="text-2xl font-bold text-[#3b1d14] mb-6">
-            Đánh giá sản phẩm
-          </h2>
+
+        {/* ── REVIEWS ── */}
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-1 h-6 rounded-full bg-rose-400" />
+            <h2 className="text-xl font-bold text-gray-800">
+              Đánh giá sản phẩm
+            </h2>
+          </div>
           <ReviewList productId={id} />
         </div>
+
+        {/* ── SAME BRAND ── */}
+        {product.brand_id && (
+          <SameBrandProducts
+            brandId={product.brand_id}
+            excludeProductId={product.id}
+          />
+        )}
       </div>
     </div>
   );

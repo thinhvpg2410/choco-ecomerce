@@ -19,6 +19,88 @@ export class OrdersService {
   async createOrder(userId: string, createOrderDto: CreateOrderDto) {
     this.validateUserId(userId);
 
+    // ── BUY NOW: bỏ qua giỏ hàng, tạo order thẳng từ product ────────────
+    if (createOrderDto.buy_now === true) {
+      return this.createBuyNowOrder(userId, createOrderDto);
+    }
+
+    // ── NORMAL: tạo order từ giỏ hàng ────────────────────────────────────
+    return this.createCartOrder(userId, createOrderDto);
+  }
+
+  // ── Buy Now ──────────────────────────────────────────────────────────────
+  private async createBuyNowOrder(userId: string, dto: CreateOrderDto) {
+    const { product_id, quantity = 1 } = dto;
+
+    if (!product_id) {
+      throw new BadRequestException('product_id is required for buy_now');
+    }
+
+    const createdOrder = await this.prisma.$transaction(async (tx) => {
+      const product = await tx.product.findFirst({
+        where: { id: product_id, isActive: true },
+      });
+
+      if (!product) {
+        throw new NotFoundException(`Product not found: ${product_id}`);
+      }
+
+      if (product.stock < quantity) {
+        throw new ConflictException(
+          `Not enough stock for product: ${product.name}`,
+        );
+      }
+
+      // Giảm stock
+      await tx.product.update({
+        where: { id: product.id },
+        data: { stock: { decrement: quantity } },
+      });
+
+      const unitPrice = Number(product.salePrice ?? product.price);
+      const totalAmount = unitPrice * quantity;
+
+      const order = await tx.order.create({
+        data: {
+          userId,
+          totalAmount,
+          shippingFee: 30000,
+          finalAmount: totalAmount + 30000,
+          status: OrderStatus.PENDING,
+          receiverName: dto.receiver_name,
+          receiverPhone: dto.receiver_phone,
+          shippingAddress: dto.shipping_address,
+          paymentMethod: dto.payment_method,
+          note: dto.note,
+          paypalOrderId: dto.paypal_order_id,
+          items: {
+            create: [
+              {
+                product: { connect: { id: product.id } },
+                productNameAtTime: product.name,
+                productImageAtTime: product.imageUrl,
+                price: product.price,
+                salePrice: product.salePrice,
+                quantity,
+              },
+            ],
+          },
+        },
+        include: { items: true },
+      });
+
+      return order;
+    });
+
+    return {
+      success: true,
+      message: 'Order created successfully',
+      data: this.toOrderResponse(createdOrder),
+    };
+  }
+
+  // ── Cart Order ────────────────────────────────────────────────────────────
+  private async createCartOrder(userId: string, dto: CreateOrderDto) {
     const createdOrder = await this.prisma.$transaction(async (tx) => {
       const cart = await tx.cart.findUnique({
         where: { userId },
@@ -29,7 +111,7 @@ export class OrdersService {
         throw new BadRequestException('Cart is empty');
       }
 
-      const cartItemIds = createOrderDto.cart_item_ids ?? [];
+      const cartItemIds = dto.cart_item_ids ?? [];
 
       const selectedCartItems =
         cartItemIds.length > 0
@@ -60,7 +142,6 @@ export class OrdersService {
           );
         }
 
-        // Cập nhật stock
         await tx.product.update({
           where: { id: product.id },
           data: { stock: { decrement: cartItem.quantity } },
@@ -79,7 +160,6 @@ export class OrdersService {
         });
       }
 
-      // Tạo Order
       const order = await tx.order.create({
         data: {
           userId,
@@ -87,18 +167,18 @@ export class OrdersService {
           shippingFee: 30000,
           finalAmount: totalAmount + 30000,
           status: OrderStatus.PENDING,
-          receiverName: createOrderDto.receiver_name,
-          receiverPhone: createOrderDto.receiver_phone,
-          shippingAddress: createOrderDto.shipping_address,
-          paymentMethod: createOrderDto.payment_method,
-          note: createOrderDto.note,
-          paypalOrderId: createOrderDto.paypal_order_id, // ← Quan trọng nhất
+          receiverName: dto.receiver_name,
+          receiverPhone: dto.receiver_phone,
+          shippingAddress: dto.shipping_address,
+          paymentMethod: dto.payment_method,
+          note: dto.note,
+          paypalOrderId: dto.paypal_order_id,
           items: { create: orderItemsData },
         },
         include: { items: true },
       });
 
-      // Xóa items đã mua trong giỏ hàng
+      // Xóa items đã mua khỏi giỏ
       await tx.cartItem.deleteMany({
         where: {
           cartId: cart.id,
@@ -116,6 +196,7 @@ export class OrdersService {
     };
   }
 
+  // ── Other methods (không thay đổi) ───────────────────────────────────────
   async findMyOrders(userId: string) {
     this.validateUserId(userId);
     const orders = await this.prisma.order.findMany({
@@ -123,7 +204,6 @@ export class OrdersService {
       orderBy: { createdAt: 'desc' },
       include: { items: true },
     });
-
     return {
       success: true,
       message: 'Orders fetched successfully',
@@ -144,16 +224,12 @@ export class OrdersService {
       include: { items: true },
     });
 
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
+    if (!order) throw new NotFoundException('Order not found');
 
     const isOwner = order.userId === requesterId;
     const isAdmin = requesterRole === UserRole.admin;
 
-    if (!isOwner && !isAdmin) {
-      throw new NotFoundException('Order not found');
-    }
+    if (!isOwner && !isAdmin) throw new NotFoundException('Order not found');
 
     return {
       success: true,
@@ -196,22 +272,17 @@ export class OrdersService {
   }
 
   private validateUserId(id: string): void {
-    if (!isUuid(id)) {
-      throw new NotFoundException('User not found');
-    }
+    if (!isUuid(id)) throw new NotFoundException('User not found');
   }
 
   private validateOrderId(id: string): void {
-    if (!isUuid(id)) {
-      throw new NotFoundException('Order not found');
-    }
+    if (!isUuid(id)) throw new NotFoundException('Order not found');
   }
 
   private toOrderResponse(order: OrderWithItems) {
     return {
       id: order.id,
       user_id: order.userId,
-
       items:
         order.items?.map((item) => ({
           product_id: item.productId,
@@ -221,13 +292,10 @@ export class OrdersService {
           sale_price: item.salePrice ? Number(item.salePrice) : null,
           quantity: item.quantity,
         })) || [],
-
       total_amount: Number(order.totalAmount),
-
       payment_method: order.paymentMethod,
       payment_status: order.paymentStatus,
       status: order.status,
-
       receiver_name: order.receiverName,
       receiver_phone: order.receiverPhone,
       shipping_address: order.shippingAddress,

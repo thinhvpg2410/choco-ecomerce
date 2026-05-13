@@ -1,5 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 
 export class CreateOrderDto {
   @ApiProperty()
@@ -41,4 +51,28 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   paypal_order_id?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'True khi mua ngay, bỏ qua giỏ hàng',
+  })
+  @IsOptional()
+  @IsBoolean()
+  buy_now?: boolean;
+
+  @ApiProperty({ required: false, description: 'Product ID khi mua ngay' })
+  @ValidateIf((o) => o.buy_now === true)
+  @IsUUID()
+  @IsNotEmpty()
+  product_id?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Số lượng khi mua ngay',
+    minimum: 1,
+  })
+  @ValidateIf((o) => o.buy_now === true)
+  @IsNumber()
+  @Min(1)
+  quantity?: number;
 }

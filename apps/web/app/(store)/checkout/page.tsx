@@ -60,6 +60,17 @@ export default function CheckoutPage() {
   const [note, setNote] = useState("");
   const [placing, setPlacing] = useState(false);
 
+  const [isBuyNow, setIsBuyNow] = useState(false);
+  const [buyNowProduct, setBuyNowProduct] = useState<{
+    product_id: string;
+    quantity: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    setIsBuyNow(mode === "buy_now");
+  }, []);
+
   // PayPal Configuration
   const paypalOptions = {
     "client-id":
@@ -71,29 +82,60 @@ export default function CheckoutPage() {
   useEffect(() => {
     const data = localStorage.getItem("checkout_cart");
 
-    if (data) {
-      const parsed = JSON.parse(data);
+    console.log("📦 RAW checkout_cart:", data);
 
-      setItems(parsed.items ?? []);
-
-      const safeIds = (parsed.cart_item_ids ?? [])
-        .filter((id: any) => id !== null && id !== undefined && id !== "")
-        .map((id: any) => String(id));
-
-      setCartItemIds(safeIds);
+    if (!data) {
+      setLoadingCart(false);
+      return;
     }
 
-    // fetch address user
+    try {
+      const parsed = JSON.parse(data);
+
+      console.log("📦 PARSED:", parsed);
+
+      setCartItemIds(parsed.cart_item_ids ?? []);
+
+      if (parsed.buy_now) {
+        const productId = parsed.product_id;
+
+        if (!productId) {
+          console.error("❌ Missing product_id");
+          toast.error("Lỗi sản phẩm không hợp lệ");
+          setLoadingCart(false);
+          return;
+        }
+
+        const buyNow = {
+          product_id: productId,
+          quantity: Number(parsed.quantity ?? 1),
+        };
+
+        setBuyNowProduct(buyNow);
+
+        setItems([
+          {
+            id: productId,
+            name: parsed.name ?? "Sản phẩm",
+            image: parsed.image ?? "",
+            price: Number(parsed.price ?? 0),
+            quantity: Number(parsed.quantity ?? 1),
+          },
+        ]);
+      } else {
+        setItems(parsed.items ?? []);
+      }
+    } catch (err) {
+      console.error("checkout_cart parse error:", err);
+    } finally {
+      setLoadingCart(false);
+    }
+
     getAddresses()
       .then((res) => {
         setAddresses(res);
-
-        // auto chọn địa chỉ đầu tiên
-        if (res.length > 0) {
-          setSelectedAddress(res[0]);
-        }
+        if (res.length > 0) setSelectedAddress(res[0]);
       })
-      .catch(console.error)
       .finally(() => setLoadingCart(false));
   }, []);
 
@@ -108,7 +150,7 @@ export default function CheckoutPage() {
 
  const total = Math.max(0, subtotal + SHIPPING - totalDiscount);
   const fmt = (n: number) => n.toLocaleString("vi-VN") + "đ";
-
+console.log("📦 ITEMS STATE:", items);
   const applyVoucher = async () => {
     const code = voucherInput.trim().toUpperCase();
 
@@ -180,7 +222,9 @@ export default function CheckoutPage() {
     try {
       const shippingAddress = `${selectedAddress.address}, ${selectedAddress.ward}, ${selectedAddress.district}, ${selectedAddress.city}`;
 
-      const payload = {
+      
+
+      const payload: any = {
         receiver_name:
           selectedAddress.receiver_name || selectedAddress.receiverName,
         receiver_phone:
@@ -189,8 +233,13 @@ export default function CheckoutPage() {
         payment_method: payMethod,
         note: note?.trim() || undefined,
         cart_item_ids: cartItemIds,
-        paypal_order_id: paypalOrderId, // ← Đã thêm vào DTO
+        buy_now: isBuyNow,
       };
+
+      if (isBuyNow && buyNowProduct) {
+        payload.product_id = buyNowProduct.product_id;
+        payload.quantity = Number(buyNowProduct.quantity || 1);
+      }
 
       console.log("📤 Creating order with payload:", payload);
 
@@ -276,6 +325,7 @@ export default function CheckoutPage() {
         >
           <div className="flex flex-col divide-y divide-gray-50">
             {items.map((item) => (
+              
               <div
                 key={item.id}
                 className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
