@@ -117,10 +117,10 @@ useEffect(() => {
   };
 
   const navItemClass =
-    "cursor-pointer px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-pink-50 hover:text-pink-600";
+    "cursor-pointer px-4 py-2 rounded-md text-sm transition-all duration-200 font-bold hover:text-[#D4AF37] hover:underline underline-offset-4 ";
 
   const dropdownItemClass =
-    "block px-3 py-1.5 rounded-md text-sm transition-all duration-200 hover:bg-pink-50 hover:text-pink-600";
+    "block px-3 py-1.5 rounded-md text-sm transition-all duration-200 hover:text-[#3b1d14] hover:font-bold block w-full";
 
   return (
     <header className="border-b bg-white relative z-[1000] sticky top-0 z-50 bg-white">
@@ -133,14 +133,14 @@ useEffect(() => {
         </div>
 
         {/* CENTER */}
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2 ">
           <Link
             href="/information/aboutUs"
-            className={`${navItemClass} whitespace-nowrap`}
+            className={`${navItemClass} whitespace-nowrap uppercase`}
           >
             Giới thiệu
           </Link>
-          <Link href="/product" className={`${navItemClass} whitespace-nowrap`}>
+          <Link href="/product" className={`${navItemClass} whitespace-nowrap uppercase`}>
             Sản phẩm
           </Link>
 
@@ -148,16 +148,16 @@ useEffect(() => {
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuTrigger className={navItemClass}>
+                <NavigationMenuTrigger className={`${navItemClass} whitespace-nowrap uppercase`}>
                   Chính sách
                 </NavigationMenuTrigger>
                 <NavigationMenuContent
-                  className="p-2"
+                  className="p-2 "
                   style={{
                     width: "var(--radix-navigation-menu-trigger-width)",
                   }}
                 >
-                  <ul className="space-y-1">
+                  <ul className="space-y-1 min-w-[180px]">
                     <li>
                       <NavigationMenuLink asChild>
                         <Link
@@ -202,7 +202,7 @@ useEffect(() => {
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuTrigger className={navItemClass}>
+                <NavigationMenuTrigger className={`${navItemClass} whitespace-nowrap uppercase`}>
                   Loại
                 </NavigationMenuTrigger>
 
@@ -220,7 +220,7 @@ useEffect(() => {
                         <NavigationMenuLink key={cat.id} asChild>
                           <Link
                             href={`/products?category=${cat.slug ?? cat.id}`}
-                            className={`${dropdownItemClass} block text-sm py-2 px-2 rounded-lg hover:bg-pink-50 hover:text-pink-600 transition-colors whitespace-nowrap`}
+                            className={`${dropdownItemClass} `}
                           >
                             {cat.name}
                           </Link>
@@ -240,7 +240,7 @@ useEffect(() => {
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuTrigger className={navItemClass}>
+                <NavigationMenuTrigger className={`${navItemClass} whitespace-nowrap uppercase`}>
                   Thương hiệu
                 </NavigationMenuTrigger>
 
@@ -258,7 +258,7 @@ useEffect(() => {
                         <NavigationMenuLink key={brand.id} asChild>
                           <Link
                             href={`/products?brand=${brand.slug ?? brand.id}`}
-                            className={`${dropdownItemClass} block text-sm py-2 px-2 rounded-lg hover:bg-pink-50 hover:text-pink-600 transition-colors whitespace-nowrap`}
+                            className={`${dropdownItemClass}`}
                           >
                             {brand.name}
                           </Link>
