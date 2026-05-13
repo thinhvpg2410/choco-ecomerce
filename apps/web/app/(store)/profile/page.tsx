@@ -121,15 +121,28 @@ export default function ProfilePage() {
   try {
     if (editingAddr) {
       // UPDATE
-      const updated = await updateAddress(editingAddr.id, data);
+      const updated = await updateAddress(editingAddr.id, {
+        receiverName: data.receiverName,
+        receiverPhone: data.receiverPhone,
+        address: data.address,
+        ward: data.ward,
+        district: data.district,
+        city: data.city,
+      });
 
       setAddresses((prev) =>
         prev.map((a) => (a.id === updated.id ? updated : a))
       );
     } else {
       // CREATE
-      const created = await createAddress(data);
-
+const created = await createAddress({
+  receiverName: data.receiverName,
+  receiverPhone: data.receiverPhone,
+  address: data.address,
+  ward: data.ward,
+  district: data.district,
+  city: data.city,
+});
       setAddresses((prev) => [...prev, created]);
     }
 
@@ -365,16 +378,13 @@ export default function ProfilePage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-gray-900">
-                        {addr.receiver_name}
+                        {addr.receiverName}
                       </p>
+
                       <span className="text-xs text-gray-400">
-                        {addr.receiver_phone}
+                        {addr.receiverPhone}
                       </span>
-                      {idx === 0 && (
-                        <span className="text-[10px] font-bold bg-pink-100 text-pink-500 px-2 py-0.5 rounded-full">
-                          Mặc định
-                        </span>
-                      )}
+                      
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5 truncate">
                       {addr.address}, {addr.ward}, {addr.district}, {addr.city}
@@ -411,8 +421,8 @@ export default function ProfilePage() {
           initial={
             editingAddr
               ? {
-                  receiver_name: editingAddr.receiver_name,
-                  receiver_phone: editingAddr.receiver_phone,
+                  receiver_name: editingAddr.receiverName,
+                  receiver_phone: editingAddr.receiverPhone,
                   address: editingAddr.address,
                   ward: editingAddr.ward,
                   district: editingAddr.district,
@@ -421,7 +431,10 @@ export default function ProfilePage() {
               : null
           }
           onSave={handleSaveAddress}
-          onClose={() => setModalOpen(false)}
+          onClose={() => {
+            setModalOpen(false);
+            setEditingAddr(null);
+          }}
           title={editingAddr ? "Sửa địa chỉ" : "Thêm địa chỉ mới"}
         />
       )}

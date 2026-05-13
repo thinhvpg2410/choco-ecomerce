@@ -77,12 +77,12 @@ export default function CartPage() {
     }
 
     const checkoutData = selectedItems.map((item) => ({
+      id: item.product_id,
       product_id: item.product_id,
       name: item.product?.name ?? productsMap[item.product_id]?.name,
-      image: item.product?.image_url ?? productsMap[item.product_id]?.image_url,
+      image: item.product?.image_url ?? productsMap[item.product_id]?.image_url ?? "",
       price: item.price,
       quantity: item.quantity,
-      stock: item.product?.stock ?? 100,
     }));
 
     const cartItemIds = selectedItems.map((item) => item.product_id);

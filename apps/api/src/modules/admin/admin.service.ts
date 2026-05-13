@@ -61,8 +61,6 @@ export class AdminService {
     };
   }
 
-
-
   async getProducts(query: {
     page?: number;
     search?: string;
@@ -249,84 +247,127 @@ export class AdminService {
     const startOfYear = new Date(currentYear, 0, 1);
     const endOfYear = new Date(currentYear + 1, 0, 1);
 
-    const monthlyRevenueRaw: Array<{
-      month: number;
-      revenue: string;
-      orders: string;
-    }> = await this.prisma.$queryRaw`
-        SELECT
-          EXTRACT(MONTH FROM "created_at")::int as month,
-          SUM("final_amount") as revenue,
-          COUNT(*) as orders
-        FROM "orders"
-        WHERE "created_at" >= ${startOfYear} AND "created_at" < ${endOfYear}
-        GROUP BY EXTRACT(MONTH FROM "created_at")
-        ORDER BY month
-      `;
+    try {
+      // Debug: Xem status hợp lệ
+      const validStatuses = await this.prisma.$queryRaw`
+      SELECT unnest(enum_range(NULL::"OrderStatus")) as status;
+    `;
+      console.log('🔍 Valid OrderStatus:', validStatuses);
 
-    const topProductsByQuantityRaw: Array<{
-      name: string;
-      total_quantity: string;
-    }> = await this.prisma.$queryRaw`
-        SELECT
-          p."name",
-          SUM(oi."quantity") as total_quantity
+      // ================= DOANH THU THEO THÁNG =================
+      const monthlyRevenueRaw = await this.prisma.$queryRaw<any[]>`
+      SELECT
+        EXTRACT(MONTH FROM o."created_at")::int as month,
+        COALESCE(SUM(o."final_amount"), 0) as revenue,
+        COUNT(*)::int as orders
+      FROM "orders" o
+      WHERE o."created_at" >= ${startOfYear}
+        AND o."created_at" < ${endOfYear}
+        AND o."status" IN ('DELIVERED', 'SHIPPING', 'CONFIRMED')  -- Chỉ lấy đơn đã hoàn thành/giao
+      GROUP BY EXTRACT(MONTH FROM o."created_at")
+      ORDER BY month
+    `;
+
+      const monthlyRevenue = Array.from({ length: 12 }, (_, i) => {
+        const found = monthlyRevenueRaw.find((m) => m.month === i + 1);
+        return {
+          month: i + 1,
+          revenue: found ? Number(found.revenue) : 0,
+          orders: found ? Number(found.orders) : 0,
+        };
+      });
+
+      // ================= TOP SẢN PHẨM & DANH MỤC =================
+      const [
+        topProductsByQuantityRaw,
+        topProductsByRevenueRaw,
+        categoryRevenueRaw,
+      ] = await Promise.all([
+        this.prisma.$queryRaw<any[]>`
+        SELECT 
+          p."name", 
+          p."image_url", 
+          SUM(oi."quantity")::int as total_quantity
         FROM "order_items" oi
-        JOIN "products" p ON oi."product_id" = p."id"
-        JOIN "orders" o ON oi."order_id" = o."id"
-        WHERE o."created_at" >= ${startOfYear} AND o."created_at" < ${endOfYear}
-        GROUP BY p."id", p."name"
+        JOIN "products" p ON p."id" = oi."product_id"
+        JOIN "orders" o ON o."id" = oi."order_id"
+        WHERE o."created_at" >= ${startOfYear}
+          AND o."created_at" < ${endOfYear}
+          AND o."status" IN ('DELIVERED', 'SHIPPING', 'CONFIRMED')
+        GROUP BY p."id", p."name", p."image_url"
         ORDER BY total_quantity DESC
         LIMIT 10
-      `;
+      `,
 
-    const topProductsByRevenueRaw: Array<{
-      name: string;
-      total_revenue: string;
-    }> = await this.prisma.$queryRaw`
-        SELECT
-          p."name",
+        this.prisma.$queryRaw<any[]>`
+        SELECT 
+          p."name", 
+          p."image_url", 
           SUM(oi."quantity" * oi."price") as total_revenue
         FROM "order_items" oi
-        JOIN "products" p ON oi."product_id" = p."id"
-        JOIN "orders" o ON oi."order_id" = o."id"
-        WHERE o."created_at" >= ${startOfYear} AND o."created_at" < ${endOfYear}
-        GROUP BY p."id", p."name"
+        JOIN "products" p ON p."id" = oi."product_id"
+        JOIN "orders" o ON o."id" = oi."order_id"
+        WHERE o."created_at" >= ${startOfYear}
+          AND o."created_at" < ${endOfYear}
+          AND o."status" IN ('DELIVERED', 'SHIPPING', 'CONFIRMED')
+        GROUP BY p."id", p."name", p."image_url"
         ORDER BY total_revenue DESC
         LIMIT 10
-      `;
+      `,
 
-    const [totalUsers, totalOrders, totalProducts] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.order.count(),
-      this.prisma.product.count(),
-    ]);
+        this.prisma.$queryRaw<any[]>`
+        SELECT 
+          c."name" as category_name, 
+          SUM(oi."quantity" * oi."price") as revenue
+        FROM "order_items" oi
+        JOIN "products" p ON p."id" = oi."product_id"
+        JOIN "categories" c ON c."id" = p."category_id"
+        JOIN "orders" o ON o."id" = oi."order_id"
+        WHERE o."created_at" >= ${startOfYear}
+          AND o."created_at" < ${endOfYear}
+          AND o."status" IN ('DELIVERED', 'SHIPPING', 'CONFIRMED')
+        GROUP BY c."id", c."name"
+        ORDER BY revenue DESC
+      `,
+      ]);
 
-    return {
-      success: true,
-      message: 'Statistics fetched successfully',
-      data: {
-        year: currentYear,
-        monthlyRevenue: monthlyRevenueRaw.map((item) => ({
-          month: Number(item.month),
-          revenue: Number(item.revenue),
-          orders: Number(item.orders),
-        })),
-        topProductsByQuantity: topProductsByQuantityRaw.map((item) => ({
-          name: item.name,
-          total_quantity: Number(item.total_quantity),
-        })),
-        topProductsByRevenue: topProductsByRevenueRaw.map((item) => ({
-          name: item.name,
-          total_revenue: Number(item.total_revenue),
-        })),
-        totals: {
-          users: totalUsers,
-          orders: totalOrders,
-          products: totalProducts,
+      const [totalUsers, totalOrders, totalProducts] = await Promise.all([
+        this.prisma.user.count(),
+        this.prisma.order.count(),
+        this.prisma.product.count(),
+      ]);
+
+      return {
+        success: true,
+        message: 'Statistics fetched successfully',
+        data: {
+          year: currentYear,
+          monthlyRevenue,
+          topProductsByQuantity: topProductsByQuantityRaw.map((i) => ({
+            name: i.name || '',
+            image_url: i.image_url || '',
+            total_quantity: Number(i.total_quantity || 0),
+          })),
+          topProductsByRevenue: topProductsByRevenueRaw.map((i) => ({
+            name: i.name || '',
+            image_url: i.image_url || '',
+            total_revenue: Number(i.total_revenue || 0),
+          })),
+          categoryRevenue: categoryRevenueRaw.map((i) => ({
+            name: i.category_name || '',
+            revenue: Number(i.revenue || 0),
+          })),
+          totals: {
+            users: totalUsers,
+            orders: totalOrders,
+            products: totalProducts,
+          },
         },
-      },
-    };
+      };
+    } catch (error: any) {
+      console.error('❌ Statistics Error:', error.message);
+      throw error;
+    }
   }
 
   // ==================== GET ORDERS (List) ====================
@@ -428,6 +469,25 @@ export class AdminService {
       success: true,
       message: 'Order detail fetched successfully',
       data: order,
+    };
+  }
+
+  async updateOrderPaymentStatus(orderId: string, paymentStatus: string) {
+    const payment = await this.prisma.payment.update({
+      where: {
+        orderId,
+      },
+      data: {
+        paymentStatus: paymentStatus as any,
+
+        paidAt: paymentStatus === 'PAID' ? new Date() : null,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Payment status updated successfully',
+      data: payment,
     };
   }
 }

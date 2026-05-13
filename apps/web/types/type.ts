@@ -22,8 +22,8 @@ export interface User {
 export interface UserAddress {
   id: string;
   user_id: string;
-  receiver_name: string; // Tên người nhận
-  receiver_phone: string; // SĐT người nhận
+  receiverName: string; // Tên người nhận
+  receiverPhone: string; // SĐT người nhận
   address: string; // Địa chỉ chi tiết
   ward: string; // Phường/Xã
   district: string; // Quận/Huyện
@@ -136,8 +136,8 @@ export interface Order {
   status: OrderStatus;
   payment_status?: PaymentStatus; // Đồng bộ trạng thái thanh toán
 
-  receiver_name: string;
-  receiver_phone: string;
+  receiverName: string;
+  receiverPhone: string;
   shipping_address: string;
   ward?: string;
   district?: string;
@@ -277,3 +277,4 @@ export type OrderStatus =
   | "RETURNED"; // Thêm trạng thái trả hàng
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+ export type PaymentMethod = "COD" | "VNPay" | "Momo" | "BankTransfer" | "ZaloPay" | "Paypal"; // Thêm phương thức thanh toán phổ biến khác

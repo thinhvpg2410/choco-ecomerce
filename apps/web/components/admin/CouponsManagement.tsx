@@ -67,36 +67,52 @@ export function CouponsManagement() {
 
   const mapCoupon = (coupon: any): Coupon => ({
     id: coupon.id,
+
     code: coupon.code,
-    coupon_type: coupon.couponType,
-    discount_percent: coupon.discountPercent ?? undefined,
-    discount_amount: coupon.discountAmount ?? undefined,
+
+    coupon_type: coupon.type,
+
+    discount_percent:
+      coupon.type === "PERCENT" ? Number(coupon.value) : undefined,
+
+    discount_amount: coupon.type === "FIXED" ? Number(coupon.value) : undefined,
+
     min_order_amount: Number(coupon.minOrderAmount) || 0,
-    expiration_date: coupon.expiryDate
-      ? coupon.expiryDate.split("T")[0]
-      : "",
+
+    expiration_date: coupon.expiresAt ? coupon.expiresAt.split("T")[0] : "",
+
     is_active: coupon.isActive,
+
     max_uses: coupon.usageLimit ?? undefined,
+
     current_uses: coupon.usedCount ?? 0,
   });
 
   const loadCoupons = async () => {
     setLoading(true);
+
     try {
       const data = await getAdminCoupons({
         page: 1,
-        search: search.trim() || undefined,
       });
-      setCoupons((data.coupons || []).map(mapCoupon));
+
+      console.log("RAW:", data);
+
+      const mapped = (data || []).map(mapCoupon);
+
+      console.log("MAPPED:", mapped);
+
+      setCoupons(mapped);
     } catch (error) {
       console.error(error);
+
       toast.error("Không thể tải danh sách coupon");
+
       setCoupons([]);
     } finally {
       setLoading(false);
     }
   };
-
   const handleAdd = () => {
     setEditingCoupon(null);
     setFormData(defaultForm);
@@ -337,7 +353,7 @@ export function CouponsManagement() {
 
             {formData.coupon_type === "FIXED" && (
               <div className="space-y-1">
-                <Label>Số tiền giảm ($)</Label>
+                <Label>Số tiền giảm (đ)</Label>
                 <Input
                   type="number"
                   min={1}
@@ -355,7 +371,7 @@ export function CouponsManagement() {
             )}
 
             <div className="space-y-1">
-              <Label>Giá trị đơn tối thiểu ($)</Label>
+              <Label>Giá trị đơn tối thiểu (đ)</Label>
               <Input
                 type="number"
                 min={0}

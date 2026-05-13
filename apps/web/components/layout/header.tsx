@@ -66,34 +66,44 @@ export function Header() {
     getBrands().then(setBrands);
   }, []);
 
-  useEffect(() => {
-    const loadCart = async () => {
-      try {
-        const res: any = await getCart();
+ const loadCart = async () => {
+   try {
+     const res: any = await getCart();
 
-        let items = res?.data?.items || res?.items || res || [];
+     let items = res?.data?.items || res?.items || res || [];
 
-        setCartItems(items);
+     setCartItems(items);
 
-        const productIds = [...new Set(items.map((i: any) => i.product_id))];
+     const productIds = [...new Set(items.map((i: any) => i.product_id))];
 
-        const map: Record<string, any> = {};
+     const map: Record<string, any> = {};
 
-        await Promise.all(
-          productIds.map(async (id: string) => {
-            const p = await getProductById(id);
-            if (p) map[id] = p;
-          }),
-        );
+     await Promise.all(
+       productIds.map(async (id: string) => {
+         const p = await getProductById(id);
+         if (p) map[id] = p;
+       }),
+     );
 
-        setProductsMap(map);
-      } catch (err) {
-        console.error(err);
-      }
-    };
+     setProductsMap(map);
+   } catch (err) {
+     console.error(err);
+   }
+ };
 
-    loadCart();
-  }, []);
+ useEffect(() => {
+   loadCart();
+
+   const handleCartUpdated = () => {
+     loadCart();
+   };
+
+   window.addEventListener("cart-updated", handleCartUpdated);
+
+   return () => {
+     window.removeEventListener("cart-updated", handleCartUpdated);
+   };
+ }, []);
 
   // Thay handleLogout:
   const handleLogout = async () => {

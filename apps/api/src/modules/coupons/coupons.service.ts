@@ -50,11 +50,16 @@ export class CouponsService {
       isActive: dto.is_active ?? true,
     };
 
-    if (dto.type === CouponType.PERCENT) {
-      data.discountPercent = dto.value;
-    } else {
-      data.discountAmount = dto.value;
-    }
+   if (dto.type === CouponType.PERCENT) {
+     data.discountPercent = dto.value;
+     data.discountAmount = null;
+   } else if (dto.type === CouponType.FIXED) {
+     data.discountAmount = dto.value;
+     data.discountPercent = null;
+   } else if (dto.type === CouponType.FREE_SHIP) {
+     data.discountAmount = 0;
+     data.discountPercent = null;
+   }
 
     if (dto.max_discount !== undefined) {
       data.maxDiscountAmount = dto.max_discount;
@@ -96,11 +101,19 @@ export class CouponsService {
     const data: any = {};
     if (dto.code !== undefined) data.code = this.normalizeCode(dto.code);
     if (dto.type !== undefined) data.couponType = dto.type;
-    if (dto.value !== undefined) {
-      if (dto.type === CouponType.PERCENT) {
-        data.discountPercent = dto.value;
-      } else {
-        data.discountAmount = dto.value;
+    if (dto.value !== undefined || dto.type !== undefined) {
+      const finalType = dto.type ?? existing.couponType;
+      const finalValue = dto.value ?? 0;
+
+      if (finalType === CouponType.PERCENT) {
+        data.discountPercent = finalValue;
+        data.discountAmount = null;
+      } else if (finalType === CouponType.FIXED) {
+        data.discountAmount = finalValue;
+        data.discountPercent = null;
+      } else if (finalType === CouponType.FREE_SHIP) {
+        data.discountAmount = 0;
+        data.discountPercent = null;
       }
     }
     if (dto.max_discount !== undefined) data.maxDiscountAmount = dto.max_discount;
@@ -226,8 +239,17 @@ export class CouponsService {
     subtotal: number,
   ): number {
     const value = Number(coupon.value);
-    let discount =
-      coupon.type === CouponType.PERCENT ? (subtotal * value) / 100 : value;
+
+    let discount = 0;
+
+    if (coupon.type === CouponType.PERCENT) {
+      discount = (subtotal * value) / 100;
+    } else if (coupon.type === CouponType.FIXED) {
+      discount = value;
+    } else if (coupon.type === CouponType.FREE_SHIP) {
+      // freeship mặc định 30000
+      discount = 30000;
+    }
 
     if (coupon.type === CouponType.PERCENT && coupon.maxDiscount !== null) {
       discount = Math.min(discount, Number(coupon.maxDiscount));
@@ -242,18 +264,30 @@ export class CouponsService {
     value: number,
     maxDiscount?: number,
   ): void {
-    if (type === CouponType.PERCENT) {
-      if (value < 0 || value > 100) {
-        throw new BadRequestException('Percent value must be between 0 and 100');
+    {
+      if (type === CouponType.PERCENT) {
+        if (value < 0 || value > 100) {
+          throw new BadRequestException(
+            'Percent value must be between 0 and 100',
+          );
+        }
+      } else if (type === CouponType.FIXED) {
+        if (value < 0) {
+          throw new BadRequestException('Fixed discount must be non-negative');
+        }
+      } else if (type === CouponType.FREE_SHIP) {
+        if (value !== 0) {
+          throw new BadRequestException('FREE_SHIP value must be 0');
+        }
       }
-    } else if (type === CouponType.FIXED) {
-      if (value < 0) {
-        throw new BadRequestException('Fixed discount must be non-negative');
-      }
-    }
 
-    if (maxDiscount !== undefined && maxDiscount !== null && maxDiscount < 0) {
-      throw new BadRequestException('max_discount must be non-negative');
+      if (
+        maxDiscount !== undefined &&
+        maxDiscount !== null &&
+        maxDiscount < 0
+      ) {
+        throw new BadRequestException('max_discount must be non-negative');
+      }
     }
   }
 
@@ -310,8 +344,15 @@ export class CouponsService {
       id: coupon.id,
       code: coupon.code,
       type: coupon.couponType,
-      value: coupon.couponType === CouponType.PERCENT ? discountPercentNum : discountAmountNum,
-      maxDiscount: coupon.maxDiscountAmount ? Number(coupon.maxDiscountAmount) : null,
+      value:
+        coupon.couponType === CouponType.PERCENT
+          ? discountPercentNum
+          : coupon.couponType === CouponType.FIXED
+            ? discountAmountNum
+            : 0,
+      maxDiscount: coupon.maxDiscountAmount
+        ? Number(coupon.maxDiscountAmount)
+        : null,
       minOrderAmount: Number(coupon.minOrderAmount),
       usageLimit: coupon.usageLimit,
       usedCount: coupon.usedCount,

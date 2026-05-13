@@ -44,6 +44,36 @@ export function AddressPicker({ value, onChange }: Props) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (value) {
+      setSelProvince(value.province);
+      setSelDistrict(value.district);
+      setSelWard(value.ward);
+    }
+  }, [value]);
+  
+  useEffect(() => {
+    const loadData = async () => {
+      if (value?.province) {
+        const provinceRes = await fetch(
+          `https://provinces.open-api.vn/api/p/${value.province.code}?depth=2`,
+        );
+        const provinceData = await provinceRes.json();
+        setDistricts(provinceData.districts ?? []);
+      }
+
+      if (value?.district) {
+        const districtRes = await fetch(
+          `https://provinces.open-api.vn/api/d/${value.district.code}?depth=2`,
+        );
+        const districtData = await districtRes.json();
+        setWards(districtData.wards ?? []);
+      }
+    };
+
+    loadData();
+  }, [value]);
+
+  useEffect(() => {
     fetch("https://provinces.open-api.vn/api/p/")
       .then((r) => r.json())
       .then(setProvinces)

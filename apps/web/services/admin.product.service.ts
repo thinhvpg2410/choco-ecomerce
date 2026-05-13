@@ -64,10 +64,16 @@ export async function updateProduct(id: string, data: any) {
   return res.data.data ?? res.data;
 }
 
-export async function uploadProductImage(productId: string, formData: FormData) {
+export async function uploadProductImage(
+  productId: string,
+  formData: FormData,
+) {
   const res = await api.post(`/products/${productId}/upload-image`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
   });
+
   return res.data.data ?? res.data;
 }
 

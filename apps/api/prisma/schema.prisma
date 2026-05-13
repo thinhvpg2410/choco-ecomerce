@@ -34,6 +34,7 @@ enum PaymentMethod {
   Momo
   BankTransfer
   ZaloPay
+  PayPal
 }
 
 enum PaymentStatus {
@@ -220,6 +221,7 @@ model Order {
   status          OrderStatus  @default(PENDING)
   paymentStatus   PaymentStatus? @map("payment_status")
   paymentMethod   String?       @map("payment_method")
+  paypalOrderId     String?  @map("paypal_order_id")
   receiverName    String       @map("receiver_name")
   receiverPhone   String       @map("receiver_phone")
   shippingAddress String       @map("shipping_address")

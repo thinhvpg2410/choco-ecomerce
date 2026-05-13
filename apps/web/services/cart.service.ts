@@ -52,10 +52,11 @@ export const addToCart = async (dto: AddToCartDto): Promise<Cart | null> => {
         JSON.stringify({
           items: cart.items.map((i: any) => ({
             id: i.product_id,
+            product_id: i.product_id,
             name: i.product_name,
             price: i.price,
             quantity: i.quantity,
-            image: i.image,
+            image: i.image || "",
           })),
           cart_item_ids: cart.items.map((i: any) => String(i.product_id)),
         }),

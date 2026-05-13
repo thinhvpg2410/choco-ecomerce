@@ -23,7 +23,7 @@ export default function Home() {
   const [featured, setFeatured] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔥 DOT STATE
+  //DOT STATE
   const [api, setApi] = useState<any>();
   const [current, setCurrent] = useState(0);
 
@@ -54,7 +54,7 @@ export default function Home() {
             })),
           ],
         );
-
+        console.log("BANNERS:", bannerData);
         setBanners(bannerData || []);
         setBestSellers(bestData.products || []);
         setNewProducts(newData.products || []);
@@ -97,7 +97,7 @@ export default function Home() {
       <main>
         {/* ==================== HERO SECTION ==================== */}
         <div className="relative bg-gradient-to-br from-[#3b1d14] via-[#5c2f1f] to-[#3b1d14] text-white overflow-hidden">
-          <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center py-16 md:py-24">
+          <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-8 items-center py-2 md:py-3">
             <div className="space-y-6">
               <h1 className="text-6xl md:text-7xl font-serif leading-tight">
                 Welcome to <br />
@@ -121,7 +121,7 @@ export default function Home() {
 
         {/* ==================== BANNER CAROUSEL ==================== */}
         {banners.length > 0 && (
-          <div className="max-w-7xl mx-auto px-6 -mt-8 relative z-10 pb-12">
+          <div className="w-full relative z-10 pt-2 pb-12 bg-white">
             <Carousel
               plugins={[plugin.current]}
               opts={{ loop: true }}
@@ -137,25 +137,17 @@ export default function Home() {
                           : banner.link || "#"
                       }
                     >
-                      <div className="relative overflow-hidden rounded-3xl shadow-xl group">
+                      <div className="relative overflow-hidden group">
                         <img
                           src={banner.image_url || banner.imageUrl}
                           alt={banner.description || "Banner"}
-                          className="w-full h-[380px] md:h-[480px] lg:h-[520px] object-cover transition-transform duration-700 group-hover:scale-105"
+                          className="w-full h-[260px] md:h-[380px] lg:h-[460px] object-cover transition-transform duration-700 group-hover:scale-105"
                           onError={(e) => {
                             e.currentTarget.src =
                               "https://picsum.photos/800/400?random=88";
                           }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
-
-                        {banner.description && (
-                          <div className="absolute bottom-10 left-8 md:left-12 text-white">
-                            <p className="text-3xl md:text-5xl font-bold tracking-tight drop-shadow-xl">
-                              {banner.description}
-                            </p>
-                          </div>
-                        )}
                       </div>
                     </Link>
                   </CarouselItem>

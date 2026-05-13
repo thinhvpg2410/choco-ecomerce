@@ -49,9 +49,20 @@ export function ProductItem({ product }: Props) {
 
     
     const handleBuyNow = async () => {
-        await addToCart({ product_id: product.id, quantity: qty });
-        // Chuyển hướng đến trang thanh toán
-        window.location.href = "/checkout";
+      if (isAdding || isOutOfStock) return;
+
+      const payload = {
+        buy_now: true,
+        product_id: product.id,
+        quantity: qty,
+        name: product.name,
+        price: product.sale_price ?? product.price,
+        image: product.image_url || "",
+        cart_item_ids: [],
+      };
+
+      localStorage.setItem("checkout_cart", JSON.stringify(payload));
+      window.location.href = "/checkout?mode=buy_now";
     };
 
     return (

@@ -2,8 +2,8 @@ import api from "@/services/axios";
 import { UserAddress } from "@/types/type";
 
 export interface AddressPayload {
-  receiver_name: string;
-  receiver_phone: string;
+  receiverName: string;
+  receiverPhone: string;
   address: string;
   ward: string;
   district: string;

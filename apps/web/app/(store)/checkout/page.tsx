@@ -14,6 +14,10 @@ import {
   X,
 } from "lucide-react";
 
+import { getAddresses, createAddress } from "@/services/user-address.service";
+import { applyCoupon } from "@/services/coupon.service";
+import type { UserAddress } from "@/types/type";
+
 import api from "@/services/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,19 +40,36 @@ export default function CheckoutPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loadingCart, setLoadingCart] = useState(true);
   const [addrOpen, setAddrOpen] = useState(false);
-  const [savedAddr, setSavedAddr] = useState<AddressFormData | null>(null);
+  const [addresses, setAddresses] = useState<UserAddress[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(
+  null,
+  );
   const [cartItemIds, setCartItemIds] = useState<string[]>([]);
 
   const [voucherInput, setVoucherInput] = useState("");
-  const [voucherApplied, setVoucherApplied] = useState<{
-    code: string;
-    discount: number;
-    label: string;
-  } | null>(null);
+  const [appliedVouchers, setAppliedVouchers] = useState<
+    {
+      code: string;
+      discount: number;
+      finalAmount: number;
+      description?: string;
+    }[]
+  >([]);
   const [voucherError, setVoucherError] = useState("");
   const [payMethod, setPayMethod] = useState<"COD" | "PAYPAL">("COD");
   const [note, setNote] = useState("");
   const [placing, setPlacing] = useState(false);
+
+  const [isBuyNow, setIsBuyNow] = useState(false);
+  const [buyNowProduct, setBuyNowProduct] = useState<{
+    product_id: string;
+    quantity: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    setIsBuyNow(mode === "buy_now");
+  }, []);
 
   // PayPal Configuration
   const paypalOptions = {
@@ -60,74 +81,134 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     const data = localStorage.getItem("checkout_cart");
-    const savedAddress = localStorage.getItem("checkout_shipping");
 
-    if (data) {
+    console.log("📦 RAW checkout_cart:", data);
+
+    if (!data) {
+      setLoadingCart(false);
+      return;
+    }
+
+    try {
       const parsed = JSON.parse(data);
 
-      setItems(parsed.items ?? []);
+      console.log("📦 PARSED:", parsed);
 
-      const safeIds = (parsed.cart_item_ids ?? [])
-        .filter((id: any) => id !== null && id !== undefined && id !== "")
-        .map((id: any) => String(id));
+      setCartItemIds(parsed.cart_item_ids ?? []);
 
-      setCartItemIds(safeIds);
+      if (parsed.buy_now) {
+        const productId = parsed.product_id;
+
+        if (!productId) {
+          console.error("❌ Missing product_id");
+          toast.error("Lỗi sản phẩm không hợp lệ");
+          setLoadingCart(false);
+          return;
+        }
+
+        const buyNow = {
+          product_id: productId,
+          quantity: Number(parsed.quantity ?? 1),
+        };
+
+        setBuyNowProduct(buyNow);
+
+        setItems([
+          {
+            id: productId,
+            name: parsed.name ?? "Sản phẩm",
+            image: parsed.image ?? "",
+            price: Number(parsed.price ?? 0),
+            quantity: Number(parsed.quantity ?? 1),
+          },
+        ]);
+      } else {
+        setItems(parsed.items ?? []);
+      }
+    } catch (err) {
+      console.error("checkout_cart parse error:", err);
+    } finally {
+      setLoadingCart(false);
     }
 
-    if (savedAddress) {
-      setSavedAddr(JSON.parse(savedAddress));
-    }
-
-    setLoadingCart(false);
+    getAddresses()
+      .then((res) => {
+        setAddresses(res);
+        if (res.length > 0) setSelectedAddress(res[0]);
+      })
+      .finally(() => setLoadingCart(false));
   }, []);
 
-  const MOCK_VOUCHERS: Record<
-    string,
-    { pct?: number; fixed?: number; ship?: boolean }
-  > = {
-    SAVE20: { pct: 20 },
-    CHOCO10: { pct: 10 },
-    FREESHIP: { ship: true },
-  };
+ 
 
   const SHIPPING = 30_000;
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
-  const discountAmt = voucherApplied?.discount ?? 0;
-  const total = subtotal + SHIPPING - discountAmt;
-  const fmt = (n: number) => n.toLocaleString("vi-VN") + "đ";
+ const totalDiscount = appliedVouchers.reduce(
+   (sum, item) => sum + item.discount,
+   0,
+ );
 
-  const applyVoucher = () => {
+ const total = Math.max(0, subtotal + SHIPPING - totalDiscount);
+  const fmt = (n: number) => n.toLocaleString("vi-VN") + "đ";
+console.log("📦 ITEMS STATE:", items);
+  const applyVoucher = async () => {
     const code = voucherInput.trim().toUpperCase();
+
     if (!code) {
       setVoucherError("Vui lòng nhập mã");
       return;
     }
-    const v = MOCK_VOUCHERS[code];
-    if (!v) {
-      setVoucherError("Mã không hợp lệ hoặc đã hết hạn");
+
+    // check duplicate
+    const existed = appliedVouchers.find((v) => v.code === code);
+
+    if (existed) {
+      setVoucherError("Voucher đã được áp dụng");
       return;
     }
-    const disc = v.ship
-      ? SHIPPING
-      : v.pct
-        ? Math.round((subtotal * v.pct) / 100)
-        : (v.fixed ?? 0);
 
-    setVoucherApplied({
-      code,
-      discount: disc,
-      label: v.ship
-        ? "Miễn phí vận chuyển"
-        : `-${v.pct ?? v.fixed}${v.pct ? "%" : "đ"}`,
-    });
-    setVoucherInput("");
-    setVoucherError("");
-    toast.success(`Áp dụng mã ${code} thành công!`);
+    try {
+      const data = await applyCoupon({
+        code,
+        subtotal: subtotal + SHIPPING - totalDiscount,
+      });
+
+      if (!data) {
+        throw new Error("Coupon invalid");
+      }
+
+      const discount = Number(data.discount_amount || 0);
+
+      const newVoucher = {
+        code: data.code,
+        discount,
+        finalAmount: data.final_amount,
+        description: `Giảm ${fmt(discount)}`,
+      };
+
+      setAppliedVouchers((prev) => [...prev, newVoucher]);
+
+      setVoucherError("");
+      setVoucherInput("");
+
+      toast.success(`Áp dụng mã ${data.code} thành công!`);
+    } catch (err: any) {
+      console.error("❌ Apply coupon error:", err);
+
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Mã giảm giá không hợp lệ";
+
+      setVoucherError(message);
+
+      toast.error(message);
+    }
   };
 
   const placeOrder = async (paymentId?: string, paypalOrderId?: string) => {
-    if (!savedAddr) {
-      toast.error("Vui lòng thêm địa chỉ giao hàng");
+    if (!selectedAddress) {
+      toast.error("Vui lòng chọn địa chỉ giao hàng");
       return;
     }
 
@@ -139,17 +220,28 @@ export default function CheckoutPage() {
     setPlacing(true);
 
     try {
-      const shippingAddress = `${savedAddr.address}, ${savedAddr.ward}, ${savedAddr.district}, ${savedAddr.city}`;
+      const shippingAddress = `${selectedAddress.address}, ${selectedAddress.ward}, ${selectedAddress.district}, ${selectedAddress.city}`;
 
-      const payload = {
-        receiver_name: savedAddr.receiver_name,
-        receiver_phone: savedAddr.receiver_phone,
+      
+
+      const payload: any = {
+        receiver_name:
+          selectedAddress.receiver_name || selectedAddress.receiverName,
+        receiver_phone:
+          selectedAddress.receiver_phone || selectedAddress.receiverPhone,
         shipping_address: shippingAddress,
         payment_method: payMethod,
-        note: note || undefined,
+        note: note?.trim() || undefined,
         cart_item_ids: cartItemIds,
-        paypal_order_id: paypalOrderId,
+        buy_now: isBuyNow,
       };
+
+      if (isBuyNow && buyNowProduct) {
+        payload.product_id = buyNowProduct.product_id;
+        payload.quantity = Number(buyNowProduct.quantity || 1);
+      }
+
+      console.log("📤 Creating order with payload:", payload);
 
       const order = await createOrder(payload);
 
@@ -157,16 +249,18 @@ export default function CheckoutPage() {
       await createPayment({
         order_id: order.id,
         payment_method: payMethod,
-        transaction_id: paymentId,
+        transaction_id: paymentId || paypalOrderId,
       });
 
       toast.success("Đặt hàng thành công!");
       localStorage.removeItem("checkout_cart");
       router.push(`/order/${order.id}`);
     } catch (err: any) {
-      console.error(err);
+      console.error("❌ Create order error:", err.response?.data || err);
       toast.error(
-        err?.response?.data?.message || "Đặt hàng thất bại, thử lại nhé!",
+        err?.response?.data?.message ||
+          err?.message ||
+          "Đặt hàng thất bại, vui lòng thử lại",
       );
     } finally {
       setPlacing(false);
@@ -231,6 +325,7 @@ export default function CheckoutPage() {
         >
           <div className="flex flex-col divide-y divide-gray-50">
             {items.map((item) => (
+              
               <div
                 key={item.id}
                 className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
@@ -263,7 +358,7 @@ export default function CheckoutPage() {
           </div>
         </Section>
 
-        {/* Địa chỉ */}
+        {/* Địa chỉ giao hàng */}
         <Section
           icon={<MapPin className="w-4 h-4 text-rose-500" />}
           iconBg="bg-rose-50"
@@ -271,43 +366,70 @@ export default function CheckoutPage() {
           right={
             <button
               onClick={() => setAddrOpen(true)}
-              className="text-sm text-rose-500 font-bold"
+              className="text-sm font-bold text-rose-500"
             >
-              Thay đổi
+              + Thêm mới
             </button>
           }
         >
-          <button
-            onClick={() => setAddrOpen(true)}
-            className="flex items-center gap-3 w-full text-left py-1"
-          >
-            <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-4 h-4 text-rose-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              {savedAddr ? (
-                <>
-                  <p className="text-[13.5px] font-bold text-gray-900">
-                    {savedAddr.receiver_name} · {savedAddr.receiver_phone}
-                  </p>
-                  <p className="text-[12.5px] text-gray-500 truncate mt-0.5">
-                    {savedAddr.address}, {savedAddr.ward}, {savedAddr.district},{" "}
-                    {savedAddr.city}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-[13.5px] font-medium text-gray-400">
-                    Chưa có địa chỉ
-                  </p>
-                  <p className="text-[12px] text-gray-400 mt-0.5">
-                    Nhấn để thêm địa chỉ nhận hàng
-                  </p>
-                </>
-              )}
-            </div>
-            <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
-          </button>
+          <div className="flex flex-col gap-2 max-h-[320px] overflow-y-auto pr-1 custom-scroll">
+            {addresses.length === 0 && (
+              <div className="text-center py-6 border border-dashed border-gray-200 rounded-2xl">
+                <p className="text-sm text-gray-400">
+                  Chưa có địa chỉ giao hàng
+                </p>
+              </div>
+            )}
+
+            {addresses.map((addr) => {
+              const active = selectedAddress?.id === addr.id;
+
+              return (
+                <button
+                  key={addr.id}
+                  onClick={() => setSelectedAddress(addr)}
+                  className={`w-full text-left rounded-2xl border p-3 transition-all duration-200 ${
+                    active
+                      ? "border-rose-400 bg-rose-50 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-rose-200 hover:bg-rose-50/40"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Radio */}
+                    <div
+                      className={`mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        active ? "border-rose-500" : "border-gray-300"
+                      }`}
+                    >
+                      {active && (
+                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-bold text-gray-900">
+                          {addr.receiver_name || addr.receiverName}
+                        </p>
+
+                        <span className="text-[11px] text-gray-400">|</span>
+
+                        <p className="text-xs text-gray-500">
+                          {addr.receiver_phone || addr.receiverPhone}
+                        </p>
+                      </div>
+
+                      <p className="text-xs text-gray-500 mt-1 leading-relaxed break-words">
+                        {addr.address}, {addr.ward}, {addr.district},{" "}
+                        {addr.city}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </Section>
 
         {/* Voucher */}
@@ -326,11 +448,11 @@ export default function CheckoutPage() {
               }}
               onKeyDown={(e) => e.key === "Enter" && applyVoucher()}
               className="rounded-xl text-sm flex-1"
-              disabled={!!voucherApplied}
+              disabled={false}
             />
             <Button
               onClick={applyVoucher}
-              disabled={!!voucherApplied}
+              disabled={false}
               className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-bold text-sm px-5"
             >
               Áp dụng
@@ -339,18 +461,60 @@ export default function CheckoutPage() {
           {voucherError && (
             <p className="text-xs text-rose-500 mt-1.5">{voucherError}</p>
           )}
-          {voucherApplied && (
-            <div className="flex items-center gap-2 mt-2 bg-rose-50 border border-rose-200 rounded-full px-3 py-1.5 w-fit">
-              <Tag className="w-3.5 h-3.5 text-rose-500" />
-              <span className="text-xs font-bold text-rose-600">
-                {voucherApplied.code} · {voucherApplied.label}
-              </span>
-              <button
-                onClick={() => setVoucherApplied(null)}
-                className="text-rose-400 hover:text-rose-600"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+          {appliedVouchers.length > 0 && (
+            <div className="mt-3 flex flex-col gap-3">
+              {appliedVouchers.map((voucher) => (
+                <div
+                  key={voucher.code}
+                  className="relative overflow-hidden rounded-2xl border border-rose-200 bg-gradient-to-r from-rose-50 to-pink-50 p-4 shadow-sm"
+                >
+                  {/* remove */}
+                  <button
+                    onClick={() =>
+                      setAppliedVouchers((prev) =>
+                        prev.filter((v) => v.code !== voucher.code),
+                      )
+                    }
+                    className="absolute top-3 right-3 text-rose-400 hover:text-rose-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+
+                  <div className="flex items-start gap-3">
+                    {/* icon */}
+                    <div className="w-11 h-11 rounded-xl bg-rose-100 flex items-center justify-center flex-shrink-0">
+                      <Tag className="w-5 h-5 text-rose-500" />
+                    </div>
+
+                    {/* content */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-black text-rose-600 tracking-wide">
+                          {voucher.code}
+                        </span>
+
+                        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[11px] font-bold">
+                          Đã áp dụng
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-gray-600 mt-1">
+                        {voucher.description}
+                      </p>
+
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-xs text-gray-400">
+                          Số tiền giảm:
+                        </span>
+
+                        <span className="text-lg font-black text-green-600">
+                          -{fmt(voucher.discount)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </Section>
@@ -388,37 +552,54 @@ export default function CheckoutPage() {
                 <PayPalButtons
                   style={{ layout: "vertical", shape: "rect", color: "blue" }}
                   createOrder={async () => {
-  try {
-    const usdAmount = Math.max(0.01, Math.round((total / 23000) * 100) / 100); // đảm bảo tối thiểu 0.01 USD
-
-    console.log(`🔄 Gửi amount = ${usdAmount} USD (từ ${total}đ)`);
-
-    const response = await api.post("/paypal/create-order", {
-      amount: usdAmount,
-      currency: "USD",
-      description: `Đơn hàng Choco Kingdom #${Date.now()}`,
-    });
-
-    console.log("✅ PayPal Order created:", response.data);
-    return response.data.id;
-  } catch (err: any) {
-    console.error("❌ Create Order Failed:", err.response?.data || err);
-    
-    const errorMsg = err.response?.data?.message || err.message;
-    toast.error(`Lỗi tạo đơn PayPal: ${errorMsg}`);
-    throw err;
-  }
-}}
-                  onApprove={async (data, actions) => {
                     try {
-                      const details = await actions.order.capture();
-                      console.log("✅ Payment captured:", details);
+                      const usdAmount = Math.max(
+                        0.01,
+                        Math.round((total / 23000) * 100) / 100,
+                      ); // đảm bảo tối thiểu 0.01 USD
+
+                      console.log(
+                        `🔄 Gửi amount = ${usdAmount} USD (từ ${total}đ)`,
+                      );
+
+                      const response = await api.post("/paypal/create-order", {
+                        amount: usdAmount,
+                        currency: "USD",
+                        description: `Đơn hàng Choco Kingdom #${Date.now()}`,
+                      });
+
+                      console.log("✅ PayPal Order created:", response.data);
+                      return response.data.id;
+                    } catch (err: any) {
+                      console.error(
+                        "❌ Create Order Failed:",
+                        err.response?.data || err,
+                      );
+
+                      const errorMsg =
+                        err.response?.data?.message || err.message;
+                      toast.error(`Lỗi tạo đơn PayPal: ${errorMsg}`);
+                      throw err;
+                    }
+                  }}
+                  onApprove={async (data) => {
+                    try {
+                      const response = await api.post("/paypal/capture-order", {
+                        orderId: data.orderID,
+                      });
+
+                      console.log("✅ Payment captured:", response.data);
 
                       toast.success("Thanh toán PayPal thành công!");
-                      await placeOrder(details.id, data.orderID);
-                    } catch (err) {
+
+                      await placeOrder(response.data.id, data.orderID);
+                    } catch (err: any) {
                       console.error("onApprove Error:", err);
-                      toast.error("Xác nhận thanh toán thất bại");
+
+                      toast.error(
+                        err?.response?.data?.message ||
+                          "Xác nhận thanh toán thất bại",
+                      );
                     }
                   }}
                   onError={(err) => {
@@ -458,13 +639,14 @@ export default function CheckoutPage() {
                 value={fmt(subtotal)}
               />
               <SumRow label="Phí vận chuyển" value={fmt(SHIPPING)} />
-              {voucherApplied && (
+              {appliedVouchers.map((voucher) => (
                 <SumRow
-                  label="Giảm giá voucher"
-                  value={`-${fmt(voucherApplied.discount)}`}
+                  key={voucher.code}
+                  label={`Voucher ${voucher.code}`}
+                  value={`-${fmt(voucher.discount)}`}
                   green
                 />
-              )}
+              ))}
               <div className="h-px bg-gray-100 my-0.5" />
               <div className="flex items-center justify-between">
                 <span className="text-[15px] font-extrabold text-gray-900 tracking-tight">
@@ -497,10 +679,23 @@ export default function CheckoutPage() {
 
       {addrOpen && (
         <AddressFormModal
-          initial={savedAddr}
+          initial={null}
           onSave={async (data: any) => {
-            setSavedAddr(data);
-            localStorage.setItem("checkout_shipping", JSON.stringify(data));
+            const created = await createAddress({
+              receiverName: data.receiverName,
+              receiverPhone: data.receiverPhone,
+              address: data.address,
+              ward: data.ward,
+              district: data.district,
+              city: data.city,
+            });
+
+            setAddresses((prev) => [...prev, created]);
+            setSelectedAddress(created);
+
+            setAddrOpen(false);
+
+            toast.success("Thêm địa chỉ thành công");
           }}
           onClose={() => setAddrOpen(false)}
           title="Địa chỉ nhận hàng"

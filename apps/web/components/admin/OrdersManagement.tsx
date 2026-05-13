@@ -24,7 +24,7 @@ import { getAdminOrders } from "@/services/admin.service";
 import type { Order } from "@/types/type";
 import { toast } from "sonner";
 import { Search, Eye } from "lucide-react";
-
+import { OrderDetailModal } from "./order-detail-modal";
 
 const statusConfig: Record<
   string,
@@ -56,6 +56,8 @@ export function OrdersManagement() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -69,6 +71,7 @@ export function OrdersManagement() {
         search: search.trim() || undefined,
         status: statusFilter === "ALL" ? undefined : statusFilter,
       });
+      console.log("ADMIN ORDERS DATA:", data);
       setOrders(data.orders ?? []);
     } catch (error) {
       console.error(error);
@@ -80,7 +83,7 @@ export function OrdersManagement() {
 
   const filtered = orders.filter((o) => {
     const userDisplay =
-      (o as any).user?.email || (o as any).user?.username || o.user_id || "";
+      (o as any).user?.username || (o as any).user?.email || "";
     const matchSearch =
       o.id.toLowerCase().includes(search.toLowerCase()) ||
       userDisplay.toLowerCase().includes(search.toLowerCase());
@@ -89,8 +92,11 @@ export function OrdersManagement() {
   });
 
   const totalRevenue = orders
-    .filter((o) => o.status !== "CANCELLED")
-    .reduce((sum, o) => sum + (o.final_amount ?? 0), 0);
+    .filter((o: any) => o.status !== "CANCELLED")
+    .reduce(
+      (sum, o: any) => sum + Number(o.finalAmount || o.totalAmount || 0),
+      0,
+    );
 
   return (
     <div className="space-y-6">
@@ -98,7 +104,7 @@ export function OrdersManagement() {
         <div>
           <h2 className="text-2xl font-bold">Đơn Hàng</h2>
           <p className="text-muted-foreground text-sm mt-0.5">
-            {orders.length} đơn hàng · Doanh thu: $
+            {orders.length} đơn hàng · Doanh thu: ₫
             {totalRevenue.toLocaleString("vi-VN")}
           </p>
         </div>
@@ -161,77 +167,117 @@ export function OrdersManagement() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Mã đơn</TableHead>
+                  <TableRow className="bg-muted/40">
+                    <TableHead className="w-[140px]">Mã đơn</TableHead>
                     <TableHead>Khách hàng</TableHead>
-                    <TableHead>Tổng tiền</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Thanh toán</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
+                    <TableHead className="text-right">Tổng tiền</TableHead>
+                    <TableHead className="text-center">Trạng thái</TableHead>
+                    <TableHead className="text-center">Thanh toán</TableHead>
+                    <TableHead className="w-[170px]">Cập nhật</TableHead>
                     <TableHead className="text-right">Hành động</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((order) => {
+                  {filtered.map((order: any) => {
                     const status = statusConfig[order.status] ?? {
                       label: order.status,
                       variant: "outline",
                       color: "",
                     };
-                    const payment = paymentConfig[
-                      order.payment_status ?? ""
-                    ] ?? {
-                      label: order.payment_status ?? "N/A",
+
+                    const payment = paymentConfig[order.paymentStatus] ?? {
+                      label: order.paymentStatus ?? "N/A",
                       variant: "outline",
                     };
+
                     return (
                       <TableRow
                         key={order.id}
-                        className="hover:bg-muted/30 transition-colors"
+                        className="hover:bg-muted/20 transition-colors"
                       >
+                        {/* Mã đơn */}
                         <TableCell>
-                          <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
+                          <code className="text-[11px] bg-muted px-2 py-1 rounded-md font-mono font-semibold">
                             #{order.id.slice(-8).toUpperCase()}
                           </code>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {(order as any).user?.email ||
-                            (order as any).user?.username ||
-                            order.user_id ||
-                            "Không rõ"}
-                        </TableCell>
-                        <TableCell className="font-semibold">
-                          ${order.final_amount?.toLocaleString("vi-VN")}
-                        </TableCell>
+
+                        {/* Tên KH */}
                         <TableCell>
-                          <Badge variant={status.variant} className="text-xs">
+                          <div className="font-medium">
+                            {order.user?.username || "Không rõ"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {order.user?.email}
+                          </div>
+                        </TableCell>
+
+                        {/* Tổng tiền */}
+                        <TableCell className="text-right font-semibold whitespace-nowrap">
+                          {Number(
+                            order.finalAmount || order.totalAmount || 0,
+                          ).toLocaleString("vi-VN")}{" "}
+                          ₫
+                        </TableCell>
+
+                        {/* Status */}
+                        <TableCell className="text-center">
+                          <Badge
+                            variant={status.variant}
+                            className="text-xs px-2.5 py-1"
+                          >
                             {status.label}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <Badge variant={payment.variant} className="text-xs">
+
+                        {/* Payment Status */}
+                        <TableCell className="text-center">
+                          <Badge
+                            variant={payment.variant}
+                            className="text-xs px-2.5 py-1"
+                          >
                             {payment.label}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {new Date(order.created_at).toLocaleDateString(
-                            "vi-VN",
-                          )}
+
+                        {/* Ngày */}
+                        <TableCell>
+                          <div className="text-sm">
+                            {new Date(order.updatedAt).toLocaleDateString(
+                              "vi-VN",
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(order.updatedAt).toLocaleTimeString(
+                              "vi-VN",
+                            )}
+                          </div>
                         </TableCell>
+
+                        {/* Action */}
                         <TableCell className="text-right">
-                          <div className="flex gap-1.5 justify-end">
+                          <div className="flex gap-2 justify-end">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-7 px-2 gap-1"
+                              className="h-8 px-3 gap-1"
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setOpen(true);
+                              }}
                             >
-                              <Eye className="h-3 w-3" />
+                              <Eye className="h-3.5 w-3.5" />
                               Xem
                             </Button>
+
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-7 px-2 text-xs"
+                              className="h-8 px-3 text-xs"
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setOpen(true);
+                              }}
                             >
                               Cập nhật
                             </Button>
@@ -246,6 +292,11 @@ export function OrdersManagement() {
           )}
         </CardContent>
       </Card>
+      <OrderDetailModal
+        open={open}
+        onOpenChange={setOpen}
+        order={selectedOrder}
+      />
     </div>
   );
 }

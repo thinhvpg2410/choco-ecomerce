@@ -108,87 +108,80 @@ export default function OrdersPage() {
               return (
                 <div
                   key={order.id}
-                  className="rounded-3xl border bg-white p-6 shadow-sm hover:shadow-md transition"
+                  className="group rounded-[28px] bg-white border border-gray-100 p-5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
                 >
                   {/* TOP */}
-                  <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
+                  <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className="text-xs text-gray-500 flex gap-2">
-                        <span>#{order.id.slice(0, 8).toUpperCase()}</span>
+                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <span className="font-semibold text-gray-500">
+                          #{order.id.slice(0, 8).toUpperCase()}
+                        </span>
+
                         <span>•</span>
+
                         <span>{fmtDate(order.createdAt)}</span>
                       </div>
 
-                      <h2 className="mt-2 font-bold text-lg text-gray-900">
-                        {order.items.length} sản phẩm ·{" "}
+                      <h2 className="mt-2 text-lg font-black text-gray-900">
                         {fmt(order.total_amount)}
                       </h2>
-                    </div>
 
-                    {/* STATUS */}
-                    <span
-                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                        STATUS_STYLES[order.status] ||
-                        "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {order.status}
-                    </span>
-                    <span
-                      className={`ml-2 inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                        PAYMENT_STYLES[order.payment_status ?? "PENDING"] ||
-                        "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {order.payment_status}
-                    </span>
-                  </div>
-
-                  {/* INFO */}
-                  <div className="mt-5 grid sm:grid-cols-2 gap-3">
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-widest text-gray-400">
-                        Giao hàng
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-gray-700">
-                        {order.receiver_name} · {order.receiver_phone}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {order.shipping_address}
+                      <p className="mt-1 text-sm text-gray-500">
+                        {order.items.length} sản phẩm
                       </p>
                     </div>
 
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-widest text-gray-400">
-                        Thanh toán
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-gray-700">
-                        {order.payment_method || "COD"}
-                      </p>
+                    <div className="flex flex-col items-end gap-2">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          STATUS_STYLES[order.status] ||
+                          "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {order.status}
+                      </span>
+
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          PAYMENT_STYLES[order.payment_status ?? "PENDING"] ||
+                          "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {order.payment_status}
+                      </span>
                     </div>
                   </div>
 
-                  {/* PRODUCTS PREVIEW */}
-                  <div className="mt-5 flex items-center justify-between">
-                    <div className="text-sm text-gray-600">
-                      {firstItem?.name}
+                  {/* PRODUCT */}
+                  <div className="mt-5 flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0">
+                      <img
+                        src={firstItem?.image}
+                        alt={firstItem?.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 truncate">
+                        {firstItem?.name}
+                      </p>
+
                       {extraCount > 0 && (
-                        <span className="text-gray-400">
-                          {" "}
+                        <p className="text-sm text-gray-400 mt-1">
                           +{extraCount} sản phẩm khác
-                        </span>
+                        </p>
                       )}
                     </div>
 
-                    {orders.map((order) => {
-                      if (!order?.id) return null;
-
-                      return (
-                        <div key={order.id}>
-                          <Link href={`/order/${order.id}`}>Xem chi tiết</Link>
-                        </div>
-                      );
-                    })}
+                    <Link
+                      href={`/order/${order.id}`}
+                      className="flex items-center gap-1 text-sm font-bold text-rose-500 hover:text-rose-600"
+                    >
+                      Chi tiết
+                      <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </Link>
                   </div>
                 </div>
               );

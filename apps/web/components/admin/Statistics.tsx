@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { DollarSign, Package, Users, ShoppingCart, Loader2 } from "lucide-react";
+import {
+  DollarSign,
+  Package,
+  Users,
+  ShoppingCart,
+  Loader2,
+} from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -32,32 +38,43 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getAdminStatistics } from "@/services/admin.service";
 
-const categoryData = [
-  { name: "Chocolate đen", value: 400, color: "#3b1f0a" },
-  { name: "Chocolate sữa", value: 320, color: "#8b5e3c" },
-  { name: "Chocolate trắng", value: 200, color: "#f5deb3" },
-  { name: "Kẹo", value: 150, color: "#e8a87c" },
-  { name: "Bánh", value: 130, color: "#c0765a" },
+const CHART_COLORS = [
+  "#3b82f6", // Blue
+  "#8b5cf6", // Purple
+  "#ec4899", // Pink
+  "#f43f5e", // Rose
+  "#f97316", // Orange
+  "#eab308", // Yellow
+  "#22c55e", // Green
+  "#14b8a6", // Teal
+  "#a855f7", // Violet
+  "#f472b6", // Pink light
 ];
 
-const CHART_COLORS = [
-  "#1e3a5f",
-  "#2d6a9f",
-  "#3d8bcd",
-  "#5ba4e0",
-  "#84c1f0",
-  "#a8d8f0",
-  "#c4e8ff",
-  "#d8f0ff",
-  "#e8f7ff",
-  "#f0fbff",
-];
+const formatVND = (value: number) =>
+  new Intl.NumberFormat("vi-VN").format(value) + "đ";
 
 interface AdminStatistics {
   year: number;
-  monthlyRevenue: Array<{ month: number; revenue: number; orders: number }>;
-  topProductsByQuantity: Array<{ name: string; total_quantity: number }>;
-  topProductsByRevenue: Array<{ name: string; total_revenue: number }>;
+  monthlyRevenue: Array<{
+    month: number;
+    revenue: number;
+    orders: number;
+  }>;
+  topProductsByQuantity: Array<{
+    name: string;
+    image_url: string;
+    total_quantity: number;
+  }>;
+  topProductsByRevenue: Array<{
+    name: string;
+    image_url: string;
+    total_revenue: number;
+  }>;
+  categoryRevenue: Array<{
+    name: string;
+    revenue: number;
+  }>;
   totals: {
     users: number;
     orders: number;
@@ -93,67 +110,61 @@ export function Statistics() {
     }
   };
 
-  const monthlyData =
-    stats?.monthlyRevenue.map((item) => ({
-      month: `T${item.month}`,
-      revenue: item.revenue,
-      orders: item.orders,
-    })) ?? [];
+  const monthlyData = useMemo(() => {
+    return (
+      stats?.monthlyRevenue.map((item) => ({
+        month: `T${item.month}`,
+        revenue: item.revenue,
+        orders: item.orders,
+      })) ?? []
+    );
+  }, [stats]);
 
-  const totalRevenue = monthlyData.reduce((s, m) => s + m.revenue, 0);
+  const categoryData = useMemo(() => {
+    const data = stats?.categoryRevenue ?? [];
+
+    if (data.length <= 8) {
+      return data.map((item) => ({
+        name: item.name,
+        value: item.revenue,
+      }));
+    }
+
+    // Lấy Top 7 + Gom còn lại thành "Khác"
+    const sorted = [...data].sort((a, b) => b.revenue - a.revenue);
+    const top7 = sorted.slice(0, 7);
+    const othersRevenue = sorted
+      .slice(7)
+      .reduce((sum, item) => sum + item.revenue, 0);
+
+    const result = top7.map((item) => ({
+      name: item.name,
+      value: item.revenue,
+    }));
+
+    if (othersRevenue > 0) {
+      result.push({
+        name: "Khác",
+        value: othersRevenue,
+      });
+    }
+
+    return result;
+  }, [stats]);
+
+  const totalRevenue = monthlyData.reduce((sum, item) => sum + item.revenue, 0);
   const totalOrders = stats?.totals.orders ?? 0;
   const totalProducts = stats?.totals.products ?? 0;
   const totalUsers = stats?.totals.users ?? 0;
+
   const topByQuantity = stats?.topProductsByQuantity ?? [];
   const topByRevenue = stats?.topProductsByRevenue ?? [];
 
   return (
     <div className="space-y-6">
-      {/* Summary cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            label: "Doanh Thu",
-            value: `$${totalRevenue.toLocaleString()}`,
-            icon: DollarSign,
-            delta: "+18.2%",
-          },
-          {
-            label: "Đơn Hàng",
-            value: totalOrders.toLocaleString(),
-            icon: ShoppingCart,
-            delta: "+12.5%",
-          },
-          {
-            label: "Sản Phẩm",
-            value: totalProducts.toLocaleString(),
-            icon: Package,
-            delta: "+3.1%",
-          },
-          {
-            label: "Khách Hàng",
-            value: totalUsers.toLocaleString(),
-            icon: Users,
-            delta: "+8.2%",
-          },
-        ].map((card) => (
-          <Card key={card.label}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {card.label}
-              </CardTitle>
-              <card.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
-              <p className="text-xs text-green-600 mt-1 font-medium">
-                {card.delta} so với năm trước
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      
 
+      {/* Phần còn lại giữ nguyên */}
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-foreground">Biểu đồ thống kê năm</h3>
         <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -170,11 +181,12 @@ export function Statistics() {
         </Select>
       </div>
 
+      {/* Doanh thu theo tháng */}
       <Card>
         <CardHeader>
           <CardTitle>Doanh Thu Theo Tháng — {selectedYear}</CardTitle>
           <CardDescription>
-            Tổng doanh thu: ${totalRevenue.toLocaleString()}
+            Tổng doanh thu: {formatVND(totalRevenue)}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -186,128 +198,165 @@ export function Statistics() {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart
                 data={monthlyData}
-                margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                 <YAxis
                   tick={{ fontSize: 12 }}
-                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                  tickFormatter={(v) => `${(v / 1000000).toFixed(1)}tr`}
                 />
                 <Tooltip
-                  formatter={(value: any, name: any) => [
+                  formatter={(value: number, name: string) => [
                     name === "revenue"
-                      ? `$${Number(value || 0).toLocaleString()}`
-                      : value,
+                      ? formatVND(value)
+                      : value.toLocaleString(),
                     name === "revenue" ? "Doanh thu" : "Đơn hàng",
                   ]}
                 />
-                <Bar
-                  dataKey="revenue"
-                  fill="#1e3a5f"
-                  radius={[4, 4, 0, 0]}
-                  name="revenue"
-                />
-                <Bar
-                  dataKey="orders"
-                  fill="#84c1f0"
-                  radius={[4, 4, 0, 0]}
-                  name="orders"
-                />
+                <Bar dataKey="revenue" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="orders" fill="#84c1f0" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
         </CardContent>
       </Card>
 
+      {/* Pie Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Doanh Số Theo Danh Mục</CardTitle>
-          <CardDescription>Phân bổ doanh số theo loại sản phẩm</CardDescription>
+          <CardTitle>Doanh Thu Theo Danh Mục</CardTitle>
+          <CardDescription>
+            Top 7 danh mục + Khác • Năm {selectedYear}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={categoryData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                paddingAngle={3}
-                label={({ name, percent }) =>
-                  `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`
-                }
-                labelLine
-              >
-                {categoryData.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v: any) => [`${v} đơn vị`, "Số lượng"]} />
-            </PieChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Top sản phẩm theo số lượng</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {topByQuantity.length === 0 ? (
-            <div className="text-center text-muted-foreground py-12">
-              Chưa có dữ liệu thống kê
+          {loading ? (
+            <div className="flex h-80 items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : categoryData.length === 0 ? (
+            <div className="flex h-80 items-center justify-center text-muted-foreground">
+              Chưa có dữ liệu danh mục trong năm {selectedYear}
             </div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {topByQuantity.map((item, index) => (
-                <div
-                  key={item.name}
-                  className="rounded-2xl border border-border p-4"
+            <ResponsiveContainer width="100%" height={420}>
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={135}
+                  paddingAngle={4}
                 >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">#{index + 1}</p>
-                    <Badge variant="secondary">{item.total_quantity} sp</Badge>
-                  </div>
-                  <p className="mt-3 text-base font-semibold">{item.name}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Tổng sản phẩm bán ra
-                  </p>
-                </div>
-              ))}
-            </div>
+                  {categoryData.map((_, index) => (
+                    <Cell
+                      key={index}
+                      fill={CHART_COLORS[index % CHART_COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number) => [formatVND(value), "Doanh thu"]}
+                />
+                <Legend
+                  layout="vertical"
+                  verticalAlign="middle"
+                  align="right"
+                  iconType="circle"
+                />
+              </PieChart>
+            </ResponsiveContainer>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Top sản phẩm theo doanh thu</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-2">
-            {topByRevenue.map((item, index) => (
-              <div
-                key={item.name}
-                className="rounded-2xl border border-border p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">#{index + 1}</p>
-                  <Badge variant="secondary">
-                    ${item.total_revenue.toLocaleString()}
-                  </Badge>
-                </div>
-                <p className="mt-3 text-base font-semibold">{item.name}</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Tổng doanh thu
-                </p>
+      {/* Hai Top Products */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Top sản phẩm bán chạy</CardTitle>
+            <CardDescription>Theo số lượng bán ra</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {topByQuantity.length === 0 ? (
+              <div className="text-center text-muted-foreground py-12">
+                Chưa có dữ liệu
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            ) : (
+              topByQuantity.slice(0, 6).map((item, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-4 rounded-2xl border p-4"
+                >
+                  <div className="w-10 text-2xl font-black text-muted-foreground">
+                    #{index + 1}
+                  </div>
+                  <img
+                    src={item.image_url || "/placeholder.png"}
+                    alt={item.name}
+                    className="w-16 h-16 rounded-xl object-cover border"
+                  />
+                  <div className="flex-1">
+                    <p className="font-semibold line-clamp-2">{item.name}</p>
+                    <Badge variant="secondary" className="mt-1">
+                      {item.total_quantity} sản phẩm
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Top sản phẩm doanh thu cao nhất</CardTitle>
+            <CardDescription>Xếp hạng theo tổng doanh thu</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {topByRevenue.length === 0 ? (
+              <div className="text-center text-muted-foreground py-12">
+                Chưa có dữ liệu
+              </div>
+            ) : (
+              topByRevenue.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-4 rounded-2xl border p-4"
+                >
+                  <div className="w-10 text-2xl font-black text-muted-foreground">
+                    #{index + 1}
+                  </div>
+                  <img
+                    src={item.image_url || "/placeholder.png"}
+                    alt={item.name}
+                    className="w-16 h-16 rounded-xl object-cover border"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold line-clamp-2">{item.name}</p>
+                    <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-black rounded-full"
+                        style={{
+                          width: `${(item.total_revenue / (topByRevenue[0]?.total_revenue || 1)) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold">
+                      {formatVND(item.total_revenue)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

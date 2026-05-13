@@ -1,9 +1,9 @@
 import api from "@/services/axios";
-import type { Payment, PaymentStatus } from "@/types/type";
+import type { PaymentMethod } from "@/types/type";
 
 export interface CreatePaymentDto {
   order_id: string;
-  payment_method: string;
+  payment_method: PaymentMethod;
   transaction_code?: string;
 }
 

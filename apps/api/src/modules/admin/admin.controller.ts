@@ -4,8 +4,8 @@ import { AdminService } from './admin.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
-import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
-
+import { UpdateOrderStatusAdminDto } from './dto/update-order-status-admin.dto';
+import { UpdateOrderPaymentStatusDto } from './dto/update-order-payment-status.dto';
 @ApiTags('Admin')
 @ApiBearerAuth()
 @Controller('admin')
@@ -17,7 +17,10 @@ export class AdminController {
   @ApiQuery({ name: 'search', required: false })
   @Roles(UserRole.admin)
   @Get('users')
-  async getUsers(@Query('page') page?: string, @Query('search') search?: string) {
+  async getUsers(
+    @Query('page') page?: string,
+    @Query('search') search?: string,
+  ) {
     return this.adminService.getUsers({
       page: page ? Number(page) : undefined,
       search,
@@ -27,7 +30,10 @@ export class AdminController {
   @ApiOperation({ summary: 'Update user status (active/inactive)' })
   @Roles(UserRole.admin)
   @Patch('users/:id/status')
-  async updateUserStatus(@Param('id') userId: string, @Body() body: UpdateUserStatusDto) {
+  async updateUserStatus(
+    @Param('id') userId: string,
+    @Body() body: UpdateUserStatusDto,
+  ) {
     return this.adminService.updateUserStatus(userId, body.status);
   }
 
@@ -54,7 +60,7 @@ export class AdminController {
   @Patch('orders/:id/status')
   async updateOrderStatus(
     @Param('id') orderId: string,
-    @Body() body: UpdateOrderStatusDto,
+    @Body() body: UpdateOrderStatusAdminDto,
   ) {
     return this.adminService.updateOrderStatus(orderId, body.status);
   }
@@ -104,5 +110,18 @@ export class AdminController {
   @Get('statistics')
   async getStatistics(@Query('year') year?: string) {
     return this.adminService.getStatistics(year ? Number(year) : undefined);
+  }
+
+  @ApiOperation({ summary: 'Update payment status' })
+  @Roles(UserRole.admin)
+  @Patch('orders/:id/payment-status')
+  async updateOrderPaymentStatus(
+    @Param('id') orderId: string,
+    @Body() body: UpdateOrderPaymentStatusDto,
+  ) {
+    return this.adminService.updateOrderPaymentStatus(
+      orderId,
+      body.paymentStatus,
+    );
   }
 }

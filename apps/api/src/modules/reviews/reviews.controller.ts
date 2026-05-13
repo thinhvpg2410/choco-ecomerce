@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Param, Post, Put, Req } from '@nestjs/common';
+import {Get, Body, Controller, Delete, Param, Post, Put, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import {
   ApiBearerAuth,
@@ -50,5 +50,17 @@ export class ReviewsController {
   async remove(@Req() request: Request, @Param('id') reviewId: string) {
     const user = request.user as { sub: string; role: UserRole };
     return this.reviewsService.remove(reviewId, user.sub, user.role);
+  }
+
+  @ApiOperation({ summary: 'Get my review for a product' })
+  @ApiOkResponse({ type: ReviewDetailResponseDto })
+  @Get('me/product/:productId')
+  async getMyReviewForProduct(
+    @Req() request: Request,
+    @Param('productId') productId: string,
+  ) {
+    const user = request.user as { sub: string };
+
+    return this.reviewsService.getMyReviewForProduct(user.sub, productId);
   }
 }
