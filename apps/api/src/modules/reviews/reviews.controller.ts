@@ -15,6 +15,8 @@ import {
   ReviewDetailResponseDto,
   ReviewListResponseDto,
 } from './dto/review-response.dto';
+import { Query } from '@nestjs/common';
+import { QueryReviewsDto } from './dto/query-reviews.dto';
 
 @ApiTags('Reviews')
 @ApiBearerAuth()
@@ -62,5 +64,15 @@ export class ReviewsController {
     const user = request.user as { sub: string };
 
     return this.reviewsService.getMyReviewForProduct(user.sub, productId);
+  }
+
+  @ApiOperation({ summary: 'Get reviews by product' })
+  @ApiOkResponse({ type: ReviewListResponseDto })
+  @Get('product/:productId')
+  async findByProduct(
+    @Param('productId') productId: string,
+    @Query() query: QueryReviewsDto,
+  ) {
+    return this.reviewsService.findByProduct(productId, query);
   }
 }

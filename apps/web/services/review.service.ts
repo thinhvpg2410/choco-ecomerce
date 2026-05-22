@@ -11,7 +11,8 @@ export interface Review {
 
 export interface CreateReviewDto {
   product_id: string;
-  rating: number; // 1-5
+  order_item_id: string;
+  rating: number;
   comment?: string;
 }
 
@@ -104,6 +105,17 @@ export const getMyReviewForProduct = async (
     return res.data?.data || null;
   } catch (error: any) {
     console.error("❌ Get my review error:", error?.response?.data || error);
+    return null;
+  }
+};
+
+export const getMyReviewForOrderItem = async (
+  orderItemId: string,
+): Promise<Review | null> => {
+  try {
+    const res = await api.get(`/reviews/me/order-item/${orderItemId}`);
+    return res.data?.data || null;
+  } catch (error: any) {
     return null;
   }
 };

@@ -184,11 +184,11 @@ export class CouponsService {
 
     const now = new Date();
     if (coupon.expiryDate && coupon.expiryDate <= now) {
-      throw new BadRequestException('Coupon has expired');
+      throw new BadRequestException('Mã giảm giá đã hết hạn');
     }
 
     if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) {
-      throw new BadRequestException('Coupon usage limit reached');
+      throw new BadRequestException('Mã giảm giá đã hết lượt sử dụng');
     }
 
     let subtotal: number;
@@ -207,7 +207,7 @@ export class CouponsService {
     const minOrder = Number(coupon.minOrderAmount);
     if (subtotal < minOrder) {
       throw new BadRequestException(
-        `Minimum order amount of ${minOrder} required for this coupon`,
+        `Đơn hàng tối thiểu ${minOrder.toLocaleString('vi-VN')}đ để áp dụng mã này`,
       );
     }
 

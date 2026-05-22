@@ -4,7 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { OrderStatus, Prisma, UserRole } from '@prisma/client';
+import {
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  Prisma,
+  UserRole,
+} from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -67,6 +73,12 @@ export class OrdersService {
           shippingFee: 30000,
           finalAmount: totalAmount + 30000,
           status: OrderStatus.PENDING,
+
+          paymentStatus:
+            dto.payment_method === PaymentMethod.PayPal
+              ? PaymentStatus.PAID
+              : PaymentStatus.PENDING,
+
           receiverName: dto.receiver_name,
           receiverPhone: dto.receiver_phone,
           shippingAddress: dto.shipping_address,
@@ -88,6 +100,41 @@ export class OrdersService {
         },
         include: { items: true },
       });
+
+      if (dto.coupon_code) {
+        const coupon = await tx.coupon.findUnique({
+          where: {
+            code: dto.coupon_code.trim().toUpperCase(),
+          },
+        });
+
+        if (!coupon || !coupon.isActive) {
+          throw new BadRequestException('Mã giảm giá không hợp lệ');
+        }
+
+        const updated = await tx.coupon.updateMany({
+          where: {
+            id: coupon.id,
+            OR: [
+              { usageLimit: null },
+              {
+                usedCount: {
+                  lt: coupon.usageLimit ?? 0,
+                },
+              },
+            ],
+          },
+          data: {
+            usedCount: {
+              increment: 1,
+            },
+          },
+        });
+
+        if (updated.count === 0) {
+          throw new BadRequestException('Mã giảm giá đã hết lượt sử dụng');
+        }
+      }
 
       return order;
     });
@@ -167,6 +214,12 @@ export class OrdersService {
           shippingFee: 30000,
           finalAmount: totalAmount + 30000,
           status: OrderStatus.PENDING,
+
+          paymentStatus:
+            dto.payment_method === PaymentMethod.PayPal
+              ? PaymentStatus.PAID
+              : PaymentStatus.PENDING,
+
           receiverName: dto.receiver_name,
           receiverPhone: dto.receiver_phone,
           shippingAddress: dto.shipping_address,
@@ -177,6 +230,41 @@ export class OrdersService {
         },
         include: { items: true },
       });
+
+      if (dto.coupon_code) {
+        const coupon = await tx.coupon.findUnique({
+          where: {
+            code: dto.coupon_code.trim().toUpperCase(),
+          },
+        });
+
+        if (!coupon || !coupon.isActive) {
+          throw new BadRequestException('Mã giảm giá không hợp lệ');
+        }
+
+        const updated = await tx.coupon.updateMany({
+          where: {
+            id: coupon.id,
+            OR: [
+              { usageLimit: null },
+              {
+                usedCount: {
+                  lt: coupon.usageLimit ?? 0,
+                },
+              },
+            ],
+          },
+          data: {
+            usedCount: {
+              increment: 1,
+            },
+          },
+        });
+
+        if (updated.count === 0) {
+          throw new BadRequestException('Mã giảm giá đã hết lượt sử dụng');
+        }
+      }
 
       // Xóa items đã mua khỏi giỏ
       await tx.cartItem.deleteMany({
@@ -255,20 +343,101 @@ export class OrdersService {
     updateOrderStatusDto: UpdateOrderStatusDto,
   ) {
     this.validateOrderId(orderId);
-    try {
-      const order = await this.prisma.order.update({
+
+    const newStatus = updateOrderStatusDto.status;
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
         where: { id: orderId },
-        data: { status: updateOrderStatusDto.status },
-        include: { items: true },
+        include: {
+          items: true,
+          payment: true,
+        },
       });
-      return {
-        success: true,
-        message: 'Order status updated successfully',
-        data: this.toOrderResponse(order),
-      };
-    } catch {
-      throw new NotFoundException('Order not found');
-    }
+
+      if (!order) {
+        throw new NotFoundException('Order not found');
+      }
+
+      // Không cho update nếu đã cancel
+      if (order.status === OrderStatus.CANCELLED) {
+        throw new BadRequestException('Cannot update cancelled order');
+      }
+
+      // Update order status
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: newStatus,
+        },
+        include: {
+          items: true,
+          payment: true,
+        },
+      });
+
+      // COD => giao thành công mới PAID
+      if (
+        newStatus === OrderStatus.DELIVERED &&
+        order.payment &&
+        order.payment.paymentMethod === PaymentMethod.COD &&
+        order.payment.paymentStatus === PaymentStatus.PENDING
+      ) {
+        await tx.payment.update({
+          where: {
+            id: order.payment.id,
+          },
+          data: {
+            paymentStatus: PaymentStatus.PAID,
+            paidAt: new Date(),
+          },
+        });
+
+        await tx.order.update({
+          where: {
+            id: order.id,
+          },
+          data: {
+            paymentStatus: PaymentStatus.PAID,
+          },
+        });
+
+        updatedOrder.paymentStatus = PaymentStatus.PAID;
+      }
+
+      return updatedOrder;
+    });
+
+    return {
+      success: true,
+      message: 'Order status updated successfully',
+      data: this.toOrderResponse(result),
+    };
+  }
+
+  async getReviewableOrders(userId: string) {
+    const orders = await this.prisma.order.findMany({
+      where: {
+        userId,
+        status: OrderStatus.DELIVERED,
+      },
+      include: {
+        items: {
+          include: {
+            review: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Reviewable orders fetched successfully',
+      data: orders,
+    };
   }
 
   private validateUserId(id: string): void {
@@ -285,6 +454,7 @@ export class OrdersService {
       user_id: order.userId,
       items:
         order.items?.map((item) => ({
+          order_item_id: item.id,
           product_id: item.productId,
           name: item.productNameAtTime,
           image: item.productImageAtTime,
@@ -294,7 +464,7 @@ export class OrdersService {
         })) || [],
       total_amount: Number(order.totalAmount),
       payment_method: order.paymentMethod,
-      payment_status: order.paymentStatus,
+      payment_status: order.paymentStatus ?? null,
       status: order.status,
       receiver_name: order.receiverName,
       receiver_phone: order.receiverPhone,

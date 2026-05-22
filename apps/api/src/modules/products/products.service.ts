@@ -396,9 +396,13 @@ export class ProductsService {
       throw new NotFoundException('Product not found');
     }
 
-    const myReview = await this.prisma.review.findUnique({
+    const myReviews = await this.prisma.review.findMany({
       where: {
-        userId_productId: { userId: viewer.sub, productId: product.id },
+        userId: viewer.sub,
+        productId: product.id,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
 
@@ -408,13 +412,13 @@ export class ProductsService {
       message: 'Product fetched successfully',
       data: {
         ...base,
-        my_review: myReview
-          ? {
-              rating: myReview.rating,
-              comment: myReview.comment,
-              createdAt: myReview.createdAt,
-            }
-          : null,
+        my_reviews: myReviews.map((review) => ({
+          id: review.id,
+          rating: review.rating,
+          comment: review.comment,
+          createdAt: review.createdAt,
+          order_item_id: review.orderItemId,
+        })),
       },
       meta: {
         viewer: {

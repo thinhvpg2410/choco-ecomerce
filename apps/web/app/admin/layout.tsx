@@ -1,16 +1,35 @@
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Admin Dashboard — Choco Kingdom",
-};
+import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/store/store";
 
-// Admin layout KHÔNG có <html><body> (root layout đã xử lý)
-// KHÔNG có Header/Footer (admin/ nằm ngoài group (store))
-// Chỉ render children — toàn bộ UI do page.tsx quản lý
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const user = useSelector((state: RootState) => state.auth.user);
+
+  useEffect(() => {
+    // ✅ Cho phép truy cập trang admin login
+    if (pathname === "/admin/login") return;
+
+    // ❌ Chưa login
+    if (!user) {
+      router.replace("/admin/login");
+      return;
+    }
+
+    // ❌ Không phải admin
+    if (user.role !== "admin") {
+      router.replace("/");
+    }
+  }, [user, router, pathname]);
+
   return <>{children}</>;
 }

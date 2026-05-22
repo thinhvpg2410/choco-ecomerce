@@ -20,28 +20,24 @@ enum UserStatus {
 
 enum OrderStatus {
   PENDING
-  CONFIRMED
   SHIPPING
   DELIVERED
   CANCELLED
-  RETURNED
 }
 
 enum PaymentMethod {
   COD
-  BANKING
-  VNPay
-  Momo
-  BankTransfer
-  ZaloPay
   PayPal
+  // BANKING
+  // VNPay
+  // Momo
+  // BankTransfer
+  // ZaloPay
 }
 
 enum PaymentStatus {
   PENDING
   PAID
-  FAILED
-  REFUNDED
 }
 
 enum CouponType {
@@ -81,7 +77,6 @@ model UserAddress {
   receiverPhone String @map("receiver_phone")
   address      String
   ward         String
-  district     String
   city         String
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime? @updatedAt @map("updated_at")
@@ -226,7 +221,6 @@ model Order {
   receiverPhone   String       @map("receiver_phone")
   shippingAddress String       @map("shipping_address")
   ward            String?
-  district        String?
   city            String?
   note            String?
   cancelReason    String?      @map("cancel_reason")
@@ -307,7 +301,6 @@ model Review {
   isActive    Boolean   @default(true) @map("is_active")
   createdAt   DateTime  @default(now()) @map("created_at")
 
-  @@unique([userId, productId])
   @@map("reviews")
 }
 

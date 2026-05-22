@@ -27,18 +27,14 @@ import { Search, Eye, Loader2 } from "lucide-react";
 
 const statusConfig: Record<string, { label: string; variant: any; color: string }> = {
   PENDING: { label: "Chờ xử lý", variant: "outline", color: "text-amber-600" },
-  CONFIRMED: { label: "Đã xác nhận", variant: "default", color: "text-blue-600" },
   SHIPPING: { label: "Đang giao", variant: "default", color: "text-indigo-600" },
   DELIVERED: { label: "Đã giao", variant: "default", color: "text-green-600" },
   CANCELLED: { label: "Đã hủy", variant: "destructive", color: "text-red-600" },
-  RETURNED: { label: "Đã trả hàng", variant: "destructive", color: "text-orange-600" },
 };
 
 const paymentConfig: Record<string, { label: string; variant: any }> = {
   PAID: { label: "Đã thanh toán", variant: "default" },
   PENDING: { label: "Chưa thanh toán", variant: "outline" },
-  FAILED: { label: "Thanh toán thất bại", variant: "destructive" },
-  REFUNDED: { label: "Đã hoàn tiền", variant: "secondary" },
 };
 
 export function OrdersManagement() {

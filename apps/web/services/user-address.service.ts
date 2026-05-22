@@ -6,7 +6,6 @@ export interface AddressPayload {
   receiverPhone: string;
   address: string;
   ward: string;
-  district: string;
   city: string;
 }
 

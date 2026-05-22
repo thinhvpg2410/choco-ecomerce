@@ -19,6 +19,9 @@ export class ReviewItemDto {
 
   @ApiProperty({ description: 'ISO string' })
   created_at: string;
+
+  @ApiProperty()
+  order_item_id: string;
 }
 
 export class ReviewListDataDto {
