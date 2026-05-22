@@ -25,7 +25,7 @@ export class UsersService {
       where: { email: createUserDto.email },
     });
     if (existingUser) {
-      throw new ConflictException('Email already exists');
+      throw new ConflictException('Email này đã tồn tại');
     }
 
     const createdUser = await this.prisma.user.create({
@@ -71,12 +71,12 @@ export class UsersService {
 
   async findById(userId: string): Promise<UserResponseDto> {
     if (!isUuid(userId)) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Người dùng không tồn tại');
     }
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Người dùng không tồn tại');
     }
 
     return this.toUserResponse(user);
@@ -102,7 +102,7 @@ export class UsersService {
   // ==================== ADMIN ONLY - XÓA USER (SOFT DELETE) ====================
   async deleteUserByAdmin(userId: string): Promise<UserResponseDto> {
     if (!isUuid(userId)) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Người dùng không tồn tại');
     }
 
     const user = await this.prisma.user.findUnique({
@@ -110,12 +110,12 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Không tìm thấy người dùng');
     }
 
     // Không cho xóa tài khoản Admin
     if (user.role === UserRole.admin) {
-      throw new BadRequestException('Cannot delete admin account');
+      throw new BadRequestException('Không thể xóa tài khoản admin');
     }
 
     const updatedUser = await this.prisma.user.update({
@@ -134,7 +134,7 @@ export class UsersService {
       where: { id: userId },
     });
 
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) throw new NotFoundException('Người dùng không tồn tại');
 
     // 1. xoá ảnh cũ từ URL
     if (user.avatarUrl) {

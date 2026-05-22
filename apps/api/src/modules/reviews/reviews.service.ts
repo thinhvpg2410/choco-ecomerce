@@ -21,15 +21,15 @@ export class ReviewsService {
   ) {}
 
   async create(userId: string, dto: CreateReviewDto) {
-    this.assertUuid(userId, 'User not found');
-    this.assertUuid(dto.product_id, 'Product not found');
+    this.assertUuid(userId, 'Người dùng không tồn tại');
+    this.assertUuid(dto.product_id, 'Sản phẩm không tồn tại');
 
     const product = await this.prisma.product.findFirst({
       where: { id: dto.product_id, isActive: true },
     });
 
     if (!product) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException('Sản phẩm không tồn tại');
     }
 
     const orderItem = await this.prisma.orderItem.findFirst({
@@ -47,11 +47,11 @@ export class ReviewsService {
     });
 
     if (!orderItem) {
-      throw new ForbiddenException('You can only review purchased products');
+      throw new ForbiddenException('Bạn chỉ có thể đánh giá sản phẩm đã nhận');
     }
 
     if (orderItem.review) {
-      throw new ConflictException('You already reviewed this purchase');
+      throw new ConflictException('Bạn đã đánh giá sản phẩm này rồi');
     }
 
     try {
@@ -73,7 +73,7 @@ export class ReviewsService {
       await this.cache.invalidateAfterProductWrite(dto.product_id);
       return {
         success: true,
-        message: 'Review created successfully',
+        message: 'Đánh giá sản phẩm thành công',
         data: this.toReviewResponse(review),
       };
     } catch (error) {
@@ -81,21 +81,21 @@ export class ReviewsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        throw new ConflictException('You have already reviewed this product');
+        throw new ConflictException('Bạn đã đánh giá sản phẩm này rồi');
       }
       throw error;
     }
   }
 
   async findByProduct(productId: string, query: QueryReviewsDto) {
-    this.assertUuid(productId, 'Product not found');
+    this.assertUuid(productId, 'Không tìm thấy sản phẩm');
 
     const product = await this.prisma.product.findFirst({
       where: { id: productId, isActive: true },
     });
 
     if (!product) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException('Sản phẩm không tồn tại');
     }
 
     const page = Number(query.page ?? 1);
@@ -127,7 +127,7 @@ export class ReviewsService {
 
     return {
       success: true,
-      message: 'Reviews fetched successfully',
+      message: 'Đánh giá sản phẩm đã được lấy thành công',
       data: {
         items: reviews.map((r) => this.toReviewResponse(r)),
         pagination: {
@@ -146,11 +146,11 @@ export class ReviewsService {
     role: UserRole,
     dto: UpdateReviewDto,
   ) {
-    this.assertUuid(reviewId, 'Review not found');
-    this.assertUuid(userId, 'User not found');
+    this.assertUuid(reviewId, 'Đánh giá không tồn tại');
+    this.assertUuid(userId, 'Người dùng không tồn tại');
 
     if (dto.rating === undefined && dto.comment === undefined) {
-      throw new BadRequestException('No changes provided');
+      throw new BadRequestException('Đánh giá không có gì thay đổi');
     }
 
     const review = await this.prisma.review.findUnique({
@@ -158,14 +158,14 @@ export class ReviewsService {
     });
 
     if (!review) {
-      throw new NotFoundException('Review not found');
+      throw new NotFoundException('Đánh giá không tồn tại');
     }
 
     const isOwner = review.userId === userId;
     const isAdmin = role === UserRole.admin;
 
     if (!isOwner && !isAdmin) {
-      throw new ForbiddenException('You cannot edit this review');
+      throw new ForbiddenException('Bạn không thể chỉnh sửa đánh giá này');
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -184,28 +184,28 @@ export class ReviewsService {
     await this.cache.invalidateAfterProductWrite(review.productId);
     return {
       success: true,
-      message: 'Review updated successfully',
+      message: 'Đánh giá đã được cập nhật thành công',
       data: this.toReviewResponse(updated),
     };
   }
 
   async remove(reviewId: string, userId: string, role: UserRole) {
-    this.assertUuid(reviewId, 'Review not found');
-    this.assertUuid(userId, 'User not found');
+    this.assertUuid(reviewId, 'Đánh giá không tồn tại');
+    this.assertUuid(userId, 'Người dùng không tồn tại');
 
     const review = await this.prisma.review.findUnique({
       where: { id: reviewId },
     });
 
     if (!review) {
-      throw new NotFoundException('Review not found');
+      throw new NotFoundException('Đánh giá không tồn tại');
     }
 
     const isOwner = review.userId === userId;
     const isAdmin = role === UserRole.admin;
 
     if (!isOwner && !isAdmin) {
-      throw new ForbiddenException('You cannot delete this review');
+      throw new ForbiddenException('Bạn không thể xóa đánh giá này');
     }
 
     const productId = review.productId;
@@ -217,7 +217,7 @@ export class ReviewsService {
     await this.cache.invalidateAfterProductWrite(productId);
     return {
       success: true,
-      message: 'Review deleted successfully',
+      message: 'Đánh giá đã được xóa thành công',
     };
   }
 
@@ -292,8 +292,8 @@ export class ReviewsService {
   }
 
   async getMyReviewForProduct(userId: string, productId: string) {
-    this.assertUuid(userId, 'User not found');
-    this.assertUuid(productId, 'Product not found');
+    this.assertUuid(userId, 'Người dùng không tồn tại');
+    this.assertUuid(productId, 'Sản phẩm không tồn tại');
 
     const review = await this.prisma.review.findFirst({
       where: {
@@ -304,7 +304,7 @@ export class ReviewsService {
 
     return {
       success: true,
-      message: 'Review fetched successfully',
+      message: 'Đánh giá đã được lấy thành công',
       data: review ? this.toReviewResponse(review) : null,
     };
   }

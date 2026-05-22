@@ -75,7 +75,7 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'Login successfully',
+      message: '“Đăng nhập thành công',
       data: {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
@@ -92,13 +92,13 @@ export class AuthService {
       });
       return { sub: payload.sub };
     } catch {
-      throw new UnauthorizedException('Invalid token');
+      throw new UnauthorizedException('Token không hợp lệ');
     }
   }
 
   async refreshTokens(refreshToken: string) {
     if (!refreshToken) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('Token làm mới không hợp lệ');
     }
 
     let payload: { sub: string; email: string; role: string };
@@ -108,12 +108,12 @@ export class AuthService {
         secret: this.configService.getOrThrow<string>('jwt.refreshSecret'),
       });
     } catch {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('Token làm mới không hợp lệ');
     }
 
     const user = await this.usersService.findByIdWithRefreshToken(payload.sub);
     if (!user || !user.refreshTokenHash) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('Token làm mới không hợp lệ');
     }
 
     const refreshTokenMatches = await bcrypt.compare(
@@ -121,7 +121,7 @@ export class AuthService {
       user.refreshTokenHash,
     );
     if (!refreshTokenMatches) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('Token làm mới không hợp lệ');
     }
 
     const nextPayload = this.buildJwtPayload(user);

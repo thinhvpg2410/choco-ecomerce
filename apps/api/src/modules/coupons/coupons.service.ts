@@ -32,7 +32,7 @@ export class CouponsService {
 
     return {
       success: true,
-      message: 'Coupons fetched successfully',
+      message: 'Lấy danh sách mã giảm giá thành công',
       data: coupons.map((c) => this.toCouponResponse(c)),
     };
   }
@@ -50,16 +50,16 @@ export class CouponsService {
       isActive: dto.is_active ?? true,
     };
 
-   if (dto.type === CouponType.PERCENT) {
-     data.discountPercent = dto.value;
-     data.discountAmount = null;
-   } else if (dto.type === CouponType.FIXED) {
-     data.discountAmount = dto.value;
-     data.discountPercent = null;
-   } else if (dto.type === CouponType.FREE_SHIP) {
-     data.discountAmount = 0;
-     data.discountPercent = null;
-   }
+    if (dto.type === CouponType.PERCENT) {
+      data.discountPercent = dto.value;
+      data.discountAmount = null;
+    } else if (dto.type === CouponType.FIXED) {
+      data.discountAmount = dto.value;
+      data.discountPercent = null;
+    } else if (dto.type === CouponType.FREE_SHIP) {
+      data.discountAmount = 0;
+      data.discountPercent = null;
+    }
 
     if (dto.max_discount !== undefined) {
       data.maxDiscountAmount = dto.max_discount;
@@ -72,12 +72,15 @@ export class CouponsService {
 
       return {
         success: true,
-        message: 'Coupon created successfully',
+        message: 'Mã giảm giá đã được tạo thành công',
         data: this.toCouponResponse(coupon),
       };
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new ConflictException('Coupon code already exists');
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('Mã giảm giá đã tồn tại');
       }
       throw error;
     }
@@ -86,15 +89,29 @@ export class CouponsService {
   async update(couponId: string, dto: UpdateCouponDto) {
     this.assertUuid(couponId, 'Coupon not found');
 
-    const existing = await this.prisma.coupon.findUnique({ where: { id: couponId } });
+    const existing = await this.prisma.coupon.findUnique({
+      where: { id: couponId },
+    });
     if (!existing) {
       throw new NotFoundException('Coupon not found');
     }
 
     const nextType = dto.type ?? existing.couponType;
-    const nextValue = dto.value ?? (nextType === CouponType.PERCENT ? Number(existing.discountPercent || 0) : Number(existing.discountAmount || 0));
-    const nextMaxRaw = dto.max_discount !== undefined ? dto.max_discount : existing.maxDiscountAmount ? Number(existing.maxDiscountAmount) : null;
-    const nextMax = nextMaxRaw === null || nextMaxRaw === undefined ? undefined : Number(nextMaxRaw);
+    const nextValue =
+      dto.value ??
+      (nextType === CouponType.PERCENT
+        ? Number(existing.discountPercent || 0)
+        : Number(existing.discountAmount || 0));
+    const nextMaxRaw =
+      dto.max_discount !== undefined
+        ? dto.max_discount
+        : existing.maxDiscountAmount
+          ? Number(existing.maxDiscountAmount)
+          : null;
+    const nextMax =
+      nextMaxRaw === null || nextMaxRaw === undefined
+        ? undefined
+        : Number(nextMaxRaw);
 
     this.validateCouponValue(nextType, nextValue, nextMax);
 
@@ -116,10 +133,13 @@ export class CouponsService {
         data.discountPercent = null;
       }
     }
-    if (dto.max_discount !== undefined) data.maxDiscountAmount = dto.max_discount;
-    if (dto.min_order_amount !== undefined) data.minOrderAmount = dto.min_order_amount;
+    if (dto.max_discount !== undefined)
+      data.maxDiscountAmount = dto.max_discount;
+    if (dto.min_order_amount !== undefined)
+      data.minOrderAmount = dto.min_order_amount;
     if (dto.usage_limit !== undefined) data.usageLimit = dto.usage_limit;
-    if (dto.expires_at !== undefined) data.expiryDate = dto.expires_at ? new Date(dto.expires_at) : null;
+    if (dto.expires_at !== undefined)
+      data.expiryDate = dto.expires_at ? new Date(dto.expires_at) : null;
     if (dto.is_active !== undefined) data.isActive = dto.is_active;
 
     try {
@@ -130,29 +150,35 @@ export class CouponsService {
 
       return {
         success: true,
-        message: 'Coupon updated successfully',
+        message: 'Mã giảm giá đã được cập nhật thành công',
         data: this.toCouponResponse(coupon),
       };
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new ConflictException('Coupon code already exists');
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('Mã giảm giá đã tồn tại');
       }
       throw error;
     }
   }
 
   async remove(couponId: string) {
-    this.assertUuid(couponId, 'Coupon not found');
+    this.assertUuid(couponId, 'Mã giảm giá không tồn tại');
 
     try {
       await this.prisma.coupon.delete({ where: { id: couponId } });
       return {
         success: true,
-        message: 'Coupon deleted successfully',
+        message: 'Mã giảm giá đã được xóa thành công',
       };
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException('Coupon not found');
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException('Mã giảm giá không tồn tại');
       }
       throw error;
     }
@@ -163,14 +189,18 @@ export class CouponsService {
     const hasSubtotal = dto.subtotal !== undefined && dto.subtotal !== null;
 
     if (hasOrder === hasSubtotal) {
-      throw new BadRequestException('Provide exactly one of order_id or subtotal');
+      throw new BadRequestException(
+        'Provide exactly one of order_id or subtotal',
+      );
     }
 
     let userId: string | undefined;
     if (hasOrder) {
       const token = this.extractBearer(authorization);
       if (!token) {
-        throw new UnauthorizedException('Authorization required when using order_id');
+        throw new UnauthorizedException(
+          'Authorization required when using order_id',
+        );
       }
       userId = this.authService.verifyAccessToken(token).sub;
     }
@@ -179,7 +209,7 @@ export class CouponsService {
     const coupon = await this.prisma.coupon.findUnique({ where: { code } });
 
     if (!coupon || !coupon.isActive) {
-      throw new BadRequestException('Invalid or inactive coupon');
+      throw new BadRequestException('Mã giảm giá không hợp lệ');
     }
 
     const now = new Date();
@@ -197,7 +227,7 @@ export class CouponsService {
         where: { id: dto.order_id, userId },
       });
       if (!order) {
-        throw new NotFoundException('Order not found');
+        throw new NotFoundException('Đơn hàng không tồn tại');
       }
       subtotal = Number(order.totalAmount);
     } else {
@@ -211,16 +241,22 @@ export class CouponsService {
       );
     }
 
-    const discount = this.computeDiscount({
-      type: coupon.couponType,
-      value: (coupon.couponType === CouponType.PERCENT ? coupon.discountPercent : coupon.discountAmount) || new Prisma.Decimal(0),
-      maxDiscount: coupon.maxDiscountAmount,
-    }, subtotal);
+    const discount = this.computeDiscount(
+      {
+        type: coupon.couponType,
+        value:
+          (coupon.couponType === CouponType.PERCENT
+            ? coupon.discountPercent
+            : coupon.discountAmount) || new Prisma.Decimal(0),
+        maxDiscount: coupon.maxDiscountAmount,
+      },
+      subtotal,
+    );
     const finalAmount = this.roundMoney(Math.max(0, subtotal - discount));
 
     return {
       success: true,
-      message: 'Coupon applied successfully',
+      message: 'Mã giảm giá đã được áp dụng thành công',
       data: {
         code: coupon.code,
         discount_amount: discount,
@@ -268,16 +304,18 @@ export class CouponsService {
       if (type === CouponType.PERCENT) {
         if (value < 0 || value > 100) {
           throw new BadRequestException(
-            'Percent value must be between 0 and 100',
+            'Giá trị phần trăm phải nằm trong khoảng từ 0 đến 100',
           );
         }
       } else if (type === CouponType.FIXED) {
         if (value < 0) {
-          throw new BadRequestException('Fixed discount must be non-negative');
+          throw new BadRequestException(
+            'Giá trị giảm giá cố định phải là số không âm',
+          );
         }
       } else if (type === CouponType.FREE_SHIP) {
         if (value !== 0) {
-          throw new BadRequestException('FREE_SHIP value must be 0');
+          throw new BadRequestException('Giá trị FREE_SHIP phải là 0');
         }
       }
 
@@ -286,7 +324,9 @@ export class CouponsService {
         maxDiscount !== null &&
         maxDiscount < 0
       ) {
-        throw new BadRequestException('max_discount must be non-negative');
+        throw new BadRequestException(
+          'Giá trị giảm giá tối đa phải là số không âm',
+        );
       }
     }
   }
@@ -326,8 +366,12 @@ export class CouponsService {
     isActive: boolean;
     createdAt: Date;
   }) {
-    const discountPercentNum = coupon.discountPercent ? Number(coupon.discountPercent) : 0;
-    const discountAmountNum = coupon.discountAmount ? Number(coupon.discountAmount) : 0;
+    const discountPercentNum = coupon.discountPercent
+      ? Number(coupon.discountPercent)
+      : 0;
+    const discountAmountNum = coupon.discountAmount
+      ? Number(coupon.discountAmount)
+      : 0;
     const row: {
       id: string;
       code: string;
