@@ -31,11 +31,6 @@ const statusConfig: Record<
   { label: string; variant: any; color: string }
 > = {
   PENDING: { label: "Chờ xử lý", variant: "outline", color: "text-amber-600" },
-  PROCESSING: {
-    label: "Đang xử lý",
-    variant: "secondary",
-    color: "text-blue-600",
-  },
   SHIPPING: {
     label: "Đang giao",
     variant: "default",
@@ -47,8 +42,7 @@ const statusConfig: Record<
 
 const paymentConfig: Record<string, { label: string; variant: any }> = {
   PAID: { label: "Đã thanh toán", variant: "default" },
-  UNPAID: { label: "Chưa thanh toán", variant: "outline" },
-  REFUNDED: { label: "Đã hoàn tiền", variant: "secondary" },
+  PENDING: { label: "Chưa thanh toán", variant: "outline" },
 };
 
 export function OrdersManagement() {
@@ -79,6 +73,11 @@ export function OrdersManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCloseModal = () => {
+    setOpen(false);
+    loadOrders();
   };
 
   const filtered = orders.filter((o) => {
@@ -168,12 +167,12 @@ export function OrdersManagement() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/40">
-                    <TableHead className="w-[140px]">Mã đơn</TableHead>
+                    <TableHead className="w-36">Mã đơn</TableHead>
                     <TableHead>Khách hàng</TableHead>
                     <TableHead className="text-right">Tổng tiền</TableHead>
                     <TableHead className="text-center">Trạng thái</TableHead>
                     <TableHead className="text-center">Thanh toán</TableHead>
-                    <TableHead className="w-[170px]">Cập nhật</TableHead>
+                    <TableHead className="w-44">Cập nhật</TableHead>
                     <TableHead className="text-right">Hành động</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -294,7 +293,10 @@ export function OrdersManagement() {
       </Card>
       <OrderDetailModal
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(value) => {
+          if (!value) handleCloseModal();
+          setOpen(value);
+        }}
         order={selectedOrder}
       />
     </div>

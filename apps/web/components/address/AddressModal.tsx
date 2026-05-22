@@ -12,7 +12,6 @@ export interface AddressFormData {
   receiverPhone: string;
   address: string;
   ward: string;
-  district: string;
   city: string;
 }
 
@@ -22,7 +21,6 @@ interface Props {
     receiver_phone?: string;
     address?: string;
     ward?: string;
-    district?: string;
     city?: string;
   } | null;
   onSave: (data: AddressFormData) => Promise<void>;
@@ -47,15 +45,11 @@ export function AddressFormModal({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (initial?.city && initial?.district && initial?.ward) {
+    if (initial?.city && initial?.ward) {
       setAddrSel({
         province: {
           code: 0,
           name: initial.city,
-        },
-        district: {
-          code: 0,
-          name: initial.district,
         },
         ward: {
           code: 0,
@@ -75,7 +69,7 @@ export function AddressFormModal({
       return;
     }
     if (!addrSel) {
-      toast.error("Chọn tỉnh / quận / phường");
+      toast.error("Chọn tỉnh/thành phố và phường/xã");
       return;
     }
     if (!addrDetail.trim()) {
@@ -85,14 +79,13 @@ export function AddressFormModal({
 
     setSaving(true);
     try {
-await onSave({
-  receiverName,
-  receiverPhone,
-  address: addrDetail,
-  ward: addrSel.ward.name,
-  district: addrSel.district.name,
-  city: addrSel.province.name,
-});
+      await onSave({
+        receiverName,
+        receiverPhone,
+        address: addrDetail,
+        ward: addrSel.ward.name,
+        city: addrSel.province.name,
+      });
       onClose();
     } catch {
       toast.error("Lưu địa chỉ thất bại");

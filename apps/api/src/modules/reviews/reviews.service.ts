@@ -32,11 +32,26 @@ export class ReviewsService {
       throw new NotFoundException('Product not found');
     }
 
-    const canReview = await this.hasDeliveredPurchase(userId, dto.product_id);
-    if (!canReview) {
-      throw new ForbiddenException(
-        'Only customers who received this product can leave a review',
-      );
+    const orderItem = await this.prisma.orderItem.findFirst({
+      where: {
+        id: dto.order_item_id,
+        productId: dto.product_id,
+        order: {
+          userId,
+          status: OrderStatus.DELIVERED,
+        },
+      },
+      include: {
+        review: true,
+      },
+    });
+
+    if (!orderItem) {
+      throw new ForbiddenException('You can only review purchased products');
+    }
+
+    if (orderItem.review) {
+      throw new ConflictException('You already reviewed this purchase');
     }
 
     try {
@@ -45,6 +60,7 @@ export class ReviewsService {
           data: {
             userId,
             productId: dto.product_id,
+            orderItemId: dto.order_item_id,
             rating: dto.rating,
             comment: dto.comment ?? null,
           },
@@ -88,7 +104,10 @@ export class ReviewsService {
 
     const [reviews, total] = await Promise.all([
       this.prisma.review.findMany({
-        where: { productId },
+        where: {
+          productId,
+          isActive: true,
+        },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
@@ -223,7 +242,10 @@ export class ReviewsService {
     productId: string,
   ): Promise<void> {
     const agg = await tx.review.aggregate({
-      where: { productId },
+      where: {
+        productId,
+        isActive: true,
+      },
       _avg: { rating: true },
       _count: { _all: true },
     });
@@ -254,6 +276,7 @@ export class ReviewsService {
       id: review.id,
       user_id: review.userId,
       product_id: review.productId,
+      order_item_id: review.orderItemId,
       rating: review.rating,
       comment: review.comment ?? undefined,
       created_at: review.createdAt.toISOString(),

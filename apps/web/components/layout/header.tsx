@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getCart, getProductById } from "@/services/cart.service";
+import { clearCartState } from "@/store/cartSlice";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -35,17 +36,22 @@ import { authLogout } from "@/services/auth.service";
 
 import { getCategories, type Category } from "@/services/category.service";
 import { getBrands, type Brand } from "@/services/brand.service";
+import { fetchCart } from "@/store/cartSlice";
 
 export function Header() {
   const [openCart, setOpenCart] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
-  const [cartItems, setCartItems] = useState<any[]>([]);
+
   const [productsMap, setProductsMap] = useState<Record<string, any>>({});
 
   const { user, isAuthenticated, isLoading } = useSelector(
     (state: RootState) => state.auth,
   );
+
+  const dispatch = useDispatch();
+
+  const cartItems = useSelector((state: RootState) => state.cart.items);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -66,49 +72,47 @@ export function Header() {
     getBrands().then(setBrands);
   }, []);
 
- const loadCart = async () => {
-   try {
-     const res: any = await getCart();
-
-     let items = res?.data?.items || res?.items || res || [];
-
-     setCartItems(items);
-
-     const productIds = [...new Set(items.map((i: any) => i.product_id))];
-
-     const map: Record<string, any> = {};
-
-     await Promise.all(
-       productIds.map(async (id: string) => {
-         const p = await getProductById(id);
-         if (p) map[id] = p;
-       }),
-     );
-
-     setProductsMap(map);
-   } catch (err) {
-     console.error(err);
-   }
- };
-
  useEffect(() => {
-   loadCart();
+   const loadProducts = async () => {
+     try {
+       const productIds = [...new Set(cartItems.map((i: any) => i.product_id))];
 
-   const handleCartUpdated = () => {
-     loadCart();
+       const map: Record<string, any> = {};
+
+       await Promise.all(
+         productIds.map(async (id: string) => {
+           const p = await getProductById(id);
+
+           if (p) map[id] = p;
+         }),
+       );
+
+       setProductsMap(map);
+     } catch (err) {
+       console.error(err);
+     }
    };
 
-   window.addEventListener("cart-updated", handleCartUpdated);
+   if (cartItems.length > 0) {
+     loadProducts();
+   } else {
+     setProductsMap({});
+   }
+ }, [cartItems]);
 
-   return () => {
-     window.removeEventListener("cart-updated", handleCartUpdated);
-   };
- }, []);
+useEffect(() => {
+  if (isAuthenticated) {
+    dispatch(fetchCart() as any);
+  }
+}, [isAuthenticated]);
 
   // Thay handleLogout:
   const handleLogout = async () => {
     await authLogout();
+
+    dispatch(clearCartState());
     dispatch(logout());
+
     window.location.href = "/";
   };
 
@@ -282,7 +286,7 @@ export function Header() {
             <div className="relative cursor-pointer">
               <ShoppingCart className="w-5 h-5 transition hover:text-pink-600 hover:scale-110" />
               <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white rounded-full px-1">
-                {cartItems.length}
+                {cartItems.reduce((sum, item: any) => sum + item.quantity, 0)}
               </span>
             </div>
 

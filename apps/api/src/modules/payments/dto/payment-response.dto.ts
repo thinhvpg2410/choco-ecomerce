@@ -11,8 +11,8 @@ export class PaymentDataDto {
   @ApiProperty({ description: 'e.g. COD | BANKING' })
   payment_method: string;
 
-  @ApiProperty({ enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'] })
-  payment_status: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+  @ApiProperty({ enum: ['PENDING', 'PAID'] })
+  payment_status: 'PENDING' | 'PAID';
 
   @ApiPropertyOptional()
   transaction_code?: string;

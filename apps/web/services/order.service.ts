@@ -11,8 +11,10 @@ export interface CreateOrderDto {
 }
 
 export interface OrderApiItem {
+  order_item_id: string;
   product_id: string;
   name: string;
+  image?: string;
   price: number;
   quantity: number;
 }

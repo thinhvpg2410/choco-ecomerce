@@ -75,4 +75,8 @@ export class CreateOrderDto {
   @IsNumber()
   @Min(1)
   quantity?: number;
+
+  @IsOptional()
+  @IsString()
+  coupon_code?: string;
 }

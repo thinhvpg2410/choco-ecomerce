@@ -35,7 +35,6 @@ type Props = {
 
 const statusConfig: Record<string, string> = {
   PENDING: "Chờ xử lý",
-  PROCESSING: "Đang xử lý",
   SHIPPING: "Đang giao",
   DELIVERED: "Đã giao",
   CANCELLED: "Đã hủy",
@@ -44,8 +43,13 @@ const statusConfig: Record<string, string> = {
 const paymentConfig: Record<string, string> = {
   PENDING: "Chờ thanh toán",
   PAID: "Đã thanh toán",
-  FAILED: "Thất bại",
-  REFUNDED: "Hoàn tiền",
+};
+
+const orderStatusTransitions: Record<string, string[]> = {
+  PENDING: ["PENDING", "SHIPPING", "CANCELLED"],
+  SHIPPING: ["SHIPPING", "DELIVERED"],
+  DELIVERED: ["DELIVERED"],
+  CANCELLED: ["CANCELLED"],
 };
 
 export function OrderDetailModal({ open, onOpenChange, order }: Props) {
@@ -55,13 +59,30 @@ export function OrderDetailModal({ open, onOpenChange, order }: Props) {
 
   const [paymentStatus, setPaymentStatus] = useState("PENDING");
 
+  const availableStatuses =
+    orderStatusTransitions[order?.status] ??
+    Object.keys(statusConfig);
+
+  const currentPaymentStatus =
+    order?.payment?.paymentStatus || order?.paymentStatus || "PENDING";
+
   useEffect(() => {
     if (order) {
       setStatus(order.status || "PENDING");
-
-      setPaymentStatus(order.paymentStatus || "PENDING");
+      setPaymentStatus(currentPaymentStatus);
     }
-  }, [order]);
+  }, [order, currentPaymentStatus]);
+
+  useEffect(() => {
+    if (!order) return;
+
+    if (
+      order.payment?.paymentMethod === "COD" &&
+      status === "DELIVERED"
+    ) {
+      setPaymentStatus("PAID");
+    }
+  }, [order, status]);
   const handleUpdate = async () => {
     try {
       setLoading(true);
@@ -72,7 +93,7 @@ export function OrderDetailModal({ open, onOpenChange, order }: Props) {
       }
 
       // update payment status
-      if (paymentStatus !== order.paymentStatus) {
+      if (paymentStatus !== currentPaymentStatus) {
         await updateOrderPaymentStatus(order.id, paymentStatus);
       }
 
@@ -140,8 +161,8 @@ export function OrderDetailModal({ open, onOpenChange, order }: Props) {
                     <span className="font-medium">Trạng thái:</span>
 
                     <Badge>
-                      {paymentConfig[order.paymentStatus] ||
-                        order.paymentStatus}
+                      {paymentConfig[currentPaymentStatus] ||
+                        currentPaymentStatus}
                     </Badge>
                   </div>
 
@@ -175,15 +196,11 @@ export function OrderDetailModal({ open, onOpenChange, order }: Props) {
                     </SelectTrigger>
 
                     <SelectContent>
-                      <SelectItem value="PENDING">Chờ xử lý</SelectItem>
-
-                      <SelectItem value="PROCESSING">Đang xử lý</SelectItem>
-
-                      <SelectItem value="SHIPPING">Đang giao</SelectItem>
-
-                      <SelectItem value="DELIVERED">Đã giao</SelectItem>
-
-                      <SelectItem value="CANCELLED">Đã hủy</SelectItem>
+                      {availableStatuses.map((item) => (
+                        <SelectItem key={item} value={item}>
+                          {statusConfig[item]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -202,14 +219,22 @@ export function OrderDetailModal({ open, onOpenChange, order }: Props) {
 
                     <SelectContent>
                       <SelectItem value="PENDING">Chờ thanh toán</SelectItem>
-
-                      <SelectItem value="PAID">Đã thanh toán</SelectItem>
-
-                      <SelectItem value="FAILED">Thất bại</SelectItem>
-
-                      <SelectItem value="REFUNDED">Hoàn tiền</SelectItem>
+                      {order.payment?.paymentMethod !== "COD" || status === "DELIVERED" ? (
+                        <SelectItem value="PAID">Đã thanh toán</SelectItem>
+                      ) : null}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                  <p className="font-semibold">Luồng trạng thái hợp lệ</p>
+                  <p className="mt-1">PENDING → SHIPPING → DELIVERED</p>
+                  <p>PENDING → CANCELLED</p>
+                  <p className="mt-2 text-slate-600">
+                    {order.payment?.paymentMethod === "COD"
+                      ? "Với COD, trạng thái thanh toán sẽ tự động thành PAID khi chuyển sang DELIVERED."
+                      : "Với PayPal, nếu hủy đơn vẫn giữ trạng thái thanh toán PAID."}
+                  </p>
                 </div>
 
                 <div className="space-y-2 text-sm border-t pt-4">
@@ -262,7 +287,7 @@ export function OrderDetailModal({ open, onOpenChange, order }: Props) {
                   </p>
 
                   <p>
-                    {order.ward}, {order.district}, {order.city}
+                    {order.ward}, {order.city}
                   </p>
                 </div>
               </div>

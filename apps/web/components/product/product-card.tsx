@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { addToCart } from "@/services/cart.service";
 import { toast } from "sonner";
-
+import { fetchCart } from "@/store/cartSlice";
+import { useDispatch } from "react-redux";
 interface Props {
   product: Product;
 }
@@ -16,7 +17,7 @@ export function ProductCard({ product }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [qty, setQty] = useState(1);
-
+const dispatch = useDispatch();
   const hasSale =
     product.sale_price != null && product.sale_price < product.price;
   const isOutOfStock = product.stock === 0;
@@ -38,7 +39,8 @@ export function ProductCard({ product }: Props) {
     setIsAdding(true);
     try {
       await addToCart({ product_id: String(product.id), quantity: qty });
-      window.dispatchEvent(new Event("cart-updated"));
+      dispatch(fetchCart() as any);
+      
       setIsAdded(true);
       toast.success(`Đã thêm ${qty} sản phẩm vào giỏ!`);
 
@@ -46,8 +48,22 @@ export function ProductCard({ product }: Props) {
         setIsAdded(false);
         setQty(1);
       }, 1800);
-    } catch (err) {
-      toast.error("Thêm vào giỏ thất bại, thử lại nhé!");
+    } catch (err: any) {
+      console.error("Add to cart error:", err);
+
+      if (err.response?.status === 401) {
+        toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng!");
+      } else if (err.response?.status === 400) {
+        toast.error(err.response.data?.message || "Dữ liệu không hợp lệ!");
+      } else if (err.response?.status === 404) {
+        toast.error("Sản phẩm không tồn tại!");
+      } else if (err.response?.status === 409) {
+        toast.error("Số lượng vượt quá tồn kho!");
+      } else {
+        toast.error(
+          err.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại!",
+        );
+      }
     } finally {
       setIsAdding(false);
     }
@@ -193,3 +209,4 @@ export function ProductCard({ product }: Props) {
     </Link>
   );
 }
+

@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, OrderStatus, PaymentStatus } from '@prisma/client';
+
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
@@ -220,25 +221,93 @@ export class AdminService {
   }
 
   async updateOrderStatus(orderId: string, status: string) {
-    const order = await this.prisma.order.update({
+    const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      data: { status: status as any },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            username: true,
+      include: { payment: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const allowedTransitions: Record<string, string[]> = {
+      PENDING: ['SHIPPING', 'CANCELLED'],
+      SHIPPING: ['DELIVERED'],
+      DELIVERED: [],
+      CANCELLED: [],
+    };
+
+    if (status === order.status) {
+      return {
+        success: true,
+        message: 'Order status unchanged',
+        data: order,
+      };
+    }
+
+    if (!allowedTransitions[order.status]?.includes(status)) {
+      throw new BadRequestException(
+        `Invalid order status transition from ${order.status} to ${status}`,
+      );
+    }
+
+    const updateData: any = {
+      status: status as any,
+    };
+
+    const shouldMarkPaidForCod =
+      order.paymentMethod === 'COD' &&
+      order.status === OrderStatus.SHIPPING &&
+      status === OrderStatus.DELIVERED;
+
+    if (shouldMarkPaidForCod) {
+      updateData.paymentStatus = PaymentStatus.PAID;
+    }
+
+    const updatedOrder = await this.prisma.$transaction(async (tx) => {
+      if (shouldMarkPaidForCod && order.payment) {
+        await tx.payment.update({
+          where: { id: order.payment.id },
+          data: {
+            paymentStatus: PaymentStatus.PAID,
+            paidAt: new Date(),
           },
+        });
+      }
+
+      if (shouldMarkPaidForCod && !order.payment) {
+        await tx.payment.create({
+          data: {
+            orderId,
+            paymentMethod: 'COD',
+            paymentStatus: PaymentStatus.PAID,
+            amount: order.finalAmount,
+            paidAt: new Date(),
+          },
+        });
+      }
+
+      return tx.order.update({
+        where: { id: orderId },
+        data: updateData,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              username: true,
+            },
+          },
+          items: true,
+          payment: true,
         },
-        items: true,
-      },
+      });
     });
 
     return {
       success: true,
       message: 'Order status updated successfully',
-      data: order,
+      data: updatedOrder,
     };
   }
 
@@ -263,7 +332,7 @@ export class AdminService {
       FROM "orders" o
       WHERE o."created_at" >= ${startOfYear}
         AND o."created_at" < ${endOfYear}
-        AND o."status" IN ('DELIVERED', 'SHIPPING', 'CONFIRMED')  -- Chỉ lấy đơn đã hoàn thành/giao
+        AND o."status" IN ('DELIVERED', 'SHIPPING')  -- Chỉ lấy đơn đã hoàn thành/giao
       GROUP BY EXTRACT(MONTH FROM o."created_at")
       ORDER BY month
     `;
@@ -293,7 +362,7 @@ export class AdminService {
         JOIN "orders" o ON o."id" = oi."order_id"
         WHERE o."created_at" >= ${startOfYear}
           AND o."created_at" < ${endOfYear}
-          AND o."status" IN ('DELIVERED', 'SHIPPING', 'CONFIRMED')
+          AND o."status" IN ('DELIVERED', 'SHIPPING')
         GROUP BY p."id", p."name", p."image_url"
         ORDER BY total_quantity DESC
         LIMIT 10
@@ -309,7 +378,7 @@ export class AdminService {
         JOIN "orders" o ON o."id" = oi."order_id"
         WHERE o."created_at" >= ${startOfYear}
           AND o."created_at" < ${endOfYear}
-          AND o."status" IN ('DELIVERED', 'SHIPPING', 'CONFIRMED')
+          AND o."status" IN ('DELIVERED', 'SHIPPING')
         GROUP BY p."id", p."name", p."image_url"
         ORDER BY total_revenue DESC
         LIMIT 10
@@ -325,7 +394,7 @@ export class AdminService {
         JOIN "orders" o ON o."id" = oi."order_id"
         WHERE o."created_at" >= ${startOfYear}
           AND o."created_at" < ${endOfYear}
-          AND o."status" IN ('DELIVERED', 'SHIPPING', 'CONFIRMED')
+          AND o."status" IN ('DELIVERED', 'SHIPPING')
         GROUP BY c."id", c."name"
         ORDER BY revenue DESC
       `,
@@ -377,8 +446,16 @@ export class AdminService {
     const skip = (page - 1) * limit;
 
     const where: any = {};
+    const allowedOrderStatuses = [
+      'PENDING',
+      'SHIPPING',
+      'DELIVERED',
+      'CANCELLED',
+    ];
 
-    if (query.status) where.status = query.status;
+    if (query.status && allowedOrderStatuses.includes(query.status)) {
+      where.status = query.status;
+    }
 
     if (query.search) {
       where.OR = [
@@ -473,21 +550,38 @@ export class AdminService {
   }
 
   async updateOrderPaymentStatus(orderId: string, paymentStatus: string) {
-    const payment = await this.prisma.payment.update({
-      where: {
-        orderId,
-      },
-      data: {
-        paymentStatus: paymentStatus as any,
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { payment: true },
+    });
 
-        paidAt: paymentStatus === 'PAID' ? new Date() : null,
-      },
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (order.payment) {
+        await tx.payment.update({
+          where: { id: order.payment.id },
+          data: {
+            paymentStatus: paymentStatus as any,
+            paidAt: paymentStatus === 'PAID' ? new Date() : null,
+          },
+        });
+      }
+
+      return tx.order.update({
+        where: { id: orderId },
+        data: {
+          paymentStatus: paymentStatus as any,
+        },
+      });
     });
 
     return {
       success: true,
       message: 'Payment status updated successfully',
-      data: payment,
+      data: updated,
     };
   }
 }

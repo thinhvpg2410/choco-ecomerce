@@ -26,7 +26,6 @@ export interface UserAddress {
   receiverPhone: string; // SĐT người nhận
   address: string; // Địa chỉ chi tiết
   ward: string; // Phường/Xã
-  district: string; // Quận/Huyện
   city: string; // Tỉnh/Thành phố
   created_at: string;
   updated_at?: string;
@@ -140,7 +139,6 @@ export interface Order {
   receiverPhone: string;
   shipping_address: string;
   ward?: string;
-  district?: string;
   city?: string;
 
   note?: string;
@@ -270,11 +268,9 @@ export interface Banner {
 // ================= ORDER STATUS & PAYMENT STATUS (Giữ nguyên) =================
 export type OrderStatus =
   | "PENDING"
-  | "CONFIRMED"
   | "SHIPPING"
   | "DELIVERED"
-  | "CANCELLED"
-  | "RETURNED"; // Thêm trạng thái trả hàng
+  | "CANCELLED";
 
-export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
- export type PaymentMethod = "COD" | "VNPay" | "Momo" | "BankTransfer" | "ZaloPay" | "Paypal"; // Thêm phương thức thanh toán phổ biến khác
+export type PaymentStatus = "PENDING" | "PAID";
+export type PaymentMethod = "COD" | "VNPay" | "Momo" | "BankTransfer" | "ZaloPay" | "Paypal"; // Thêm phương thức thanh toán phổ biến khác

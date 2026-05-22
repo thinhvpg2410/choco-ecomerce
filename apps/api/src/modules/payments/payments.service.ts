@@ -42,38 +42,28 @@ export class PaymentsService {
     }
 
     if (order.payment) {
-      if (
-        order.payment.paymentStatus === PaymentStatus.PENDING &&
-        order.payment.paymentMethod === PaymentMethod.BANKING &&
-        dto.payment_method === PaymentMethod.BANKING &&
-        dto.transaction_code
-      ) {
-        return this.finalizePendingBankingPayment(
-          order.id,
-          userId,
-          dto.transaction_code,
-        );
-      }
       throw new ConflictException('Payment already exists for this order');
     }
 
     if (dto.payment_method === PaymentMethod.COD) {
-      return this.completeCodPayment(order.id);
-    }
-
-    if (dto.payment_method === PaymentMethod.BANKING) {
-      return this.createPendingBankingPayment(order.id, order.totalAmount);
+      return this.createPendingCodPayment(order.id);
     }
 
     if (dto.payment_method === PaymentMethod.PayPal) {
+      if (!dto.transaction_code) {
+        throw new BadRequestException(
+          'transaction_code is required for PayPal payment',
+        );
+      }
+
       return this.createCompletedPaypalPayment(
         order.id,
         userId,
-        dto.transaction_code!,
+        dto.transaction_code,
       );
     }
 
-    throw new BadRequestException('Unsupported payment flow');
+    throw new BadRequestException('Unsupported payment method');
   }
 
   async findByOrderId(
@@ -107,7 +97,7 @@ export class PaymentsService {
     };
   }
 
-  private async completeCodPayment(orderId: string) {
+  private async createPendingCodPayment(orderId: string) {
     const result = await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({ where: { id: orderId } });
       if (!order) {
@@ -121,48 +111,25 @@ export class PaymentsService {
         data: {
           orderId,
           paymentMethod: PaymentMethod.COD,
-          paymentStatus: PaymentStatus.PAID,
-          amount: order.totalAmount,
+          paymentStatus: PaymentStatus.PENDING,
+          amount: order.finalAmount,
         },
       });
 
-      const updatedOrder = await tx.order.update({
+      await tx.order.update({
         where: { id: orderId },
         data: {
-          status:
-            order.status === OrderStatus.PENDING
-              ? OrderStatus.CONFIRMED
-              : order.status,
+          paymentStatus: PaymentStatus.PENDING,
         },
       });
 
-      return { payment, order: updatedOrder };
+      return { payment };
     });
 
     return {
       success: true,
-      message: 'Cash on delivery payment recorded',
+      message: 'Cash on delivery payment is pending until delivery',
       data: this.toPaymentResponse(result.payment),
-    };
-  }
-
-  private async createPendingBankingPayment(
-    orderId: string,
-    totalAmount: Prisma.Decimal,
-  ) {
-    const payment = await this.prisma.payment.create({
-      data: {
-        orderId,
-        paymentMethod: PaymentMethod.BANKING,
-        paymentStatus: PaymentStatus.PENDING,
-        amount: totalAmount,
-      },
-    });
-
-    return {
-      success: true,
-      message: 'Bank transfer payment is pending confirmation',
-      data: this.toPaymentResponse(payment),
     };
   }
 
@@ -199,10 +166,6 @@ export class PaymentsService {
         where: { id: orderId },
         data: {
           paymentStatus: PaymentStatus.PAID,
-          status:
-            order.status === OrderStatus.PENDING
-              ? OrderStatus.CONFIRMED
-              : order.status,
         },
       });
 
@@ -214,71 +177,6 @@ export class PaymentsService {
       message: 'PayPal payment completed',
       data: this.toPaymentResponse(payment),
     };
-  }
-
-  private async finalizePendingBankingPayment(
-    orderId: string,
-    userId: string,
-    transactionRef: string,
-  ) {
-    const payment = await this.prisma.$transaction(async (tx) => {
-      const order = await tx.order.findFirst({
-        where: { id: orderId, userId },
-        include: { payment: true },
-      });
-
-      if (!order?.payment) {
-        throw new NotFoundException('Payment not found');
-      }
-
-      if (order.status === OrderStatus.CANCELLED) {
-        throw new BadRequestException('Cannot pay for a cancelled order');
-      }
-
-      if (
-        order.payment.paymentStatus !== PaymentStatus.PENDING ||
-        order.payment.paymentMethod !== PaymentMethod.BANKING
-      ) {
-        throw new BadRequestException('Payment cannot be completed');
-      }
-
-      const updated = await tx.payment.update({
-        where: { id: order.payment.id },
-        data: {
-          paymentStatus: PaymentStatus.PAID,
-          transactionCode: transactionRef,
-        },
-      });
-
-      await tx.order.update({
-        where: { id: orderId },
-        data: {
-          status:
-            order.status === OrderStatus.PENDING
-              ? OrderStatus.CONFIRMED
-              : order.status,
-        },
-      });
-
-      return updated;
-    });
-
-    return {
-      success: true,
-      message: 'Bank transfer payment completed',
-      data: this.toPaymentResponse(payment),
-    };
-  }
-
-  private parseOrderPaymentMethod(raw: string): PaymentMethod | null {
-    const normalized = raw.trim().toUpperCase();
-    if (normalized === 'COD') {
-      return PaymentMethod.COD;
-    }
-    if (normalized === 'BANKING') {
-      return PaymentMethod.BANKING;
-    }
-    return null;
   }
 
   private assertUuid(id: string, notFoundMessage: string): void {
@@ -312,16 +210,11 @@ export class PaymentsService {
     };
   }
 
-  private toWebPaymentStatus(
-    status: PaymentStatus,
-  ): 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' {
+  private toWebPaymentStatus(status: PaymentStatus): 'PENDING' | 'PAID' {
     switch (status) {
       case PaymentStatus.PAID:
         return 'PAID';
-      case PaymentStatus.FAILED:
-        return 'FAILED';
       case PaymentStatus.PENDING:
-        return 'PENDING';
       default:
         return 'PENDING';
     }

@@ -24,7 +24,10 @@ export class OrdersController {
   @ApiBody({ type: CreateOrderDto })
   @ApiOkResponse({ type: OrderDetailResponseDto })
   @Post()
-  async createOrder(@Req() request: Request, @Body() createOrderDto: CreateOrderDto) {
+  async createOrder(
+    @Req() request: Request,
+    @Body() createOrderDto: CreateOrderDto,
+  ) {
     const user = request.user as { sub: string };
     return this.ordersService.createOrder(user.sub, createOrderDto);
   }
@@ -63,5 +66,12 @@ export class OrdersController {
   @Get()
   async findAllOrders() {
     return this.ordersService.findAllOrders();
+  }
+
+  @Get('reviewable')
+  async getReviewableOrders(@Req() request: Request) {
+    const user = request.user as { sub: string };
+
+    return this.ordersService.getReviewableOrders(user.sub);
   }
 }

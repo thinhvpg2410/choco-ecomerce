@@ -2,11 +2,17 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field, FieldDescription, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldSeparator,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useDispatch } from "react-redux";
 import { login } from "@/store/authSlice";
-import { clearCart } from "@/store/cartSlice";
+import {  fetchCart } from "@/store/cartSlice";
 import { setAccessToken } from "@/services/axios";
 import { authLogin } from "@/services/auth.service";
 import { useState } from "react";
@@ -15,20 +21,23 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 const loginSchema = z.object({
-  email:    z.string().email("Email không hợp lệ"),
+  email: z.string().email("Email không hợp lệ"),
   password: z.string().min(6, "Mật khẩu >= 6 ký tự"),
 });
 
-export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
+export function LoginForm({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
   const dispatch = useDispatch();
-  const router   = useRouter();
+  const router = useRouter();
 
-  const [form,   setForm]   = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm(f => ({ ...f, [e.target.id]: e.target.value }));
+    setForm((f) => ({ ...f, [e.target.id]: e.target.value }));
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -46,14 +55,20 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
       const guestCart = JSON.parse(localStorage.getItem("cart") || "[]");
       const { accessToken, user } = await authLogin({ ...form, guestCart });
 
-      setAccessToken(accessToken); // Quan trọng: Set token trước khi dispatch
+      if (user.role !== "user") {
+        toast.error("Trang này chỉ dành cho khách hàng");
+        return;
+      }
+
+      setAccessToken(accessToken);
+
       dispatch(login(user));
+
+      await dispatch(fetchCart() as any);
 
       toast.success(`Chào mừng ${user.username} quay trở lại!`);
 
-      // Chuyển hướng dựa trên role của user
-      const redirectPath = user.role === "admin" ? "/admin" : "/";
-      router.replace(redirectPath);
+      router.replace("/");
       router.refresh();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Đăng nhập thất bại");
@@ -77,14 +92,28 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input id="email" type="email" value={form.email} onChange={handleChange} />
-                {errors.email && <p className="text-red-500 text-xs">{errors.email[0]}</p>}
+                <Input
+                  id="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                />
+                {errors.email && (
+                  <p className="text-red-500 text-xs">{errors.email[0]}</p>
+                )}
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="password">Mật khẩu</FieldLabel>
-                <Input id="password" type="password" value={form.password} onChange={handleChange} />
-                {errors.password && <p className="text-red-500 text-xs">{errors.password[0]}</p>}
+                <Input
+                  id="password"
+                  type="password"
+                  value={form.password}
+                  onChange={handleChange}
+                />
+                {errors.password && (
+                  <p className="text-red-500 text-xs">{errors.password[0]}</p>
+                )}
               </Field>
 
               <Field>
@@ -93,7 +122,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
                 </Button>
               </Field>
 
-              <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
+              {/* <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
                 Hoặc tiếp tục với
               </FieldSeparator>
 
@@ -104,7 +133,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
                   </svg>
                   <span className="sr-only">Login with Google</span>
                 </Button>
-              </Field>
+              </Field> */}
 
               <FieldDescription className="text-center">
                 Chưa có tài khoản? <a href="/auth/register">Đăng ký</a>
@@ -113,16 +142,25 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
           </form>
 
           <div className="relative hidden bg-muted md:block">
-            <img src="/image/login.jpg" alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale" />
+            <img
+              src="/image/login.jpg"
+              alt="Image"
+              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+            />
           </div>
         </CardContent>
       </Card>
 
       <FieldDescription className="px-6 text-center">
         Bằng việc đăng nhập, bạn đồng ý với{" "}
-        <a href="#" className="underline">Điều khoản dịch vụ</a>{" "}và{" "}
-        <a href="#" className="underline">Chính sách bảo mật</a>.
+        <a href="#" className="underline">
+          Điều khoản dịch vụ
+        </a>{" "}
+        và{" "}
+        <a href="#" className="underline">
+          Chính sách bảo mật
+        </a>
+        .
       </FieldDescription>
     </div>
   );
