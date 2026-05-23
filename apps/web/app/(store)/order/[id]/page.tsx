@@ -7,7 +7,7 @@ import type { OrderApiResponse } from "@/services/order.service";
 import {
   createReview,
   updateReview,
-  getMyReviewForOrderItem, 
+  getMyReviewForOrderItem,
 } from "@/services/review.service";
 import { Button } from "@/components/ui/button";
 import { Loader2, ChevronLeft, MapPin, Star, Edit2 } from "lucide-react";

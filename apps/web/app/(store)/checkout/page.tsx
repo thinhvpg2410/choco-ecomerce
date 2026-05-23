@@ -45,7 +45,7 @@ export default function CheckoutPage() {
   const [addrOpen, setAddrOpen] = useState(false);
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(
-  null,
+    null,
   );
   const [orderLocked, setOrderLocked] = useState(false);
   const [cartItemIds, setCartItemIds] = useState<string[]>([]);
@@ -132,25 +132,39 @@ export default function CheckoutPage() {
     loadAddresses();
   }, []);
 
- const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  const getShippingFee = (subtotal: number) => {
-    if (subtotal >= 500000) return 0;
-    if (subtotal >= 300000) return 15000;
-    return 30000;
+  const normalizeCity = (city: string) =>
+    city
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .replace(/\s+/g, " ");
+
+  const isMetroCity = (city: string) => {
+    const normalized = normalizeCity(city);
+    return ["ho chi minh", "ha noi"].some((keyword) =>
+      normalized.includes(keyword),
+    );
   };
 
-  const SHIPPING = getShippingFee(subtotal);
-  
- const totalDiscount = appliedVouchers.reduce(
-   (sum, item) => sum + item.discount,
-   0,
- );
+  const getShippingFee = (address: UserAddress | null) => {
+    if (!address?.city) return 30000;
+    return isMetroCity(address.city) ? 15000 : 30000;
+  };
 
-const total = Math.max(0, subtotal + SHIPPING - totalDiscount);
+  const SHIPPING = getShippingFee(selectedAddress);
+
+  const totalDiscount = appliedVouchers.reduce(
+    (sum, item) => sum + item.discount,
+    0,
+  );
+
+  const total = Math.max(0, subtotal + SHIPPING - totalDiscount);
 
   const fmt = (n: number) => n.toLocaleString("vi-VN") + "đ";
-console.log("📦 ITEMS STATE:", items);
+  console.log("📦 ITEMS STATE:", items);
   const applyVoucher = async () => {
     const code = voucherInput.trim().toUpperCase();
 
@@ -217,7 +231,7 @@ console.log("📦 ITEMS STATE:", items);
 
     setOrderLocked(true);
     setPlacing(true);
-    
+
     try {
       const shippingAddress = `${selectedAddress.address}, ${selectedAddress.ward}, ${selectedAddress.city}`;
 
@@ -465,7 +479,7 @@ console.log("📦 ITEMS STATE:", items);
                 Áp dụng
               </Button>
             </div>
-           
+
             {appliedVouchers.length > 0 && (
               <div className="mt-3 flex flex-col gap-3">
                 {appliedVouchers.map((voucher) => (

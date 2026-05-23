@@ -72,39 +72,41 @@ export function Header() {
     getBrands().then(setBrands);
   }, []);
 
- useEffect(() => {
-   const loadProducts = async () => {
-     try {
-       const productIds = [...new Set(cartItems.map((i: any) => i.product_id))];
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const productIds = [
+          ...new Set(cartItems.map((i: any) => i.product_id)),
+        ];
 
-       const map: Record<string, any> = {};
+        const map: Record<string, any> = {};
 
-       await Promise.all(
-         productIds.map(async (id: string) => {
-           const p = await getProductById(id);
+        await Promise.all(
+          productIds.map(async (id: string) => {
+            const p = await getProductById(id);
 
-           if (p) map[id] = p;
-         }),
-       );
+            if (p) map[id] = p;
+          }),
+        );
 
-       setProductsMap(map);
-     } catch (err) {
-       console.error(err);
-     }
-   };
+        setProductsMap(map);
+      } catch (err) {
+        console.error(err);
+      }
+    };
 
-   if (cartItems.length > 0) {
-     loadProducts();
-   } else {
-     setProductsMap({});
-   }
- }, [cartItems]);
+    if (cartItems.length > 0) {
+      loadProducts();
+    } else {
+      setProductsMap({});
+    }
+  }, [cartItems]);
 
-useEffect(() => {
-  if (isAuthenticated) {
-    dispatch(fetchCart() as any);
-  }
-}, [isAuthenticated]);
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(fetchCart() as any);
+    }
+  }, [isAuthenticated]);
 
   // Thay handleLogout:
   const handleLogout = async () => {
@@ -140,7 +142,10 @@ useEffect(() => {
           >
             Giới thiệu
           </Link>
-          <Link href="/product" className={`${navItemClass} whitespace-nowrap uppercase`}>
+          <Link
+            href="/product"
+            className={`${navItemClass} whitespace-nowrap uppercase`}
+          >
             Sản phẩm
           </Link>
 
@@ -148,7 +153,9 @@ useEffect(() => {
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuTrigger className={`${navItemClass} whitespace-nowrap uppercase`}>
+                <NavigationMenuTrigger
+                  className={`${navItemClass} whitespace-nowrap uppercase`}
+                >
                   Chính sách
                 </NavigationMenuTrigger>
                 <NavigationMenuContent
@@ -202,7 +209,9 @@ useEffect(() => {
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuTrigger className={`${navItemClass} whitespace-nowrap uppercase`}>
+                <NavigationMenuTrigger
+                  className={`${navItemClass} whitespace-nowrap uppercase`}
+                >
                   Loại
                 </NavigationMenuTrigger>
 
@@ -240,7 +249,9 @@ useEffect(() => {
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuTrigger className={`${navItemClass} whitespace-nowrap uppercase`}>
+                <NavigationMenuTrigger
+                  className={`${navItemClass} whitespace-nowrap uppercase`}
+                >
                   Thương hiệu
                 </NavigationMenuTrigger>
 
@@ -286,7 +297,7 @@ useEffect(() => {
             <div className="relative cursor-pointer">
               <ShoppingCart className="w-5 h-5 transition hover:text-pink-600 hover:scale-110" />
               <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white rounded-full px-1">
-                {cartItems.reduce((sum, item: any) => sum + item.quantity, 0)}
+                {cartItems.length}
               </span>
             </div>
 

@@ -144,3 +144,19 @@
 .custom-scroll::-webkit-scrollbar-thumb:hover {
   background: #fb7185;
 }
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Optional: remove outline khi focus (tuỳ UI) */
+input:focus {
+  outline: none;
+}
