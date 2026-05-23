@@ -17,7 +17,7 @@ export function ProductCard({ product }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [qty, setQty] = useState(1);
-const dispatch = useDispatch();
+  const dispatch = useDispatch();
   const hasSale =
     product.sale_price != null && product.sale_price < product.price;
   const isOutOfStock = product.stock === 0;
@@ -32,15 +32,30 @@ const dispatch = useDispatch();
     setQty((v) => Math.min(product.stock || 1, Math.max(1, v + delta)));
   };
 
+  const handleQtyInputChange = (raw: string) => {
+    if (/^\d*$/.test(raw)) {
+      const next = raw === "" ? 0 : Number(raw);
+      setQty(Math.min(product.stock || 1, next));
+    }
+  };
+
+  const handleQtyInputBlur = () => {
+    const stock = product.stock || 1;
+    setQty((v) => Math.max(1, Math.min(stock, v || 1)));
+  };
+
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (isAdding || isOutOfStock || !product?.id) return;
+
+    const safeQty = Math.max(1, Math.min(product.stock || 1, qty));
+    setQty(safeQty);
 
     setIsAdding(true);
     try {
       await addToCart({ product_id: String(product.id), quantity: qty });
       dispatch(fetchCart() as any);
-      
+
       setIsAdded(true);
       toast.success(`Đã thêm ${qty} sản phẩm vào giỏ!`);
 
@@ -80,8 +95,7 @@ const dispatch = useDispatch();
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.08]"
           />
 
-          {/* Overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-500" />
 
           {/* Badges */}
           {hasSale && (
@@ -95,35 +109,89 @@ const dispatch = useDispatch();
             </span>
           )}
 
-          {/* Overlay: Quantity + Add to Cart */}
-          <div className="absolute bottom-0 left-0 right-0 p-5 translate-y-6 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
-            {/* Quantity */}
+          <div className="absolute inset-x-0 bottom-0 h-1/3 opacity-0 group-hover:opacity-100 transition-all duration-500 z-10">
+            <div className="h-full w-full bg-gradient-to-t from-[#FFF0F6]/80 to-transparent flex items-end justify-center">
+              <div className="w-full px-4 pb-3 text-center text-white">
+                {isOutOfStock ? (
+                  <span className="block text-base font-bold text-[#4A2C35]">
+                    Hết hàng
+                  </span>
+                ) : (
+                  <span className="block text-base font-bold text-[#4A2C35]">
+                    Còn {product.stock} sản phẩm
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 flex-1 flex flex-col">
+          {product.brand?.name && (
+            <p className="text-xs text-amber-700/70 uppercase tracking-widest font-semibold">
+              {product.brand.name}
+            </p>
+          )}
+
+          <h3 className="text-2xl font-bold text-gray-800 line-clamp-2 min-h-[3em] group-hover:text-amber-800 transition-colors">
+            {product.name}
+          </h3>
+
+          <div className="mt-0">
+            <div className="flex items-end gap-3">
+              {hasSale ? (
+                <>
+                  <span className="text-3xl font-bold text-rose-600">
+                    {product.sale_price!.toLocaleString("vi-VN")}đ
+                  </span>
+                  <span className="text-xl text-gray-400 line-through mt-1">
+                    {product.price.toLocaleString("vi-VN")}đ
+                  </span>
+                </>
+              ) : (
+                <span className="text-3xl font-bold text-rose-600">
+                  {product.price.toLocaleString("vi-VN")}đ
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-4">
             <div
-              className={`flex items-center justify-between mb-4 ${isOutOfStock ? "opacity-40 pointer-events-none" : ""}`}
+              className={`flex items-center justify-between ${
+                isOutOfStock ? "opacity-40 pointer-events-none" : ""
+              }`}
             >
-              <span className="text-white text-sm font-medium">Số lượng</span>
-              <div className="flex items-center bg-white/95 backdrop-blur-sm border border-white/30 rounded-2xl overflow-hidden">
+              <span className="text-sm font-semibold text-gray-700">
+                Số lượng
+              </span>
+              <div className="flex items-center bg-gray-100 rounded-2xl overflow-hidden border border-gray-200">
                 <button
                   onClick={(e) => changeQty(e, -1)}
                   disabled={qty <= 1}
-                  className="w-9 h-8 flex items-center justify-center text-lg text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition"
+                  className="w-9 h-8 flex items-center justify-center text-lg text-gray-700 hover:bg-gray-200 disabled:opacity-40 transition"
                 >
                   −
                 </button>
-                <span className="w-10 text-center font-semibold text-gray-800">
-                  {qty}
-                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={product.stock || 1}
+                  value={qty}
+                  onChange={(e) => handleQtyInputChange(e.target.value)}
+                  onBlur={handleQtyInputBlur}
+                  className="w-16 h-8 text-center text-base font-semibold text-gray-800 outline-none"
+                />
                 <button
                   onClick={(e) => changeQty(e, 1)}
                   disabled={qty >= (product.stock || 1)}
-                  className="w-9 h-8 flex items-center justify-center text-lg text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition"
+                  className="w-9 h-8 flex items-center justify-center text-lg text-gray-700 hover:bg-gray-200 disabled:opacity-40 transition"
                 >
                   +
                 </button>
               </div>
             </div>
 
-            {/* Nút Add to Cart */}
             <Button
               onClick={handleAddToCart}
               disabled={isAdding || isOutOfStock}
@@ -139,7 +207,7 @@ const dispatch = useDispatch();
               <span className="relative z-10 flex items-center justify-center gap-2">
                 {isAdded ? (
                   <>
-                    <Check className="w-5 h-5" /> Đã thêm!
+                    <Check className="w-5 h-5" /> Đã thêm
                   </>
                 ) : isAdding ? (
                   "Đang thêm..."
@@ -159,54 +227,7 @@ const dispatch = useDispatch();
             </Button>
           </div>
         </div>
-
-        {/* Thông tin sản phẩm */}
-        <div className="p-5 flex-1 flex flex-col">
-          {product.brand?.name && (
-            <p className="text-xs text-amber-700/70 uppercase tracking-widest font-semibold">
-              {product.brand.name}
-            </p>
-          )}
-
-          {/* 🔥 Phần tên sản phẩm - ĐÃ FIX */}
-          <h3 className="text-xl font-semibold text-gray-800 line-clamp-2 min-h-[3.2em] mt-2 mb-3 group-hover:text-amber-800 transition-colors">
-            {product.name}
-          </h3>
-
-          <div className="mt-auto">
-            <div className="flex items-baseline gap-2">
-              {hasSale ? (
-                <>
-                  <span className="text-2xl font-bold text-rose-600">
-                    {product.sale_price!.toLocaleString("vi-VN")}đ
-                  </span>
-                  <span className="text-sm text-gray-400 line-through">
-                    {product.price.toLocaleString("vi-VN")}đ
-                  </span>
-                </>
-              ) : (
-                <span className="text-2xl font-bold text-rose-600">
-                  {product.price.toLocaleString("vi-VN")}đ
-                </span>
-              )}
-            </div>
-
-            {/* Stock */}
-            {isOutOfStock ? (
-              <p className="text-red-500 text-sm mt-1">Hết hàng</p>
-            ) : isLowStock ? (
-              <p className="text-amber-600 text-sm mt-1">
-                Chỉ còn {product.stock} sản phẩm
-              </p>
-            ) : (
-              <p className="text-emerald-600 text-sm mt-1">
-                Còn {product.stock} sản phẩm
-              </p>
-            )}
-          </div>
-        </div>
       </div>
     </Link>
   );
 }
-

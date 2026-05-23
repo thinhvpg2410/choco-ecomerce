@@ -28,7 +28,7 @@ export default async function ProductDetailPage({ params }: Props) {
   return (
     <div className="min-h-screen bg-[#fafafa]">
       {/* ── BREADCRUMB ── */}
-      <div className="border-b border-gray-100 bg-white">
+      {/* <div className="border-b border-gray-100 bg-[#FFF0F6]">
         <div className="max-w-6xl mx-auto px-6 py-3 text-sm text-gray-400 flex items-center gap-2">
           <span className="hover:text-rose-500 cursor-pointer transition-colors">
             Trang chủ
@@ -42,14 +42,14 @@ export default async function ProductDetailPage({ params }: Props) {
             {product.name}
           </span>
         </div>
-      </div>
+      </div> */}
 
       <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
         {/* ── PRODUCT CARD ── */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="grid md:grid-cols-2 gap-0 items-start">
             {/* LEFT — IMAGE */}
-            <div className="p-8 border-b md:border-b-0 md:border-r border-gray-100">
+            <div className="p-8 border-b md:border-b-0 md:border-r border-gray-100 ">
               <div className="sticky top-24">
                 <ProductImageGallery
                   productId={product.id}
