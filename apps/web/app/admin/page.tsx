@@ -114,9 +114,7 @@ export default function AdminPage() {
                   </div>
 
                   <div className="flex flex-col leading-tight">
-                    <span className="font-bold text-[15px]">
-                      Admin
-                    </span>
+                    <span className="font-bold text-[15px]">Admin</span>
                     <span className="text-xs text-muted-foreground">
                       Quản lý Choco Kingdom
                     </span>
@@ -128,8 +126,6 @@ export default function AdminPage() {
               <div className="flex-1 overflow-y-auto py-3">
                 <SidebarContent>
                   <SidebarGroup>
-                  
-
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-1 px-2">
                         {menuItems.map((item) => (
@@ -138,12 +134,12 @@ export default function AdminPage() {
                               onClick={() => setActiveSection(item.id)}
                               isActive={activeSection === item.id}
                               className="
-                      h-11 rounded-xl cursor-pointer
-                      transition-all
-                      hover:bg-muted
-                      data-[active=true]:bg-primary
-                      data-[active=true]:text-primary-foreground
-                    "
+                                h-11 rounded-xl cursor-pointer
+                                transition-all
+                                hover:bg-muted
+                                data-[active=true]:bg-primary
+                                data-[active=true]:text-primary-foreground
+                              "
                             >
                               <item.icon className="h-4 w-4" />
                               <span className="font-medium">{item.label}</span>
@@ -161,11 +157,11 @@ export default function AdminPage() {
                 <SidebarMenuButton
                   onClick={handleLogout}
                   className="
-          h-11 w-full rounded-xl
-          text-red-600
-          hover:bg-red-50
-          hover:text-red-700
-        "
+                    h-11 w-full rounded-xl
+                    text-red-600
+                    hover:bg-red-50
+                    hover:text-red-700
+                  "
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Đăng xuất</span>

@@ -93,10 +93,10 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="min-h-screen ">
       <main>
         {/* ==================== HERO SECTION ==================== */}
-        <div className="relative bg-gradient-to-br from-[#3b1d14] via-[#5c2f1f] to-[#3b1d14] text-white overflow-hidden">
+        {/* <div className="relative bg-gradient-to-br from-[#3b1d14] via-[#5c2f1f] to-[#3b1d14] text-white overflow-hidden">
           <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-8 items-center py-2 md:py-3">
             <div className="space-y-6">
               <h1 className="text-6xl md:text-7xl font-serif leading-tight">
@@ -117,57 +117,101 @@ export default function Home() {
               />
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* ==================== BANNER CAROUSEL ==================== */}
         {banners.length > 0 && (
-          <div className="w-full relative z-10 pt-2 pb-12 bg-white">
-            <Carousel
-              plugins={[plugin.current]}
-              opts={{ loop: true }}
-              setApi={setApi}
-            >
-              <CarouselContent>
-                {banners.map((banner) => (
-                  <CarouselItem key={banner.id}>
-                    <Link
-                      href={
-                        banner.product_id
-                          ? `/product/${banner.product_id}`
-                          : banner.link || "#"
-                      }
-                    >
-                      <div className="relative overflow-hidden group">
-                        <img
-                          src={banner.image_url || banner.imageUrl}
-                          alt={banner.description || "Banner"}
-                          className="w-full h-[260px] md:h-[380px] lg:h-[460px] object-cover transition-transform duration-700 group-hover:scale-105"
-                          onError={(e) => {
-                            e.currentTarget.src =
-                              "https://picsum.photos/800/400?random=88";
-                          }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
-                      </div>
-                    </Link>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
+          <div className="w-full relative z-10 pb-5">
+            <div className="relative">
+              <Carousel
+                plugins={[plugin.current]}
+                opts={{ loop: true }}
+                setApi={setApi}
+              >
+                <CarouselContent>
+                  {banners.map((banner) => (
+                    <CarouselItem key={banner.id}>
+                      <Link
+                        href={
+                          banner.product_id
+                            ? `/product/${banner.product_id}`
+                            : banner.link || "#"
+                        }
+                      >
+                        <div className="relative overflow-hidden group">
+                          <img
+                            src={banner.image_url || banner.imageUrl}
+                            alt={banner.description || "Banner"}
+                            className="w-full h-[260px] md:h-[380px] lg:h-[460px] object-cover transition-transform duration-700 group-hover:scale-105"
+                            onError={(e) => {
+                              e.currentTarget.src =
+                                "https://picsum.photos/1600/800?random=88";
+                            }}
+                          />
 
-              <CarouselPrevious className="left-6" />
-              <CarouselNext className="right-6" />
-            </Carousel>
+                          {/* Overlay tối */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-[#2b0f08]/90 via-[#3b1209]/70 to-transparent" />
+                        </div>
+                      </Link>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
 
-            {/* 🔵 DOT */}
-            <div className="flex justify-center gap-2 mt-4">
+                <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-white/20 border border-white/30 text-white hover:bg-white hover:text-black backdrop-blur-md" />
+                <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-white/20 border border-white/30 text-white hover:bg-white hover:text-black backdrop-blur-md" />
+              </Carousel>
+
+              {/* TEXT LEFT */}
+              <div className="absolute inset-0 flex items-center z-20 ">
+                <div className="ml-6 md:ml-20 max-w-2xl text-white">
+                  {/* Welcome */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-[1px] bg-[#f5d9b0]" />
+                    <p className="uppercase tracking-[6px] text-[#f5d9b0] text-xs md:text-sm">
+                      Chào mừng đến với
+                    </p>
+                    <div className="w-10 h-[1px] bg-[#f5d9b0]" />
+                  </div>
+
+                  {/* Title */}
+                  <h1 className="font-serif leading-none">
+                    <span className="block text-4xl md:text-6xl lg:text-4xl font-light tracking-wide">
+                      VƯƠNG QUỐC
+                    </span>
+                    <span className="block mt-2 text-5xl md:text-7xl lg:text-6xl font-semibold bg-gradient-to-r from-[#ffd6df] via-[#ff9eb5] to-[#ffe5ea] bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(255,180,200,0.5)]">
+                      KẸO NGỌT
+                    </span>
+                    <span className="block mt-2 text-5xl md:text-7xl lg:text-6xl font-semibold bg-gradient-to-r from-[#f5d9b0] via-[#f3c67a] to-[#f5d9b0] bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(255,220,170,0.5)]">
+                      CHOCO KINGDOM
+                    </span>
+                    <div className="w-[90%] h-[1px] bg-[#f5d9b0] my-6"></div>
+                  </h1>
+
+                  {/* Description */}
+                  <p className="mt-6 text-sm md:text-xl text-gray-200 max-w-lg leading-relaxed">
+                    Chạm đến hạnh phúc trong từng hương vị ngọt ngào
+                  </p>
+
+                  {/* Button */}
+                  <Link href="/product">
+                    <button className="mt-8 px-8 py-4 rounded-full bg-gradient-to-r from-[#ffe3b3] to-[#f3c67a] text-[#3b1d14] font-semibold text-lg shadow-[0_10px_30px_rgba(255,220,170,0.4)] hover:scale-105 hover:shadow-[0_15px_40px_rgba(255,220,170,0.6)] transition-all duration-300">
+                      KHÁM PHÁ NGAY →
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* DOT */}
+            <div className="flex justify-center gap-3 mt-5">
               {banners.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => api?.scrollTo(index)}
-                  className={`h-2.5 rounded-full transition-all duration-300 ${
+                  className={`rounded-full transition-all duration-300 ${
                     current === index
-                      ? "bg-rose-600 w-6"
-                      : "bg-gray-300 w-2.5 hover:bg-gray-400"
+                      ? "bg-[#d89b5c] w-8 h-2.5"
+                      : "bg-gray-400/50 w-2.5 h-2.5 hover:bg-gray-300"
                   }`}
                 />
               ))}
@@ -176,15 +220,16 @@ export default function Home() {
         )}
 
         {/* ==================== BEST SELLERS ==================== */}
-        <section className="max-w-7xl mx-auto px-6 py-12">
+        <section className="w-[90%] mx-auto px-6 py-6 mb-3 border border-white rounded-3xl bg-gray-100">
           <div className="grid md:grid-cols-12 gap-8">
             <div className="md:col-span-3">
               <p className="uppercase text-rose-600 font-medium tracking-widest">
-                HOT PRODUCTS
+                nổi bật
               </p>
-              <h2 className="text-4xl font-serif mt-2">Best Sellers</h2>
+              <h2 className="text-3xl font-serif mt-2"> Sản phẩm bán chạy</h2>
+              <div className="w-16 h-[2px] bg-rose-500 my-6"></div>
               <p className="mt-4 text-gray-600 text-[15px]">
-                Những sản phẩm bán chạy nhất tháng này
+                Những sản phẩm bán chạy nhất tháng này với giá ưu đãi hấp dẫn.
               </p>
               <Link
                 href="/product?is_best_seller=true"
@@ -211,15 +256,16 @@ export default function Home() {
         </section>
 
         {/* ==================== NEW ARRIVALS ==================== */}
-        <section className="max-w-7xl mx-auto px-6 py-12 bg-white">
+        <section className="w-[90%] mx-auto px-6 py-6 mb-3 border border-white rounded-3xl bg-gray-100">
           <div className="grid md:grid-cols-12 gap-8">
             <div className="md:col-span-3">
               <p className="uppercase text-orange-600 font-medium tracking-widest">
-                NEW ARRIVALS
+                MỚI VỀ
               </p>
               <h2 className="text-4xl font-serif mt-2">Sản phẩm mới</h2>
+              <div className="w-16 h-[2px] bg-rose-500 my-6"></div>
               <p className="mt-4 text-gray-600 text-[15px]">
-                Vừa mới về gần đây
+                Những sản phẩm vừa được cập nhật gần đây
               </p>
               <Link
                 href="/product?is_new=true"
@@ -246,15 +292,16 @@ export default function Home() {
         </section>
 
         {/* ==================== FEATURED ==================== */}
-        <section className="max-w-7xl mx-auto px-6 py-12">
+        <section className="w-[90%] mx-auto px-6 py-6 mb-3 border border-white rounded-3xl bg-gray-100">
           <div className="grid md:grid-cols-12 gap-8">
             <div className="md:col-span-3">
               <p className="uppercase text-amber-600 font-medium tracking-widest">
-                ONLY IN CHOCO
+                Đặc biệt
               </p>
-              <h2 className="text-4xl font-serif mt-2">Nổi bật</h2>
+              <h2 className="text-3xl font-serif mt-2">Sản phẩm cho bạn</h2>
+              <div className="w-16 h-[2px] bg-rose-500 my-6"></div>
               <p className="mt-4 text-gray-600 text-[15px]">
-                Những sản phẩm đặc biệt chỉ có tại đây
+                Những sản phẩm được chọn lọc dành riêng cho bạn
               </p>
               <Link
                 href="/product?is_featured=true"

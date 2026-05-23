@@ -37,7 +37,7 @@ export class PayPalService {
 
   async createOrder(dto: CreatePayPalOrderDto) {
     try {
-      console.log('📨 PayPal createOrder request:', dto);
+      console.log('📨 Yêu cầu tạo đơn hàng PayPal: ', dto);
 
       if (!dto.amount || dto.amount <= 0) {
         throw new Error(`Invalid amount: ${dto.amount}`);
@@ -71,11 +71,11 @@ export class PayPalService {
         },
       );
 
-      console.log('✅ PayPal Order created successfully:', data.id);
+      console.log('✅ Tạo đơn hàng PayPal thành công: ', data.id);
       return data;
     } catch (error: any) {
       console.error(
-        '❌ PayPal API Error:',
+        '❌ Lỗi API PayPal:',
         error.response?.data || error.message,
       );
       throw new Error(error.response?.data?.message || error.message);
@@ -98,7 +98,7 @@ export class PayPalService {
 
       return data;
     } catch (error: any) {
-      console.error('❌ Capture Error:', error.response?.data || error.message);
+      console.error('❌ Lỗi Capture:', error.response?.data || error.message);
 
       throw new Error(error.response?.data?.message || error.message);
     }

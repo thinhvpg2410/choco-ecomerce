@@ -164,7 +164,7 @@ export class ProductsService {
     await this.cache.invalidateAfterProductWrite(createdProduct.id);
     return {
       success: true,
-      message: 'Product created successfully',
+      message: 'Tạo sản phẩm thành công',
       data: this.toProductResponse(createdProduct),
     };
   }
@@ -249,7 +249,7 @@ export class ProductsService {
       where: { id: productId, isActive: true },
     });
     if (!existing) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException('Sản phẩm không tồn tại');
     }
 
     const updatedProduct = await this.prisma.product.update({
@@ -273,7 +273,7 @@ export class ProductsService {
     await this.cache.invalidateAfterProductWrite(productId);
     return {
       success: true,
-      message: 'Product updated successfully',
+      message: 'Cập nhật sản phẩm thành công',
       data: this.toProductResponse(updatedProduct),
     };
   }
@@ -285,11 +285,11 @@ export class ProductsService {
       data: { isActive: false },
     });
     if (result.count === 0) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException('Sản phẩm không tồn tại');
     }
 
     await this.cache.invalidateAfterProductWrite(productId);
-    return { success: true, message: 'Product deleted successfully' };
+    return { success: true, message: 'Sản phẩm đã được xóa thành công' };
   }
 
   private async findAllForViewer(
@@ -373,7 +373,7 @@ export class ProductsService {
   ) {
     return {
       success: true,
-      message: 'Products fetched successfully',
+      message: 'Sản phẩm đã được lấy thành công',
       data: {
         items: products.map((product) => this.toProductResponse(product)),
         pagination: {
@@ -393,7 +393,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException('Sản phẩm không tồn tại');
     }
 
     const myReviews = await this.prisma.review.findMany({
@@ -409,7 +409,7 @@ export class ProductsService {
     const base = this.toProductResponse(product);
     return {
       success: true,
-      message: 'Product fetched successfully',
+      message: 'Sản phẩm đã được lấy thành công',
       data: {
         ...base,
         my_reviews: myReviews.map((review) => ({
@@ -437,7 +437,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException('Sản phẩm không tồn tại');
     }
 
     return this.buildGuestDetailPayload(product);
@@ -447,7 +447,7 @@ export class ProductsService {
     const base = this.toProductResponse(product);
     return {
       success: true,
-      message: 'Product fetched successfully',
+      message: 'Sản phẩm đã được lấy thành công',
       data: base,
     };
   }
@@ -471,33 +471,33 @@ export class ProductsService {
 
   private validateProductId(id: string): void {
     if (!isUuid(id)) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException('Sản phẩm không tồn tại');
     }
   }
 
   private async ensureCategoryExists(categoryId: string): Promise<void> {
     if (!isUuid(categoryId)) {
-      throw new NotFoundException('Category not found');
+      throw new NotFoundException('Danh mục không tồn tại');
     }
 
     const category = await this.prisma.category.findUnique({
       where: { id: categoryId },
     });
     if (!category) {
-      throw new NotFoundException('Category not found');
+      throw new NotFoundException('Danh mục không tồn tại');
     }
   }
 
   private async ensureBrandExists(brandId: string): Promise<void> {
     if (!isUuid(brandId)) {
-      throw new NotFoundException('Brand not found');
+      throw new NotFoundException('Không tìm thấy thương hiệu');
     }
 
     const brand = await this.prisma.brand.findUnique({
       where: { id: brandId },
     });
     if (!brand) {
-      throw new NotFoundException('Brand not found');
+      throw new NotFoundException('Không tìm thấy thương hiệu');
     }
   }
   async uploadImage(productId: string, file: Express.Multer.File) {
@@ -513,7 +513,7 @@ export class ProductsService {
     await this.cache.invalidateAfterProductWrite(productId);
     return {
       success: true,
-      message: 'Product image uploaded successfully',
+      message: 'Hình ảnh sản phẩm đã được tải lên thành công',
       data: this.toProductResponse(updatedProduct),
     };
   }

@@ -35,7 +35,7 @@ export class ProductImagesService {
 
   async findOne(id: string) {
     const image = await this.prisma.productImage.findUnique({ where: { id } });
-    if (!image) throw new NotFoundException('Product image not found');
+    if (!image) throw new NotFoundException('Không tìm thấy hình ảnh sản phẩm');
     return image;
   }
 
@@ -48,6 +48,6 @@ export class ProductImagesService {
     // Extract public_id from Cloudinary URL if needed for deletion
     // For now, just delete from DB
     await this.prisma.productImage.delete({ where: { id } });
-    return { success: true, message: 'Product image deleted successfully' };
+    return { success: true, message: 'Hình ảnh sản phẩm đã được xóa thành công' };
   }
 }

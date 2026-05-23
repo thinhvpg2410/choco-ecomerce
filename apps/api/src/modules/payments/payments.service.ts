@@ -30,19 +30,19 @@ export class PaymentsService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException('Đơn hàng không tồn tại');
     }
 
     if (order.userId !== userId) {
-      throw new ForbiddenException('You cannot pay for this order');
+      throw new ForbiddenException('Bạn không thể thanh toán cho đơn hàng này');
     }
 
     if (order.status === OrderStatus.CANCELLED) {
-      throw new BadRequestException('Cannot pay for a cancelled order');
+      throw new BadRequestException('Không thể thanh toán cho đơn hàng đã hủy');
     }
 
     if (order.payment) {
-      throw new ConflictException('Payment already exists for this order');
+      throw new ConflictException('Đơn hàng này đã được thanh toán');
     }
 
     if (dto.payment_method === PaymentMethod.COD) {
@@ -63,7 +63,7 @@ export class PaymentsService {
       );
     }
 
-    throw new BadRequestException('Unsupported payment method');
+    throw new BadRequestException('Phương thức thanh toán không được hỗ trợ');
   }
 
   async findByOrderId(
@@ -71,8 +71,8 @@ export class PaymentsService {
     requesterId: string,
     requesterRole: UserRole,
   ) {
-    this.assertUuid(orderId, 'Order not found');
-    this.assertUuid(requesterId, 'User not found');
+    this.assertUuid(orderId, 'Đơn hàng không tồn tại');
+    this.assertUuid(requesterId, 'Người dùng không tồn tại');
 
     const payment = await this.prisma.payment.findUnique({
       where: { orderId },
@@ -80,19 +80,19 @@ export class PaymentsService {
     });
 
     if (!payment) {
-      throw new NotFoundException('Payment not found');
+      throw new NotFoundException('Không tìm thấy thanh toán');
     }
 
     const isOwner = payment.order.userId === requesterId;
     const isAdmin = requesterRole === UserRole.admin;
 
     if (!isOwner && !isAdmin) {
-      throw new NotFoundException('Payment not found');
+      throw new NotFoundException('Không tìm thấy thanh toán');
     }
 
     return {
       success: true,
-      message: 'Payment fetched successfully',
+      message: 'Lấy thông tin thanh toán thành công',
       data: this.toPaymentResponse(payment),
     };
   }
@@ -101,10 +101,10 @@ export class PaymentsService {
     const result = await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({ where: { id: orderId } });
       if (!order) {
-        throw new NotFoundException('Order not found');
+        throw new NotFoundException('Đơn hàng không tồn tại');
       }
       if (order.status === OrderStatus.CANCELLED) {
-        throw new BadRequestException('Cannot pay for a cancelled order');
+        throw new BadRequestException('Không thể thanh toán cho đơn hàng đã hủy');
       }
 
       const payment = await tx.payment.create({
@@ -128,7 +128,7 @@ export class PaymentsService {
 
     return {
       success: true,
-      message: 'Cash on delivery payment is pending until delivery',
+      message: 'Vui lòng thanh toán khi nhận hàng',
       data: this.toPaymentResponse(result.payment),
     };
   }
@@ -144,11 +144,11 @@ export class PaymentsService {
       });
 
       if (!order) {
-        throw new NotFoundException('Order not found');
+        throw new NotFoundException('Đơn hàng không tồn tại');
       }
 
       if (order.status === OrderStatus.CANCELLED) {
-        throw new BadRequestException('Cannot pay for a cancelled order');
+        throw new BadRequestException('Không thể thanh toán cho đơn hàng đã hủy');
       }
 
       const created = await tx.payment.create({
@@ -174,7 +174,7 @@ export class PaymentsService {
 
     return {
       success: true,
-      message: 'PayPal payment completed',
+      message: 'Thanh toán PayPal đã hoàn tất',
       data: this.toPaymentResponse(payment),
     };
   }

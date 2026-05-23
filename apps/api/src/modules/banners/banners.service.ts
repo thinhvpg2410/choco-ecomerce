@@ -39,7 +39,7 @@ export class BannersService {
 
   async findOne(id: string) {
     const banner = await this.prisma.banner.findUnique({ where: { id } });
-    if (!banner) throw new NotFoundException('Banner not found');
+    if (!banner) throw new NotFoundException('Không tìm thấy banner');
     return banner;
   }
 
@@ -60,6 +60,6 @@ export class BannersService {
 
   async remove(id: string) {
     await this.prisma.banner.delete({ where: { id } });
-    return { success: true, message: 'Banner deleted successfully' };
+    return { success: true, message: 'Xóa banner thành công' };
   }
 }

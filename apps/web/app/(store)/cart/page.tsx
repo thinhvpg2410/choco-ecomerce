@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getCart, getProductById, removeFromCart, updateCartItem } from "@/services/cart.service";
+import {
+  getCart,
+  getProductById,
+  removeFromCart,
+  updateCartItem,
+} from "@/services/cart.service";
 import { CartItem } from "@/types/type";
 import { ShoppingBag, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +22,9 @@ export default function CartPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
+  const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>(
+    {},
+  );
   const [productsMap, setProductsMap] = useState<Record<string, any>>({});
 
   const dispatch = useDispatch();
@@ -61,7 +69,7 @@ export default function CartPage() {
   const handleRemove = async (productId: string) => {
     try {
       await removeFromCart(productId);
-dispatch(fetchCart() as any);
+      dispatch(fetchCart() as any);
       setItems((prev) =>
         prev.filter((item) => String(item.product_id) !== String(productId)),
       );
@@ -162,20 +170,31 @@ dispatch(fetchCart() as any);
   };
 
   // Cập nhật số lượng sản phẩm trong giỏ
-  const updateQty = async (productId: string, delta: number) => {
+  const getStock = (productId: string, item: CartItem) =>
+    item.product?.stock ?? productsMap[productId]?.stock ?? 100;
+
+  const updateQty = async (
+    productId: string,
+    deltaOrQty: number,
+    absolute = false,
+  ) => {
     const item = items.find((i) => String(i.product_id) === productId);
     if (!item) return;
 
-    const stock = item.product?.stock ?? 100;
+    const stock = getStock(productId, item);
+    const targetQty = absolute ? deltaOrQty : item.quantity + deltaOrQty;
+    const newQty = Math.max(1, Math.min(stock, targetQty));
 
-    const newQty = Math.max(1, Math.min(stock, item.quantity + delta));
-
-    // Đẩy sản phẩm update lên
+    // Cập nhật giao diện và input đồng bộ
     setItems((prev) =>
       prev.map((i) =>
         String(i.product_id) === productId ? { ...i, quantity: newQty } : i,
       ),
     );
+    setQuantityInputs((prev) => ({
+      ...prev,
+      [productId]: String(newQty),
+    }));
 
     try {
       await updateCartItem({
@@ -190,6 +209,10 @@ dispatch(fetchCart() as any);
       setItems((prev) =>
         prev.map((i) => (String(i.product_id) === productId ? item : i)),
       );
+      setQuantityInputs((prev) => ({
+        ...prev,
+        [productId]: String(item.quantity),
+      }));
     }
   };
 
@@ -254,7 +277,7 @@ dispatch(fetchCart() as any);
                     alt={
                       productsMap[item.product_id]?.name ||
                       item.product?.name ||
-                      "No product"
+                      "Không có sản phẩm"
                     }
                     className="w-full h-full object-cover rounded"
                   />
@@ -264,7 +287,7 @@ dispatch(fetchCart() as any);
                     <p className="font-medium hover:text-[#3b1d14] transition-colors">
                       {productsMap[item.product_id]?.name ??
                         item.product?.name ??
-                        "No product"}
+                        "Không có sản phẩm"}
                     </p>
                   </Link>
                 </div>
@@ -285,13 +308,42 @@ dispatch(fetchCart() as any);
                   >
                     −
                   </button>
-                  <span className="min-w-[28px] text-center text-base font-bold text-[#1a1a1a]">
-                    {item.quantity}
-                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={getStock(String(item.product_id), item)}
+                    value={
+                      quantityInputs[String(item.product_id)] ??
+                      String(item.quantity)
+                    }
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (/^\d*$/.test(raw)) {
+                        setQuantityInputs((prev) => ({
+                          ...prev,
+                          [String(item.product_id)]: raw,
+                        }));
+                      }
+                    }}
+                    onBlur={() => {
+                      const raw =
+                        quantityInputs[String(item.product_id)] ??
+                        String(item.quantity);
+                      const parsed = Number(raw);
+                      const stock = getStock(String(item.product_id), item);
+                      const qty = Number.isNaN(parsed)
+                        ? item.quantity
+                        : Math.max(1, Math.min(stock, parsed));
+                      updateQty(String(item.product_id), qty, true);
+                    }}
+                    className="w-[50px] h-[28px] text-center text-base font-bold text-[#1a1a1a] outline-none bg-transparent"
+                  />
                   <button
                     onClick={() => updateQty(String(item.product_id), 1)}
-                    disabled={item.quantity >= (item.product?.stock ?? 100)}
-                    className="w-[30px] h-[28px] flex items-center justify-center text-base font-medium text-gray-700 hover:bg-pink-50 hover:text-pink-600 disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+                    disabled={
+                      item.quantity >= getStock(String(item.product_id), item)
+                    }
+                    className="w-[30px] h-[28px] flex items-center justify-center text-base font-medium text-gray-700 hover:bg-pink-50 hover:text-pink-600 disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors appearance-none"
                   >
                     +
                   </button>
@@ -308,14 +360,22 @@ dispatch(fetchCart() as any);
                 className="col-span-1 text-center hover:text-red-500 cursor-pointer"
                 onClick={() => {
                   toast("Xác nhận xóa sản phẩm?", {
-                    action: {
-                      label: "Xóa",
-                      onClick: () => handleRemove(String(item.product_id)),
+                    position: "top-center",
+                    closeButton: false,
+                    classNames: {
+                      root: "flex items-center justify-between gap-3 ",
+                      content: "flex-1",
                     },
                     cancel: {
                       label: "Hủy",
                       onClick: () => {},
                     },
+                    action: {
+                      label: "Xóa",
+                      onClick: () => handleRemove(String(item.product_id)),
+                    },
+                    cancelButtonStyle: { marginLeft: 0, marginRight: 0 },
+                    actionButtonStyle: { marginLeft: 3, marginRight: 0 },
                   });
                 }}
               >

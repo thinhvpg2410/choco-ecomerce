@@ -48,12 +48,12 @@ export class OrdersService {
       });
 
       if (!product) {
-        throw new NotFoundException(`Product not found: ${product_id}`);
+        throw new NotFoundException(`Không tìm thấy sản phẩm: ${product_id}`);
       }
 
       if (product.stock < quantity) {
         throw new ConflictException(
-          `Not enough stock for product: ${product.name}`,
+          `Không đủ hàng cho sản phẩm: ${product.name}`,
         );
       }
 
@@ -141,7 +141,7 @@ export class OrdersService {
 
     return {
       success: true,
-      message: 'Order created successfully',
+      message: 'Đơn hàng đã được tạo thành công',
       data: this.toOrderResponse(createdOrder),
     };
   }
@@ -155,7 +155,7 @@ export class OrdersService {
       });
 
       if (!cart || cart.items.length === 0) {
-        throw new BadRequestException('Cart is empty');
+        throw new BadRequestException('Giỏ hàng trống');
       }
 
       const cartItemIds = dto.cart_item_ids ?? [];
@@ -166,7 +166,7 @@ export class OrdersService {
           : cart.items;
 
       if (!selectedCartItems.length) {
-        throw new BadRequestException('No cart items selected for order');
+        throw new BadRequestException('Không có sản phẩm nào được chọn để đặt hàng');
       }
 
       const orderItemsData: Prisma.OrderItemCreateWithoutOrderInput[] = [];
@@ -179,13 +179,13 @@ export class OrdersService {
 
         if (!product) {
           throw new NotFoundException(
-            `Product not found: ${cartItem.productId}`,
+            `Không tìm thấy sản phẩm: ${cartItem.productId}`,
           );
         }
 
         if (product.stock < cartItem.quantity) {
           throw new ConflictException(
-            `Not enough stock for product: ${product.name}`,
+            `Không đủ hàng cho sản phẩm: ${product.name}`,
           );
         }
 
@@ -279,7 +279,7 @@ export class OrdersService {
 
     return {
       success: true,
-      message: 'Order created successfully',
+      message: 'Đơn hàng đã được tạo thành công',
       data: this.toOrderResponse(createdOrder),
     };
   }
@@ -294,7 +294,7 @@ export class OrdersService {
     });
     return {
       success: true,
-      message: 'Orders fetched successfully',
+      message: 'Đơn hàng đã được lấy thành công',
       data: orders.map((order) => this.toOrderResponse(order)),
     };
   }
@@ -312,16 +312,16 @@ export class OrdersService {
       include: { items: true },
     });
 
-    if (!order) throw new NotFoundException('Order not found');
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
 
     const isOwner = order.userId === requesterId;
     const isAdmin = requesterRole === UserRole.admin;
 
-    if (!isOwner && !isAdmin) throw new NotFoundException('Order not found');
+    if (!isOwner && !isAdmin) throw new NotFoundException('Không tìm thấy đơn hàng');
 
     return {
       success: true,
-      message: 'Order fetched successfully',
+      message: 'Đơn hàng đã được lấy thành công',
       data: this.toOrderResponse(order),
     };
   }
@@ -333,7 +333,7 @@ export class OrdersService {
     });
     return {
       success: true,
-      message: 'All orders fetched successfully',
+      message: 'Tất cả đơn hàng đã được lấy thành công',
       data: orders.map((order) => this.toOrderResponse(order)),
     };
   }
@@ -356,12 +356,12 @@ export class OrdersService {
       });
 
       if (!order) {
-        throw new NotFoundException('Order not found');
+        throw new NotFoundException('Không tìm thấy đơn hàng');
       }
 
       // Không cho update nếu đã cancel
       if (order.status === OrderStatus.CANCELLED) {
-        throw new BadRequestException('Cannot update cancelled order');
+        throw new BadRequestException('Không thể cập nhật đơn hàng đã hủy');
       }
 
       // Update order status
@@ -410,7 +410,7 @@ export class OrdersService {
 
     return {
       success: true,
-      message: 'Order status updated successfully',
+      message: 'Trạng thái đơn hàng đã được cập nhật thành công',
       data: this.toOrderResponse(result),
     };
   }
@@ -435,17 +435,17 @@ export class OrdersService {
 
     return {
       success: true,
-      message: 'Reviewable orders fetched successfully',
+      message: 'Đơn hàng có thể đánh giá đã được lấy thành công',
       data: orders,
     };
   }
 
   private validateUserId(id: string): void {
-    if (!isUuid(id)) throw new NotFoundException('User not found');
+    if (!isUuid(id)) throw new NotFoundException('Người dùng không tồn tại');
   }
 
   private validateOrderId(id: string): void {
-    if (!isUuid(id)) throw new NotFoundException('Order not found');
+    if (!isUuid(id)) throw new NotFoundException('Đơn hàng không tồn tại');
   }
 
   private toOrderResponse(order: OrderWithItems) {

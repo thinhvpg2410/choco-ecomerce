@@ -39,7 +39,7 @@ export class CategoriesService {
       });
       return {
         success: true,
-        message: 'Categories fetched successfully',
+        message: 'Lấy danh sách danh mục thành công',
         data: categories.map((category) => this.toCategoryResponse(category)),
         meta: {
           viewer: {
@@ -81,7 +81,7 @@ export class CategoriesService {
     });
     return {
       success: true,
-      message: 'Categories fetched successfully',
+      message: 'Lấy danh sách danh mục thành công',
       data: categories.map((category) => this.toCategoryResponse(category)),
     };
   }
@@ -101,7 +101,7 @@ export class CategoriesService {
     await this.cache.invalidateAfterCategoryWrite();
     return {
       success: true,
-      message: 'Category created successfully',
+      message: 'Tạo danh mục thành công',
       data: this.toCategoryResponse(createdCategory),
     };
   }
@@ -134,11 +134,11 @@ export class CategoriesService {
       await this.cache.invalidateAfterCategoryWrite();
       return {
         success: true,
-        message: 'Category updated successfully',
+        message: 'Cập nhật danh mục thành công',
         data: this.toCategoryResponse(updatedCategory),
       };
     } catch {
-      throw new NotFoundException('Category not found');
+      throw new NotFoundException('Danh mục không tồn tại');
     }
   }
 
@@ -149,19 +149,19 @@ export class CategoriesService {
       where: { id: categoryId },
     });
     if (!category) {
-      throw new NotFoundException('Category not found');
+      throw new NotFoundException('Danh mục không tồn tại');
     }
 
     const existingProducts = await this.prisma.product.count({
       where: { categoryId: category.id, isActive: true },
     });
     if (existingProducts > 0) {
-      throw new BadRequestException('Cannot delete category with existing products');
+      throw new BadRequestException('Không thể xóa danh mục có sản phẩm đang tồn tại');
     }
 
     await this.prisma.category.delete({ where: { id: categoryId } });
     await this.cache.invalidateAfterCategoryWrite();
-    return { success: true, message: 'Category deleted successfully' };
+    return { success: true, message: 'Danh mục đã được xóa thành công' };
   }
   async uploadImage(categoryId: string, file: Express.Multer.File): Promise<any> {
     this.validateUuid(categoryId);
@@ -173,7 +173,7 @@ export class CategoriesService {
     await this.cache.invalidateAfterCategoryWrite();
     return {
       success: true,
-      message: 'Category image uploaded successfully',
+      message: 'Hình ảnh danh mục đã được tải lên thành công',
       data: this.toCategoryResponse(updatedCategory),
     };
   }
@@ -181,7 +181,7 @@ export class CategoriesService {
 
   private validateUuid(id: string): void {
     if (!isUuid(id)) {
-      throw new NotFoundException('Category not found');
+      throw new NotFoundException('Danh mục không tồn tại');
     }
   }
 

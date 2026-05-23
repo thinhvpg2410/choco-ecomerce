@@ -52,7 +52,7 @@ export class AdminService {
 
     return {
       success: true,
-      message: 'Users fetched successfully',
+      message: 'Lấy danh sách người dùng thành công',
       data: {
         users,
         total,
@@ -126,7 +126,7 @@ export class AdminService {
 
     return {
       success: true,
-      message: 'Products fetched successfully',
+      message: 'Lấy danh sách sản phẩm thành công',
       data: {
         products,
         total,
@@ -191,7 +191,7 @@ export class AdminService {
 
     return {
       success: true,
-      message: 'Coupons fetched successfully',
+      message: 'Lấy danh sách mã giảm giá thành công',
       data: {
         coupons,
         total,
@@ -215,7 +215,7 @@ export class AdminService {
 
     return {
       success: true,
-      message: 'User status updated successfully',
+      message: 'Cập nhật trạng thái người dùng thành công',
       data: user,
     };
   }
@@ -240,7 +240,7 @@ export class AdminService {
     if (status === order.status) {
       return {
         success: true,
-        message: 'Order status unchanged',
+        message: 'Trạng thái đơn hàng không thay đổi',
         data: order,
       };
     }
@@ -306,7 +306,7 @@ export class AdminService {
 
     return {
       success: true,
-      message: 'Order status updated successfully',
+      message: 'Cập nhật trạng thái đơn hàng thành công',
       data: updatedOrder,
     };
   }
@@ -408,7 +408,7 @@ export class AdminService {
 
       return {
         success: true,
-        message: 'Statistics fetched successfully',
+        message: 'Thống kê thành công',
         data: {
           year: currentYear,
           monthlyRevenue,
@@ -434,7 +434,7 @@ export class AdminService {
         },
       };
     } catch (error: any) {
-      console.error('❌ Statistics Error:', error.message);
+      console.error('❌ Lỗi thống kê:', error.message);
       throw error;
     }
   }
@@ -503,7 +503,7 @@ export class AdminService {
 
     return {
       success: true,
-      message: 'Orders fetched successfully',
+      message: 'Lấy danh sách đơn hàng thành công',
       data: { orders, total, page, limit },
     };
   }
@@ -544,7 +544,7 @@ export class AdminService {
 
     return {
       success: true,
-      message: 'Order detail fetched successfully',
+      message: 'Lấy chi tiết đơn hàng thành công',
       data: order,
     };
   }
@@ -556,7 +556,7 @@ export class AdminService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException('Không tìm thấy đơn hàng');
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -580,7 +580,7 @@ export class AdminService {
 
     return {
       success: true,
-      message: 'Payment status updated successfully',
+      message: 'Cập nhật trạng thái thanh toán thành công',
       data: updated,
     };
   }

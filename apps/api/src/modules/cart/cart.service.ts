@@ -18,7 +18,7 @@ export class CartService {
 
     return {
       success: true,
-      message: 'Cart fetched successfully',
+      message: 'Lấy giỏ hàng thành công',
       data: this.toCartResponse(cart),
     };
   }
@@ -58,7 +58,7 @@ export class CartService {
 
     return {
       success: true,
-      message: 'Product added to cart successfully',
+      message: 'Sản phẩm đã được thêm vào giỏ hàng',
       data: this.toCartResponse(updatedCart),
     };
   }
@@ -76,7 +76,7 @@ export class CartService {
     });
 
     if (!item) {
-      throw new NotFoundException('Cart item not found');
+      throw new NotFoundException('Sản phẩm trong giỏ hàng không tồn tại');
     }
 
     await this.prisma.cartItem.update({
@@ -88,7 +88,7 @@ export class CartService {
 
     return {
       success: true,
-      message: 'Cart item updated successfully',
+      message: 'Cập nhật sản phẩm trong giỏ hàng thành công',
       data: this.toCartResponse(updatedCart),
     };
   }
@@ -103,14 +103,14 @@ export class CartService {
     });
 
     if (result.count === 0) {
-      throw new NotFoundException('Cart item not found');
+      throw new NotFoundException('Sản phẩm trong giỏ hàng không tồn tại');
     }
 
     const updatedCart = await this.loadCartWithItems(cart.id);
 
     return {
       success: true,
-      message: 'Cart item removed successfully',
+      message: 'Xóa sản phẩm khỏi giỏ hàng thành công',
       data: this.toCartResponse(updatedCart),
     };
   }
@@ -124,7 +124,7 @@ export class CartService {
 
     return {
       success: true,
-      message: 'Cart cleared successfully',
+      message: 'Giỏ hàng đã được làm trống',
       data: this.toCartResponse(updatedCart),
     };
   }
@@ -171,7 +171,7 @@ export class CartService {
 
         if (nextQty > product.stock) {
           throw new BadRequestException(
-            `Insufficient stock for "${product.name}" (${productId}). In stock: ${product.stock}, cart would be: ${nextQty}`,
+            `Không đủ hàng cho "${product.name}" (${productId}). Tồn kho: ${product.stock}, số lượng trong giỏ sẽ là: ${nextQty}`,
           );
         }
 
@@ -201,7 +201,7 @@ export class CartService {
 
     return {
       success: true,
-      message: 'Guest cart merged successfully',
+      message: 'Giỏ hàng khách hàng đã được hợp nhất thành công',
       data: this.toCartResponse(cartWithItems),
     };
   }
@@ -250,7 +250,7 @@ export class CartService {
     });
 
     if (!product) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException('Sản phẩm không tồn tại');
     }
 
     return product;
@@ -258,13 +258,13 @@ export class CartService {
 
   private validateUserId(id: string): void {
     if (!isUuid(id)) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Người dùng không tồn tại');
     }
   }
 
   private validateProductId(id: string): void {
     if (!isUuid(id)) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException('Sản phẩm không tồn tại');
     }
   }
 
