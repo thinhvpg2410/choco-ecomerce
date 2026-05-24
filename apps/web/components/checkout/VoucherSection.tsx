@@ -1,9 +1,7 @@
 "use client";
 
-import { Tag, X } from "lucide-react";
-
+import { Tag, X, Ticket } from "lucide-react";
 import Section from "./Section";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -33,7 +31,7 @@ export default function VoucherSection({
 }: Props) {
   return (
     <Section
-      icon={<Tag className="w-4 h-4 text-violet-500" />}
+      icon={<Ticket className="w-4 h-4 text-violet-500" />}
       iconBg="bg-violet-50"
       title="Mã giảm giá"
     >
@@ -43,64 +41,49 @@ export default function VoucherSection({
           value={voucherInput}
           onChange={(e) => setVoucherInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && applyVoucher()}
-          className="rounded-xl text-sm flex-1"
+          className="rounded-xl text-sm border-gray-200 focus-visible:ring-orange-400 uppercase tracking-widest placeholder:normal-case placeholder:tracking-normal"
         />
-
         <Button
           onClick={applyVoucher}
-          className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-bold text-sm px-5"
+          className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-semibold text-sm px-5 shrink-0"
         >
           Áp dụng
         </Button>
       </div>
 
       {appliedVouchers.length > 0 && (
-        <div className="mt-3 flex flex-col gap-3">
+        <div className="mt-3 flex flex-col gap-2">
           {appliedVouchers.map((voucher) => (
             <div
               key={voucher.code}
-              className="relative overflow-hidden rounded-2xl border border-rose-200 bg-gradient-to-r from-rose-50 to-pink-50 p-4 shadow-sm"
+              className="flex items-center gap-3 p-3 rounded-xl border border-emerald-200 bg-emerald-50"
             >
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                <Tag className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-emerald-700 tracking-wide">
+                    {voucher.code}
+                  </span>
+                  <span className="text-[10px] font-semibold bg-emerald-200 text-emerald-700 rounded-full px-2 py-0.5">
+                    Đã áp dụng
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-600 mt-0.5">
+                  Giảm {fmt(voucher.discount)}
+                </p>
+              </div>
               <button
                 onClick={() =>
                   setAppliedVouchers((prev) =>
                     prev.filter((v) => v.code !== voucher.code),
                   )
                 }
-                className="absolute top-3 right-3 text-rose-400 hover:text-rose-600"
+                className="p-1 rounded-lg hover:bg-emerald-200 text-emerald-500 hover:text-emerald-700 transition-colors shrink-0"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
-
-              <div className="flex items-start gap-3">
-                <div className="w-11 h-11 rounded-xl bg-rose-100 flex items-center justify-center flex-shrink-0">
-                  <Tag className="w-5 h-5 text-rose-500" />
-                </div>
-
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-black text-rose-600 tracking-wide">
-                      {voucher.code}
-                    </span>
-
-                    <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[11px] font-bold">
-                      Đã áp dụng
-                    </span>
-                  </div>
-
-                  <p className="text-sm text-gray-600 mt-1">
-                    {voucher.description}
-                  </p>
-
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-xs text-gray-400">Số tiền giảm:</span>
-
-                    <span className="text-lg font-black text-green-600">
-                      -{fmt(voucher.discount)}
-                    </span>
-                  </div>
-                </div>
-              </div>
             </div>
           ))}
         </div>

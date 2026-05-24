@@ -312,20 +312,19 @@ export class PaymentsService {
       const testAmount = 2000; 
       const transactionCode = `DH${order.id.split('-')[0].toUpperCase()}`;
 
-      // Sử dụng upsert: Nếu chưa có thì tạo mới, nếu có rồi thì cập nhật lại transactionCode
       const payment = await tx.payment.upsert({
         where: { orderId: orderId },
         update: {
           transactionCode,
           paymentMethod: PaymentMethod.QR_BANK,
           paymentStatus: PaymentStatus.PENDING,
-          amount: testAmount, // 💡 BƯỚC 2: Cập nhật số tiền test vào đây
+          amount: testAmount,
         },
         create: {
           orderId,
           paymentMethod: PaymentMethod.QR_BANK,
           paymentStatus: PaymentStatus.PENDING,
-          amount: testAmount, // 💡 BƯỚC 3: Thay order.finalAmount thành testAmount
+          amount: testAmount,
           transactionCode,
         },
       });

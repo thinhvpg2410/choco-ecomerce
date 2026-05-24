@@ -45,7 +45,6 @@ export const addToCart = async (dto: AddToCartDto): Promise<Cart | null> => {
 
     const cart = res.data?.data;
 
-    // 🔥 SYNC LOCAL STORAGE
     if (cart?.items) {
       localStorage.setItem(
         "checkout_cart",
@@ -65,7 +64,7 @@ export const addToCart = async (dto: AddToCartDto): Promise<Cart | null> => {
 
     return cart || null;
   } catch (error: any) {
-    console.error("❌ Add to cart error:", error?.response?.data || error);
+    console.error("Add to cart error:", error?.response?.data || error);
     throw error;
   }
 };
@@ -78,7 +77,7 @@ export const updateCartItem = async (
     const res = await api.put("/cart/update", dto);
     return res.data?.data || null;
   } catch (error: any) {
-    console.error("❌ Update cart error:", error?.response?.data || error);
+    console.error("Update cart error:", error?.response?.data || error);
     throw error;
   }
 };
@@ -91,7 +90,7 @@ export const removeFromCart = async (
     const res = await api.delete(`/cart/remove/${productId}`);
     return res.data?.data || null;
   } catch (error: any) {
-    console.error("❌ Remove from cart error:", error?.response?.data || error);
+    console.error("Remove from cart error:", error?.response?.data || error);
     throw error;
   }
 };
@@ -102,7 +101,7 @@ export const clearCart = async (): Promise<boolean> => {
     await api.delete("/cart/clear");
     return true;
   } catch (error: any) {
-    console.error("❌ Clear cart error:", error?.response?.data || error);
+    console.error("Clear cart error:", error?.response?.data || error);
     throw error;
   }
 };

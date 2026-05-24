@@ -10,7 +10,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import {
   ProductSearchBar,
   ProductSidebarFilters,
-} from "../../../lib/product-filters"; // ← sửa đường dẫn nếu cần
+} from "../../../lib/product-filters";
 
 type SearchParams = {
   page?: string;
@@ -19,8 +19,8 @@ type SearchParams = {
   max_price?: string;
   is_new?: string;
   is_best_seller?: string;
-  brand_id?: string; // ← THÊM
-  category_id?: string; // ← THÊM
+  brand_id?: string;
+  category_id?: string;
 };
 
 export default async function ProductPage({
@@ -46,8 +46,8 @@ export default async function ProductPage({
     max_price: params.max_price,
     is_new: params.is_new === "true",
     is_best_seller: params.is_best_seller === "true",
-    brand_id: params.brand_id, // ← THÊM DÒNG NÀY
-    category_id: params.category_id, // ← THÊM DÒNG NÀY
+    brand_id: params.brand_id,
+    category_id: params.category_id,
   });
 
   const totalPages = total > 0 && limit > 0 ? Math.ceil(total / limit) : 1;

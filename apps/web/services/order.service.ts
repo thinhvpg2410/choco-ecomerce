@@ -40,7 +40,7 @@ export const createOrder = async (
     const res = await api.post("/orders", dto);
     return res.data.data;
   } catch (error: any) {
-    console.error("❌ Create order error:", error?.response?.data || error);
+    console.error("Create order error:", error?.response?.data || error);
     throw error;
   }
 };
@@ -50,7 +50,7 @@ export const getMyOrders = async (): Promise<OrderApiResponse[]> => {
     const res = await api.get("/orders/my");
     return res.data?.data || [];
   } catch (error: any) {
-    console.error("❌ Get my orders error:", error?.response?.data || error);
+    console.error("Get my orders error:", error?.response?.data || error);
     return [];
   }
 };
@@ -62,7 +62,7 @@ export const getOrderById = async (
     const res = await api.get(`/orders/${id}`);
     return res.data?.data || null;
   } catch (error: any) {
-    console.error("❌ Get order by id error:", error?.response?.data || error);
+    console.error("Get order by id error:", error?.response?.data || error);
     return null;
   }
 };

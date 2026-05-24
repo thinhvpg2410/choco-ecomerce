@@ -32,7 +32,7 @@ export class UsersService {
       data: {
         email: createUserDto.email,
         password: createUserDto.password,
-        avatarUrl: '/user.jpg', // Default avatar
+        avatarUrl: '/user.jpg',
         ...(createUserDto.role !== undefined && { role: createUserDto.role }),
         ...(createUserDto.status !== undefined && {
           status: createUserDto.status,
@@ -99,7 +99,7 @@ export class UsersService {
     return this.toUserResponse(user);
   }
 
-  // ==================== ADMIN ONLY - XÓA USER (SOFT DELETE) ====================
+  //ADMIN ONLY - XÓA USER (SOFT DELETE)
   async deleteUserByAdmin(userId: string): Promise<UserResponseDto> {
     if (!isUuid(userId)) {
       throw new NotFoundException('Người dùng không tồn tại');

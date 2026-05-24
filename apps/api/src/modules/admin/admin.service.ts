@@ -317,13 +317,12 @@ export class AdminService {
     const endOfYear = new Date(currentYear + 1, 0, 1);
 
     try {
-      // Debug: Xem status hợp lệ
       const validStatuses = await this.prisma.$queryRaw`
       SELECT unnest(enum_range(NULL::"OrderStatus")) as status;
     `;
-      console.log('🔍 Valid OrderStatus:', validStatuses);
+      console.log('Valid OrderStatus:', validStatuses);
 
-      // ================= DOANH THU THEO THÁNG =================
+      //DOANH THU THEO THÁNG
       const monthlyRevenueRaw = await this.prisma.$queryRaw<any[]>`
       SELECT
         EXTRACT(MONTH FROM o."created_at")::int as month,
@@ -332,7 +331,7 @@ export class AdminService {
       FROM "orders" o
       WHERE o."created_at" >= ${startOfYear}
         AND o."created_at" < ${endOfYear}
-        AND o."status" IN ('DELIVERED', 'SHIPPING')  -- Chỉ lấy đơn đã hoàn thành/giao
+        AND o."status" IN ('DELIVERED', 'SHIPPING') 
       GROUP BY EXTRACT(MONTH FROM o."created_at")
       ORDER BY month
     `;
@@ -346,7 +345,7 @@ export class AdminService {
         };
       });
 
-      // ================= TOP SẢN PHẨM & DANH MỤC =================
+      //TOP SẢN PHẨM & DANH MỤC
       const [
         topProductsByQuantityRaw,
         topProductsByRevenueRaw,
@@ -439,7 +438,7 @@ export class AdminService {
     }
   }
 
-  // ==================== GET ORDERS (List) ====================
+  //GET ORDERS (List)
   async getOrders(query: { page?: number; search?: string; status?: string }) {
     const page = query.page || 1;
     const limit = 20;
@@ -490,12 +489,12 @@ export class AdminService {
           items: {
             include: {
               product: {
-                select: { name: true, imageUrl: true }, // thêm nếu cần
+                select: { name: true, imageUrl: true },
               },
             },
           },
-          coupon: true, // ← thêm
-          payment: true, // ← thêm
+          coupon: true,
+          payment: true,
         },
       }),
       this.prisma.order.count({ where }),

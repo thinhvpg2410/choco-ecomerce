@@ -31,14 +31,14 @@ export interface ReviewListResponse {
   };
 }
 
-// ==================== REVIEWS SERVICE ====================
+//REVIEWS SERVICE
 
 export const createReview = async (dto: CreateReviewDto): Promise<Review> => {
   try {
     const res = await api.post("/reviews", dto);
     return res.data?.data || res.data;
   } catch (error: any) {
-    console.error("❌ Create review error:", error?.response?.data || error);
+    console.error("Create review error:", error?.response?.data || error);
     throw error;
   }
 };
@@ -51,7 +51,7 @@ export const updateReview = async (
     const res = await api.put(`/reviews/${reviewId}`, dto);
     return res.data?.data || res.data;
   } catch (error: any) {
-    console.error("❌ Update review error:", error?.response?.data || error);
+    console.error("Update review error:", error?.response?.data || error);
     throw error;
   }
 };
@@ -61,7 +61,7 @@ export const deleteReview = async (reviewId: string): Promise<boolean> => {
     const res = await api.delete(`/reviews/${reviewId}`);
     return res.data?.success || true;
   } catch (error: any) {
-    console.error("❌ Delete review error:", error?.response?.data || error);
+    console.error("Delete review error:", error?.response?.data || error);
     throw error;
   }
 };
@@ -86,7 +86,7 @@ export const getProductReviews = async (
     );
   } catch (error: any) {
     console.error(
-      "❌ Get product reviews error:",
+      "Get product reviews error:",
       error?.response?.data || error,
     );
     return {
@@ -104,7 +104,7 @@ export const getMyReviewForProduct = async (
     const res = await api.get(`/reviews/me/product/${productId}`);
     return res.data?.data || null;
   } catch (error: any) {
-    console.error("❌ Get my review error:", error?.response?.data || error);
+    console.error("Get my review error:", error?.response?.data || error);
     return null;
   }
 };

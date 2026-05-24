@@ -24,5 +24,3 @@ export class PayPalController {
     return this.paypalService.captureOrder(body.orderId);
   }
 }
-
-

@@ -14,7 +14,7 @@ export const createPayment = async (
     const res = await api.post("/payments", dto);
     return res.data.data;
   } catch (error: any) {
-    console.error("❌ Create payment error:", error?.response?.data || error);
+    console.error("Create payment error:", error?.response?.data || error);
     throw error;
   }
 };
@@ -26,7 +26,7 @@ export const getPaymentByOrderId = async (
     const res = await api.get(`/payments/${orderId}`);
     return res.data?.data || null;
   } catch (error: any) {
-    console.error("❌ Get payment error:", error?.response?.data || error);
+    console.error("Get payment error:", error?.response?.data || error);
     return null;
   }
 };

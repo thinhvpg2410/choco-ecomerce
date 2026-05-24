@@ -14,15 +14,13 @@ export interface Banner {
 }
 
 export const bannerService = {
-  /** Lấy tất cả banner (dùng cho Admin) */
   async getBanners() {
     const response = await api.get("/banners");
     return response.data as Banner[];
   },
 
-  /** Lấy banner đang active - Khuyến nghị dùng cho Homepage */
   async getActiveBanners() {
-    const response = await api.get("/banners/active"); // hoặc '/banners?active=true'
+    const response = await api.get("/banners/active");
     return response.data as Banner[];
   },
 

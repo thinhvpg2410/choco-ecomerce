@@ -12,7 +12,7 @@ export interface Brand {
 export const getBrands = async (): Promise<Brand[]> => {
   try {
     const res = await api.get("/brands");
-    console.log("🏷️ brands raw:", res.data); // ← thêm dòng này
+    console.log("brands raw:", res.data); 
     return res.data?.data || res.data || [];
   } catch (error: any) {
     console.error("❌ Get brands error:", error?.response?.data || error);
@@ -20,7 +20,6 @@ export const getBrands = async (): Promise<Brand[]> => {
   }
 };
 
-// Nếu sau này cần lấy brand theo ID
 export const getBrandById = async (
   id: string | number,
 ): Promise<Brand | null> => {

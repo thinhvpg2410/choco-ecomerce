@@ -36,7 +36,7 @@ export const getCoupons = async (): Promise<Coupon[]> => {
 
     return res.data?.data || [];
   } catch (error: any) {
-    console.error("❌ Get coupons error:", error?.response?.data || error);
+    console.error("Get coupons error:", error?.response?.data || error);
 
     return [];
   }
@@ -54,7 +54,7 @@ export const applyCoupon = async (
 
     return res.data?.data || null;
   } catch (error: any) {
-    console.error("❌ Apply coupon error:", error?.response?.data || error);
+    console.error("Apply coupon error:", error?.response?.data || error);
 
     throw error;
   }

@@ -11,13 +11,13 @@ export interface Category {
 
 export const getCategories = async (): Promise<Category[]> => {
   try {
-    console.log("🚀 Calling:", api.defaults.baseURL + "/categories");
+    console.log("Calling:", api.defaults.baseURL + "/categories");
 
     const res = await api.get("/categories");
 
-    console.log("✅ STATUS:", res.status);
-    console.log("✅ DATA:", res.data);
-    console.log("✅ HEADERS:", res.headers);
+    console.log("STATUS:", res.status);
+    console.log("DATA:", res.data);
+    console.log("HEADERS:", res.headers);
 
     return res.data?.data || res.data || [];
   } catch (error: any) {
@@ -39,7 +39,7 @@ export const getCategoryById = async (
     const res = await api.get(`/categories/${id}`);
     return res.data?.data || null;
   } catch (error) {
-    console.error("❌ Get category by id error:", error);
+    console.error("Get category by id error:", error);
     return null;
   }
 };

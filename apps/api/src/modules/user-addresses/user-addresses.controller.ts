@@ -21,19 +21,11 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 export class UserAddressesController {
   constructor(private readonly userAddressesService: UserAddressesService) {}
 
-  // @Post()
-  // create(@Body() dto: CreateUserAddressDto, @Req() req: Request) {
-  //   const { sub } = req.user as { sub: string };
-  //   dto.userId = sub;
-  //   return this.userAddressesService.create(dto);
-  // }
-
   @Post()
-create(@Body() dto: CreateUserAddressDto, @Req() req: Request) {
-  const user = req.user as any;
-
-  return this.userAddressesService.create(user.sub, dto);
-}
+  create(@Body() dto: CreateUserAddressDto, @Req() req: Request) {
+    const user = req.user as any;
+    return this.userAddressesService.create(user.sub, dto);
+  }
 
   @Get()
   findAll(@Req() req: Request) {

@@ -45,8 +45,6 @@ export class ProductImagesService {
 
   async remove(id: string) {
     const image = await this.findOne(id);
-    // Extract public_id from Cloudinary URL if needed for deletion
-    // For now, just delete from DB
     await this.prisma.productImage.delete({ where: { id } });
     return { success: true, message: 'Hình ảnh sản phẩm đã được xóa thành công' };
   }
