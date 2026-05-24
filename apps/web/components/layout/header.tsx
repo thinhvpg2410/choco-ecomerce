@@ -119,18 +119,18 @@ export function Header() {
   };
 
   const navItemClass =
-    "cursor-pointer px-4 py-2 rounded-md text-xl font-['Manrope'] transition-all duration-200 font-bold hover:text-[#FF5FA2] hover:underline underline-offset-4 ";
+    "cursor-pointer px-4 py-2 rounded-md text-sm transition-all duration-200 font-bold hover:text-[#D4AF37] hover:underline underline-offset-4 ";
 
   const dropdownItemClass =
-    "block px-3 py-1.5 rounded-md text-[18px] font-['Manrope'] transition-all duration-200 hover:text-[#FF5FA2] hover:font-bold";
+    "block px-3 py-1.5 rounded-md text-sm transition-all duration-200 hover:text-[#3b1d14] hover:font-bold block w-full";
 
   return (
-    <header className="border-b bg-white relative z-[1000] sticky top-0 z-50">
-      <div className="w-full grid grid-cols-3 h-16 items-center px-5">
+    <header className="border-b bg-white relative z-[1000] sticky top-0 z-50 bg-white">
+      <div className="container mx-auto grid grid-cols-3 h-16 items-center">
         {/* LEFT */}
         <div className="flex items-center">
           <Link href="/" className="hover:opacity-80 transition">
-            <img src="/image/logo.png" alt="Choco Kingdom" className="h-17" />
+            <img src="/image/logo.png" alt="Choco Kingdom" className="h-20" />
           </Link>
         </div>
 
@@ -159,10 +159,9 @@ export function Header() {
                   Chính sách
                 </NavigationMenuTrigger>
                 <NavigationMenuContent
-                  className="p-4 w-screen"
+                  className="p-2 "
                   style={{
-                    left: "50%",
-                    transform: "translateX(-50%)",
+                    width: "var(--radix-navigation-menu-trigger-width)",
                   }}
                 >
                   <ul className="space-y-1 min-w-[180px]">
@@ -217,8 +216,9 @@ export function Header() {
                 </NavigationMenuTrigger>
 
                 <NavigationMenuContent
-                  className="p-4 w-screen overflow-x-auto rounded-xl scrollbar-thin scrollbar-thumb-pink-300"
+                  className="p-4 w-[320px] overflow-x-auto shadow-xl rounded-xl bg-white scrollbar-thin scrollbar-thumb-pink-300"
                   style={{
+                    width: "260px",
                     left: "50%",
                     transform: "translateX(-50%)",
                   }}
@@ -250,14 +250,15 @@ export function Header() {
             <NavigationMenuList>
               <NavigationMenuItem>
                 <NavigationMenuTrigger
-                  className={`${navItemClass} whitespace-nowrap uppercase `}
+                  className={`${navItemClass} whitespace-nowrap uppercase`}
                 >
                   Thương hiệu
                 </NavigationMenuTrigger>
 
                 <NavigationMenuContent
-                  className="p-4 w-screen overflow-x-auto rounded-xl bg-white scrollbar-thin scrollbar-thumb-pink-300"
+                  className="p-4 w-[260px] overflow-x-auto shadow-xl rounded-xl bg-white scrollbar-thin scrollbar-thumb-pink-300"
                   style={{
+                    width: "220px",
                     left: "50%",
                     transform: "translateX(-50%)",
                   }}
@@ -346,7 +347,7 @@ export function Header() {
                   {/* BUTTON */}
                   <div className="mt-3">
                     <Button
-                      className="w-full bg-pink-600 hover:bg-pink-700 text-white"
+                      className="w-full"
                       onClick={() => router.push("/cart")}
                     >
                       Xem giỏ hàng

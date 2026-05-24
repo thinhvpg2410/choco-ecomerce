@@ -330,7 +330,7 @@ export class ProductsService {
 
     const skip = (page - 1) * limit;
 
-    const whereBase: Prisma.ProductWhereInput = {
+    const where: Prisma.ProductWhereInput = {
       isActive: true,
       ...(search && {
         OR: [
@@ -340,6 +340,8 @@ export class ProductsService {
       }),
       ...(categoryId && { categoryId }),
       ...(brandId && { brandId }),
+      ...(minPrice !== undefined && { price: { gte: minPrice } }),
+      ...(maxPrice !== undefined && { price: { lte: maxPrice } }),
       ...(query.is_featured !== undefined && {
         isFeatured: Boolean(query.is_featured),
       }),
@@ -348,33 +350,6 @@ export class ProductsService {
       }),
       ...(query.is_new !== undefined && { isNew: Boolean(query.is_new) }),
     };
-
-    // Build price filters to use salePrice when available, otherwise fallback to price
-    const where: Prisma.ProductWhereInput = { ...whereBase };
-
-    if (minPrice !== undefined) {
-      where.AND = [
-        ...((where.AND ?? []) as Prisma.ProductWhereInput[]),
-        {
-          OR: [
-            { salePrice: { gte: minPrice } },
-            { salePrice: null, price: { gte: minPrice } },
-          ],
-        },
-      ];
-    }
-
-    if (maxPrice !== undefined) {
-      where.AND = [
-        ...((where.AND ?? []) as Prisma.ProductWhereInput[]),
-        {
-          OR: [
-            { salePrice: { lte: maxPrice } },
-            { salePrice: null, price: { lte: maxPrice } },
-          ],
-        },
-      ];
-    }
 
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
