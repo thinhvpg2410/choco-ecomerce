@@ -166,7 +166,9 @@ export class OrdersService {
           : cart.items;
 
       if (!selectedCartItems.length) {
-        throw new BadRequestException('Không có sản phẩm nào được chọn để đặt hàng');
+        throw new BadRequestException(
+          'Không có sản phẩm nào được chọn để đặt hàng',
+        );
       }
 
       const orderItemsData: Prisma.OrderItemCreateWithoutOrderInput[] = [];
@@ -317,7 +319,8 @@ export class OrdersService {
     const isOwner = order.userId === requesterId;
     const isAdmin = requesterRole === UserRole.admin;
 
-    if (!isOwner && !isAdmin) throw new NotFoundException('Không tìm thấy đơn hàng');
+    if (!isOwner && !isAdmin)
+      throw new NotFoundException('Không tìm thấy đơn hàng');
 
     return {
       success: true,

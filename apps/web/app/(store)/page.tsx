@@ -15,6 +15,7 @@ import { bannerService, Banner } from "@/services/banner.service";
 import { getProducts } from "@/services/product.service";
 import { ProductCard } from "@/components/product/product-card";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -93,7 +94,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen ">
+    <div className="min-h-screen  ">
       <main>
         {/* ==================== HERO SECTION ==================== */}
         {/* <div className="relative bg-gradient-to-br from-[#3b1d14] via-[#5c2f1f] to-[#3b1d14] text-white overflow-hidden">
@@ -163,7 +164,7 @@ export default function Home() {
 
               {/* TEXT LEFT */}
               <div className="absolute inset-0 flex items-center z-20 ">
-                <div className="ml-6 md:ml-20 max-w-2xl text-white">
+                <div className="ml-6 md:ml-20 max-w-2xl text-white ">
                   {/* Welcome */}
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-[1px] bg-[#f5d9b0]" />
@@ -174,15 +175,15 @@ export default function Home() {
                   </div>
 
                   {/* Title */}
-                  <h1 className="font-serif leading-none">
-                    <span className="block text-4xl md:text-6xl lg:text-4xl font-light tracking-wide">
+                  <h1 className="leading-none">
+                    <span className="block text-4xl md:text-6xl lg:text-4xl tracking-wide">
                       VƯƠNG QUỐC
                     </span>
-                    <span className="block mt-2 text-5xl md:text-7xl lg:text-6xl font-semibold bg-gradient-to-r from-[#ffd6df] via-[#ff9eb5] to-[#ffe5ea] bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(255,180,200,0.5)]">
+                    <span className="block mt-2 mx-5 text-5xl md:text-7xl lg:text-6xl bg-gradient-to-r from-[#ffd6df] via-[#ff9eb5] to-[#ffe5ea] bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(255,180,200,0.5)]">
                       KẸO NGỌT
                     </span>
-                    <span className="block mt-2 text-5xl md:text-7xl lg:text-6xl font-semibold bg-gradient-to-r from-[#f5d9b0] via-[#f3c67a] to-[#f5d9b0] bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(255,220,170,0.5)]">
-                      CHOCO KINGDOM
+                    <span className="block mt-2 mx-15 text-5xl md:text-7xl lg:text-6xl bg-gradient-to-r from-[#f5d9b0] via-[#f3c67a] to-[#f5d9b0] bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(255,220,170,0.5)]">
+                      SWEPI
                     </span>
                     <div className="w-[90%] h-[1px] bg-[#f5d9b0] my-6"></div>
                   </h1>
@@ -210,7 +211,7 @@ export default function Home() {
                   onClick={() => api?.scrollTo(index)}
                   className={`rounded-full transition-all duration-300 ${
                     current === index
-                      ? "bg-[#d89b5c] w-8 h-2.5"
+                      ? "bg-[#FF5FA2] w-8 h-2.5"
                       : "bg-gray-400/50 w-2.5 h-2.5 hover:bg-gray-300"
                   }`}
                 />
@@ -220,7 +221,7 @@ export default function Home() {
         )}
 
         {/* ==================== BEST SELLERS ==================== */}
-        <section className="w-[90%] mx-auto px-6 py-6 mb-3 border border-white rounded-3xl bg-gray-100">
+        <section className="w-[95%] mx-auto px-6 py-6 mb-3 border border-white ">
           <div className="grid md:grid-cols-12 gap-8">
             <div className="md:col-span-3">
               <p className="uppercase text-rose-600 font-medium tracking-widest">
@@ -231,12 +232,14 @@ export default function Home() {
               <p className="mt-4 text-gray-600 text-[15px]">
                 Những sản phẩm bán chạy nhất tháng này với giá ưu đãi hấp dẫn.
               </p>
-              <Link
-                href="/product?is_best_seller=true"
-                className="mt-6 inline-block text-rose-600 hover:underline"
-              >
-                Xem tất cả →
-              </Link>
+              <Button className="mt-6 px-3 bg-[#FF4D94] ">
+                <Link
+                  href="/product?is_best_seller=true"
+                  className="text-[#4A2C35] hover:underline hover:text-white font-medium hover:font-bold"
+                >
+                  Xem tất cả →
+                </Link>
+              </Button>
             </div>
             <div className="md:col-span-9">
               <Carousel opts={{ align: "start" }}>
@@ -256,7 +259,7 @@ export default function Home() {
         </section>
 
         {/* ==================== NEW ARRIVALS ==================== */}
-        <section className="w-[90%] mx-auto px-6 py-6 mb-3 border border-white rounded-3xl bg-gray-100">
+        <section className="mx-auto px-6 py-6 mb-3 border border-white bg-[#FFF0F6]">
           <div className="grid md:grid-cols-12 gap-8">
             <div className="md:col-span-3">
               <p className="uppercase text-orange-600 font-medium tracking-widest">
@@ -267,12 +270,14 @@ export default function Home() {
               <p className="mt-4 text-gray-600 text-[15px]">
                 Những sản phẩm vừa được cập nhật gần đây
               </p>
-              <Link
-                href="/product?is_new=true"
-                className="mt-6 inline-block text-rose-600 hover:underline"
-              >
-                Xem tất cả →
-              </Link>
+              <Button className="mt-6 px-3 bg-[#FF4D94] ">
+                <Link
+                  href="/product?is_new=true"
+                  className="text-[#4A2C35] hover:underline hover:text-white font-medium hover:font-bold"
+                >
+                  Xem tất cả →
+                </Link>
+              </Button>
             </div>
             <div className="md:col-span-9">
               <Carousel opts={{ align: "start" }}>
@@ -292,7 +297,7 @@ export default function Home() {
         </section>
 
         {/* ==================== FEATURED ==================== */}
-        <section className="w-[90%] mx-auto px-6 py-6 mb-3 border border-white rounded-3xl bg-gray-100">
+        {/* <section className="w-[90%] mx-auto px-6 py-6 mb-3 border border-white rounded-3xl bg-gray-100 ">
           <div className="grid md:grid-cols-12 gap-8">
             <div className="md:col-span-3">
               <p className="uppercase text-amber-600 font-medium tracking-widest">
@@ -323,6 +328,100 @@ export default function Home() {
                   ))}
                 </CarouselContent>
               </Carousel>
+            </div>
+          </div>
+        </section> */}
+
+        {/* ==================== END OF PAGE ==================== */}
+        <section className="mx-auto px-6 py-6 mb-3 border border-white rounded-3xl">
+          <div className="container mx-auto px-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+              {/* Item 1 */}
+              <div className="group flex flex-col items-center cursor-pointer">
+                <div className="w-24 h-24 rounded-3xl bg-white flex items-center justify-center shadow-lg mb-8 transition-all duration-300 group-hover:bg-[#FF5FA2]">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-10 h-10 text-black transition-colors duration-300 group-hover:text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    {/* Candy Icon */}
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M8 10a4 4 0 118 0c1.657 0 3 1.343 3 3v1H5v-1c0-1.657 1.343-3 3-3zm1 4h6v3a3 3 0 11-6 0v-3z"
+                    />
+                  </svg>
+                </div>
+
+                <h3 className="text-2xl font-black uppercase tracking-[3px] text-black mb-4">
+                  HƯƠNG VỊ NGỌT NGÀO
+                </h3>
+
+                <p className="text-gray-500 text-lg leading-relaxed max-w-sm">
+                  Mang đến những món ngọt thơm ngon giúp mỗi khoảnh khắc thêm
+                  trọn vẹn.
+                </p>
+              </div>
+
+              {/* Item 2 */}
+              <div className="group flex flex-col items-center cursor-pointer">
+                <div className="w-24 h-24 rounded-3xl bg-white flex items-center justify-center shadow-lg mb-8 transition-all duration-300 group-hover:bg-[#FF5FA2]">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-10 h-10 text-black transition-colors duration-300 group-hover:text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    {/* Gift Icon */}
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 8v13m-7-9h14M5 8h14v4H5V8zm3-3a2 2 0 014 0c0 1.5-2 3-2 3s-2-1.5-2-3zm6 0a2 2 0 014 0c0 1.5-2 3-2 3s-2-1.5-2-3z"
+                    />
+                  </svg>
+                </div>
+
+                <h3 className="text-2xl font-black uppercase tracking-[3px] text-black mb-4">
+                  QUÀ TẶNG Ý NGHĨA
+                </h3>
+
+                <p className="text-gray-500 text-lg leading-relaxed max-w-sm">
+                  Những hộp quà bánh kẹo tinh tế dành cho người thân và bạn bè.
+                </p>
+              </div>
+
+              {/* Item 3 */}
+              <div className="group flex flex-col items-center cursor-pointer">
+                <div className="w-24 h-24 rounded-3xl bg-white flex items-center justify-center shadow-lg mb-8 transition-all duration-300 group-hover:bg-[#FF5FA2]">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-10 h-10 text-black transition-colors duration-300 group-hover:text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M8 10h8m-8 4h5m-9 6l2.5-2.5A2 2 0 015 17h11a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2h.5L3 20z"
+                    />
+                  </svg>
+                </div>
+
+                <h3 className="text-2xl font-black uppercase tracking-[3px] text-black mb-4">
+                  HỖ TRỢ 24/7
+                </h3>
+
+                <p className="text-gray-500 text-lg leading-relaxed max-w-sm">
+                  Đội ngũ chăm sóc khách hàng luôn sẵn sàng hỗ trợ mọi lúc.
+                </p>
+              </div>
             </div>
           </div>
         </section>
