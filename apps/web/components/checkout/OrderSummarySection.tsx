@@ -46,7 +46,6 @@ export default function OrderSummarySection({
   placing,
   orderLocked,
   payMethod,
-  placeOrder,
 
   selectedAddress,
   items,
@@ -57,12 +56,13 @@ export default function OrderSummarySection({
 }: Props) {
   const router = useRouter();
 
-  const goToPaymentPage = () => {
+  const handleContinue = () => {
     if (!selectedAddress) {
       toast.error("Vui lòng chọn địa chỉ giao hàng");
       return;
     }
 
+    // Lưu dữ liệu checkout
     const checkoutData = {
       items,
       cartItemIds,
@@ -79,6 +79,21 @@ export default function OrderSummarySection({
 
     localStorage.setItem("pending_checkout", JSON.stringify(checkoutData));
 
+    // QUAN TRỌNG: chỉ set meta, KHÔNG xử lý order ở đây
+    localStorage.setItem(
+      "payment_meta",
+      JSON.stringify({
+        method: payMethod,
+      }),
+    );
+
+    // 👉 COD phải xử lý luôn tại đây (FIX BUG)
+    if (payMethod === "COD") {
+      router.push("/checkout/payment");
+      return;
+    }
+
+    // PayPal / QR thì cũng sang page payment
     router.push("/checkout/payment");
   };
 
@@ -119,13 +134,7 @@ export default function OrderSummarySection({
       </div>
 
       <Button
-        onClick={() => {
-          if (payMethod === "COD") {
-            placeOrder();
-          } else {
-            goToPaymentPage();
-          }
-        }}
+        onClick={handleContinue}
         disabled={placing || orderLocked}
         className="w-full mt-4 h-14 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white text-[15px] font-black tracking-tight flex items-center justify-center gap-2 transition-all active:scale-[.99]"
       >
@@ -137,7 +146,7 @@ export default function OrderSummarySection({
         ) : (
           <>
             <Check className="w-5 h-5" />
-            Đặt hàng · {fmt(total)}
+            Tiếp tục thanh toán · {fmt(total)}
           </>
         )}
       </Button>

@@ -15,27 +15,25 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
-
 import { createOrder } from "@/services/order.service";
 import { createPayment } from "@/services/payment.service";
 import api from "@/services/axios";
-
+import { fetchCart } from "@/store/cartSlice";
 import { Button } from "@/components/ui/button";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { useRef } from "react";
-
-
+import { useDispatch } from "react-redux";
+import { clearCartState } from "@/store/cartSlice";
 
 export default function PaymentPage() {
   const router = useRouter();
-const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkoutData, setCheckoutData] = useState<any>(null);
   const [placing, setPlacing] = useState(false);
   const [qrUrl, setQrUrl] = useState("");
 
   const [checkingPayment, setCheckingPayment] = useState(false);
-  
 
   // Trạng thái xử lý giao diện thành công sau khi quét mã/Thanh toán
   const [isSuccess, setIsSuccess] = useState(false);
@@ -43,56 +41,8 @@ const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [verifyingQR, setVerifyingQR] = useState(false);
 
   const createdRef = useRef(false);
+  const dispatch = useDispatch();
 
-
-  const startCheckingPayment = (orderId: string) => {
-    console.log("START POLLING:", orderId);
-
-    setCheckingPayment(true);
-
-    intervalRef.current = setInterval(async () => {
-      try {
-        console.log("CALL CHECK PAYMENT API");
-
-        const res = await api.get(`/sepay/payment/${orderId}`);
-
-        console.log("CHECK PAYMENT RESPONSE:", res.data);
-
-        const status = res.data?.paymentStatus;
-
-        console.log("PAYMENT STATUS:", status);
-
-        if (status === "PAID") {
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-          }
-
-          setCheckingPayment(false);
-          setIsSuccess(true);
-
-          toast.success("Thanh toán thành công!");
-
-          localStorage.removeItem("pending_checkout");
-          localStorage.removeItem("checkout_cart");
-        }
-
-        if (status === "FAILED") {
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-          }
-
-          setCheckingPayment(false);
-          toast.error("Thanh toán thất bại!");
-          router.push("/checkout");
-        }
-      } catch (err) {
-        console.error("CHECK PAYMENT ERROR:", err);
-      }
-    }, 3000);
-  };
-
-
-  // LOAD DATA FROM LOCALSTORAGE
   useEffect(() => {
     const raw = localStorage.getItem("pending_checkout");
 
@@ -101,48 +51,120 @@ const intervalRef = useRef<NodeJS.Timeout | null>(null);
       return;
     }
 
-    setCheckoutData(JSON.parse(raw));
-    setLoading(false);
-  }, [router]);
+    const data = JSON.parse(raw);
 
+    setCheckoutData(data);
+    setLoading(false);
+  }, []);
   useEffect(() => {
     if (!checkoutData) return;
-    if (checkoutData.payMethod !== "QR_BANK") return;
-
     if (createdRef.current) return;
+
     createdRef.current = true;
 
-    handleCreateOrder();
+    if (
+      checkoutData.payMethod === "QR_BANK" ||
+      checkoutData.payMethod === "COD"
+    ) {
+      handleCreateOrder();
+    }
   }, [checkoutData]);
-  
+
+  useEffect(() => {
+    const meta = localStorage.getItem("payment_meta");
+    if (!meta) return;
+
+    const parsed = JSON.parse(meta);
+    if (parsed.method === "PayPal" && parsed.paypalOrderId) {
+      // Chỉ xử lý PayPal từ meta
+      handleCreateOrder(parsed.paypalOrderId);
+    }
+  }, [checkoutData]);
+
+  const startCheckingPayment = (orderId: string) => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    setCheckingPayment(true);
+
+    intervalRef.current = setInterval(async () => {
+      try {
+        const res = await api.get(`/sepay/payment/${orderId}`);
+        const status = res.data?.paymentStatus;
+
+        if (status === "PAID") {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+
+          setCheckingPayment(false);
+
+          // 1. tạo payment record (KHÔNG tạo order lại)
+          await createPayment({
+            order_id: orderId,
+            payment_method: "QR_BANK",
+          });
+
+          // 2. clear storage
+          localStorage.removeItem("pending_checkout");
+          localStorage.removeItem("checkout_cart");
+          localStorage.removeItem("payment_meta");
+
+          dispatch(clearCartState());
+          dispatch(fetchCart() as any);
+
+          // 3. success cuối cùng
+          setIsSuccess(true);
+
+          toast.success("Thanh toán thành công!");
+        }
+
+        if (status === "FAILED") {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+
+          setCheckingPayment(false);
+          toast.error("Thanh toán thất bại!");
+          router.push("/checkout");
+        }
+      } catch (err) {
+        console.error("CHECK PAYMENT ERROR:", err);
+        setCheckingPayment(false);
+      }
+    }, 3000);
+  };
+
   useEffect(() => {
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
+
+      setCheckingPayment(false);
     };
   }, []);
 
   const handleCreateOrder = async (transactionCode?: string) => {
+    if (!checkoutData || placing) return;
+
     try {
       setPlacing(true);
 
+      const addr = checkoutData.selectedAddress;
       const payload: any = {
-        receiver_name:
-          checkoutData.selectedAddress.receiver_name ||
-          checkoutData.selectedAddress.receiverName,
-
-        receiver_phone:
-          checkoutData.selectedAddress.receiver_phone ||
-          checkoutData.selectedAddress.receiverPhone,
-
-        shipping_address: `${checkoutData.selectedAddress.address}, ${checkoutData.selectedAddress.ward}, ${checkoutData.selectedAddress.city}`,
-
+        receiver_name: addr.receiverName || addr.receiver_name,
+        receiver_phone: addr.receiverPhone || addr.receiver_phone,
+        shipping_address: `${addr.address}, ${addr.ward}, ${addr.city}`,
         payment_method: checkoutData.payMethod,
-        note: checkoutData.note,
-        cart_item_ids: checkoutData.cartItemIds,
-        buy_now: checkoutData.isBuyNow,
-        coupon_code: checkoutData.appliedVouchers?.[0]?.code,
+        note: checkoutData.note || "",
+        cart_item_ids: checkoutData.cartItemIds || [],
+        buy_now: checkoutData.isBuyNow || false,
+        coupon_code: checkoutData.appliedVouchers?.[0]?.code || null,
       };
 
       if (checkoutData.isBuyNow) {
@@ -153,46 +175,69 @@ const intervalRef = useRef<NodeJS.Timeout | null>(null);
       const order = await createOrder(payload);
       setCreatedOrderId(order.id);
 
-      const paymentRes = await createPayment({
+      await createPayment({
         order_id: order.id,
         payment_method: checkoutData.payMethod,
         transaction_code: transactionCode,
       });
 
-      // Nếu là QR BANK thì giữ lại giao diện để khách quét mã
       if (checkoutData.payMethod === "QR_BANK") {
-        setQrUrl(paymentRes.qr_url);
-
-        // START REAL CHECK
+        const paymentRes = await createPayment({
+          // Lấy QR
+          order_id: order.id,
+          payment_method: "QR_BANK",
+        });
+        setQrUrl(paymentRes.qr_url || paymentRes.qrUrl);
         startCheckingPayment(order.id);
-
         return;
       }
 
-      // Đối với PayPal thành công -> Kích hoạt màn hình thành công luôn
-      setIsSuccess(true);
-      localStorage.removeItem("pending_checkout");
-      localStorage.removeItem("checkout_cart");
+      // COD & PayPal → Thành công ngay
+      handlePaymentSuccess(order.id);
     } catch (err: any) {
       console.error(err);
+      createdRef.current = false;
       toast.error(err?.response?.data?.message || "Khởi tạo đơn hàng thất bại");
     } finally {
       setPlacing(false);
     }
   };
 
- const handleCancelPayment = () => {
-   if (intervalRef.current) {
-     clearInterval(intervalRef.current);
-     intervalRef.current = null;
-   }
+  const handlePaymentSuccess = (orderId: string) => {
+    setCheckingPayment(false);
 
-   setCheckingPayment(false);
+    dispatch(clearCartState());
+    dispatch(fetchCart() as any);
 
-   if (confirm("Bạn có chắc chắn muốn hủy quá trình thanh toán này?")) {
-     router.push("/checkout");
-   }
- };
+    localStorage.removeItem("pending_checkout");
+    localStorage.removeItem("checkout_cart");
+    localStorage.removeItem("payment_meta");
+
+    setIsSuccess(true);
+    setCreatedOrderId(orderId);
+    toast.success("Thanh toán thành công!");
+  };
+
+  const handleCancelPayment = () => {
+    // Dừng polling nếu đang chạy
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    setCheckingPayment(false);
+
+    if (
+      confirm("Bạn có chắc chắn muốn hủy quá trình thanh toán này và quay lại?")
+    ) {
+      // ✅ CHỈ xóa dữ liệu tạm, KHÔNG xóa giỏ hàng
+      localStorage.removeItem("pending_checkout");
+      localStorage.removeItem("payment_meta");
+      // KHÔNG gọi clearCartState() ở đây
+
+      router.push("/checkout");
+    }
+  };
 
   if (loading || !checkoutData) {
     return (
@@ -248,7 +293,11 @@ const intervalRef = useRef<NodeJS.Timeout | null>(null);
             <div className="flex justify-between">
               <span className="text-gray-400">Phương thức:</span>
               <span className="font-medium text-gray-800">
-                {payMethod === "QR_BANK" ? "Chuyển khoản QR" : "Cổng PayPal"}
+                {payMethod === "QR_BANK"
+                  ? "Chuyển khoản QR"
+                  : payMethod === "COD"
+                    ? "Thanh toán COD"
+                    : "Cổng PayPal"}
               </span>
             </div>
             <div className="flex justify-between border-t border-dashed pt-2 mt-2">
@@ -279,7 +328,6 @@ const intervalRef = useRef<NodeJS.Timeout | null>(null);
     );
   }
 
-  // ==================== INTERFACE 2: GIAO DIỆN CHÍNH (2 CỘT) ====================
   return (
     <div className="min-h-screen bg-[#f5f5f7] py-8 px-4">
       <div className="max-w-5xl mx-auto">
@@ -403,11 +451,14 @@ const intervalRef = useRef<NodeJS.Timeout | null>(null);
                         return res.data.id;
                       }}
                       onApprove={async (data) => {
-                        const res = await api.post("/paypal/capture-order", {
-                          orderId: data.orderID,
-                        });
-
-                        await handleCreateOrder(res.data.id);
+                        localStorage.setItem(
+                          "payment_meta",
+                          JSON.stringify({
+                            paypalOrderId: data.orderID,
+                            method: "PayPal",
+                          }),
+                        );
+                        await handleCreateOrder(data.orderID, checkoutData);
                       }}
                       onError={() => {
                         toast.error(

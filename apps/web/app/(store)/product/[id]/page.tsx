@@ -7,6 +7,7 @@ import { Product } from "@/types/type";
 import ReviewList from "@/components/review/review-list";
 import ProductImageGallery from "@/components/product/product-image-gallery";
 import SameBrandProducts from "@/components/product/same-brand-products";
+import { ChevronRight, Home, Star } from "lucide-react";
 
 interface Props {
   params: { id: string };
@@ -26,31 +27,49 @@ export default async function ProductDetailPage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="min-h-screen bg-[#F7F7F8]">
       {/* ── BREADCRUMB ── */}
-      {/* <div className="border-b border-gray-100 bg-[#FFF0F6]">
-        <div className="max-w-6xl mx-auto px-6 py-3 text-sm text-gray-400 flex items-center gap-2">
-          <span className="hover:text-rose-500 cursor-pointer transition-colors">
+      <div className="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-[0_1px_0_0_#f0f0f0]">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm">
+          <Home className="w-3.5 h-3.5 text-gray-400" />
+          <span className="text-gray-500 hover:text-orange-500 cursor-pointer transition-colors">
             Trang chủ
           </span>
-          <span>/</span>
-          <span className="hover:text-rose-500 cursor-pointer transition-colors">
+          <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
+          <span className="text-gray-500 hover:text-orange-500 cursor-pointer transition-colors">
             Sản phẩm
           </span>
-          <span>/</span>
-          <span className="text-gray-700 font-medium truncate max-w-[240px]">
+          <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
+          <span className="text-gray-800 font-medium truncate max-w-[280px]">
             {product.name}
           </span>
         </div>
-      </div> */}
+      </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-5">
         {/* ── PRODUCT CARD ── */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="grid md:grid-cols-2 gap-0 items-start">
+        <div
+          className="bg-white rounded-2xl overflow-hidden border border-gray-100"
+          style={{
+            boxShadow:
+              "0 2px 16px -4px rgba(0,0,0,0.08), 0 1px 3px -1px rgba(0,0,0,0.04)",
+          }}
+        >
+          <div className="grid md:grid-cols-2 items-start">
             {/* LEFT — IMAGE */}
-            <div className="p-8 border-b md:border-b-0 md:border-r border-gray-100 ">
-              <div className="sticky top-24">
+            <div
+              className="relative p-8 md:p-10 border-b md:border-b-0 md:border-r border-gray-100"
+              style={{ background: "#FAFAFA" }}
+            >
+              {/* Subtle corner accent */}
+              <div
+                className="absolute top-0 right-0 w-32 h-32 opacity-[0.04] pointer-events-none"
+                style={{
+                  background:
+                    "radial-gradient(circle at top right, #f97316 0%, transparent 70%)",
+                }}
+              />
+              <div className="sticky top-20">
                 <ProductImageGallery
                   productId={product.id}
                   mainImage={product.image_url}
@@ -59,22 +78,35 @@ export default async function ProductDetailPage({ params }: Props) {
               </div>
             </div>
 
-            {/* RIGHT — ProductItem tự render toàn bộ: brand, tên, giá, mô tả, actions */}
-            <div className="p-8 lg:p-10">
+            {/* RIGHT — Info */}
+            <div className="p-8 lg:p-12">
               <ProductItem product={product as any} />
             </div>
           </div>
         </div>
 
         {/* ── REVIEWS ── */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-1 h-6 rounded-full bg-rose-400" />
-            <h2 className="text-xl font-bold text-gray-800">
-              Đánh giá sản phẩm
-            </h2>
+        <div
+          className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
+          style={{ boxShadow: "0 2px 16px -4px rgba(0,0,0,0.06)" }}
+        >
+          {/* Section header */}
+          <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-[3px] h-6 rounded-full bg-orange-500" />
+              <h2 className="text-base font-bold text-gray-900 tracking-tight">
+                Đánh giá sản phẩm
+              </h2>
+            </div>
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <Star className="w-3 h-3 fill-orange-400 text-orange-400" />
+              <span>Xác thực từ người mua</span>
+            </div>
           </div>
-          <ReviewList productId={id} />
+
+          <div className="p-8">
+            <ReviewList productId={id} />
+          </div>
         </div>
 
         {/* ── SAME BRAND ── */}
@@ -84,7 +116,23 @@ export default async function ProductDetailPage({ params }: Props) {
             excludeProductId={product.id}
           />
         )}
+
+        <div className="h-6" />
       </div>
+
+      {/* Fade-in animation */}
+      <style>{`
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .product-detail-animate > * {
+          animation: fadeUp 0.45s cubic-bezier(0.22,1,0.36,1) both;
+        }
+        .product-detail-animate > *:nth-child(1) { animation-delay: 0ms; }
+        .product-detail-animate > *:nth-child(2) { animation-delay: 80ms; }
+        .product-detail-animate > *:nth-child(3) { animation-delay: 150ms; }
+      `}</style>
     </div>
   );
 }

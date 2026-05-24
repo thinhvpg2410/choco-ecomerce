@@ -31,8 +31,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { createOrder } from "@/services/order.service";
-import { createPayment } from "@/services/payment.service";
 import type { CartItem } from "@/types/type";
 import { clearCartState } from "@/store/cartSlice";
 import {
@@ -40,8 +38,6 @@ import {
   type AddressFormData,
 } from "@/components/address/AddressModal";
 import ProtectedRoute from "@/components/ProtectedRoute";
-
-import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -91,31 +87,37 @@ export default function CheckoutPage() {
     intent: "capture" as const,
   };
 
-  const goToPaymentPage = async () => {
-    if (!selectedAddress) {
-      toast.error("Vui lòng chọn địa chỉ giao hàng");
-      return;
-    }
+const goToPaymentPage = () => {
+  if (!selectedAddress) {
+    toast.error("Vui lòng chọn địa chỉ giao hàng");
+    return;
+  }
 
-    const checkoutData = {
-      items,
-      cartItemIds,
-      selectedAddress,
-      appliedVouchers,
-      note,
-      payMethod,
-      subtotal,
-      shipping: SHIPPING,
-      total,
-      isBuyNow,
-      buyNowProduct,
-    };
-
-    localStorage.setItem("pending_checkout", JSON.stringify(checkoutData));
-
-    router.push("/checkout/payment");
+  const checkoutData = {
+    items,
+    cartItemIds,
+    selectedAddress,
+    appliedVouchers,
+    note,
+    payMethod,
+    subtotal,
+    shipping: SHIPPING,
+    total,
+    isBuyNow,
+    buyNowProduct,
   };
 
+  localStorage.setItem("pending_checkout", JSON.stringify(checkoutData));
+
+  localStorage.setItem(
+    "payment_meta",
+    JSON.stringify({
+      method: payMethod, 
+    }),
+  );
+
+  router.push("/checkout/payment");
+};
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -290,82 +292,6 @@ export default function CheckoutPage() {
     }
   };
 
-  const placeOrder = async (paymentId?: string, paypalOrderId?: string) => {
-    if (orderLocked) return;
-
-    if (!selectedAddress) {
-      toast.error("Vui lòng chọn địa chỉ giao hàng");
-      return;
-    }
-
-    if (items.length === 0) {
-      toast.error("Giỏ hàng trống");
-      return;
-    }
-
-    setOrderLocked(true);
-    setPlacing(true);
-
-    try {
-      const shippingAddress = `${selectedAddress.address}, ${selectedAddress.ward}, ${selectedAddress.city}`;
-
-      const payload: any = {
-        receiver_name:
-          selectedAddress.receiver_name || selectedAddress.receiverName,
-        receiver_phone:
-          selectedAddress.receiver_phone || selectedAddress.receiverPhone,
-        shipping_address: shippingAddress,
-        payment_method: payMethod,
-        note: note?.trim() || undefined,
-        cart_item_ids: cartItemIds,
-        buy_now: isBuyNow,
-        coupon_code:
-          appliedVouchers.length > 0 ? appliedVouchers[0].code : undefined,
-      };
-
-      if (isBuyNow && buyNowProduct) {
-        payload.product_id = buyNowProduct.product_id;
-        payload.quantity = Number(buyNowProduct.quantity || 1);
-      }
-
-      console.log("📤 Creating order with payload:", payload);
-
-      const order = await createOrder(payload);
-
-      // Tạo payment record
-      const paymentRes = await createPayment({
-        order_id: order.id,
-        payment_method: payMethod,
-        transaction_code: paymentId || paypalOrderId,
-      });
-
-      console.log("PAYMENT RES:", paymentRes);
-
-      toast.success("Đặt hàng thành công!");
-
-      localStorage.removeItem("checkout_cart");
-
-      // clear redux cart badge
-      dispatch(clearCartState());
-
-      router.push(`/order/${order.id}`);
-    } catch (err: any) {
-      console.error("❌ Create order error:", err.response?.data || err);
-      toast.error(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Đặt hàng thất bại, vui lòng thử lại",
-      );
-    } finally {
-      setPlacing(false);
-
-      // QR đang chờ thanh toán -> giữ lock
-      if (payMethod !== "QR_BANK") {
-        setOrderLocked(false);
-      }
-    }
-  };
-
   if (loadingCart || loadingAddress) {
     return (
       <ProtectedRoute>
@@ -470,82 +396,6 @@ export default function CheckoutPage() {
               />
             </div>
 
-            {/* PayPal Buttons */}
-            {payMethod === "PayPal" && (
-              <div className="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                <PayPalScriptProvider options={paypalOptions}>
-                  <PayPalButtons
-                    style={{ layout: "vertical", shape: "rect", color: "blue" }}
-                    createOrder={async () => {
-                      if (!selectedAddress) {
-                        toast.error("Vui lòng chọn địa chỉ giao hàng");
-                        throw new Error("No address");
-                      }
-                      try {
-                        const usdAmount = Math.max(
-                          0.01,
-                          Math.round((total / 23000) * 100) / 100,
-                        ); // đảm bảo tối thiểu 0.01 USD
-
-                        console.log(
-                          `🔄 Gửi amount = ${usdAmount} USD (từ ${total}đ)`,
-                        );
-
-                        const response = await api.post(
-                          "/paypal/create-order",
-                          {
-                            amount: usdAmount,
-                            currency: "USD",
-                            description: `Đơn hàng Choco Kingdom #${Date.now()}`,
-                          },
-                        );
-
-                        console.log("✅ PayPal Order created:", response.data);
-                        return response.data.id;
-                      } catch (err: any) {
-                        console.error(
-                          "❌ Create Order Failed:",
-                          err.response?.data || err,
-                        );
-
-                        const errorMsg =
-                          err.response?.data?.message || err.message;
-                        toast.error(`Lỗi tạo đơn PayPal: ${errorMsg}`);
-                        throw err;
-                      }
-                    }}
-                    onApprove={async (data) => {
-                      try {
-                        const response = await api.post(
-                          "/paypal/capture-order",
-                          {
-                            orderId: data.orderID,
-                          },
-                        );
-
-                        console.log("✅ Payment captured:", response.data);
-
-                        toast.success("Thanh toán PayPal thành công!");
-
-                        await placeOrder(response.data.id, data.orderID);
-                      } catch (err: any) {
-                        console.error("onApprove Error:", err);
-
-                        toast.error(
-                          err?.response?.data?.message ||
-                            "Xác nhận thanh toán thất bại",
-                        );
-                      }
-                    }}
-                    onError={(err) => {
-                      console.error("PayPal SDK Error:", err);
-                      toast.error("Lỗi PayPal. Vui lòng thử lại sau.");
-                    }}
-                  />
-                </PayPalScriptProvider>
-              </div>
-            )}
-
             {payMethod === "QR_BANK" && qrUrl && (
               <div className="bg-white rounded-2xl border p-5 mt-4">
                 <h3 className="text-center font-bold text-lg mb-4">
@@ -587,7 +437,7 @@ export default function CheckoutPage() {
             placing={placing}
             orderLocked={orderLocked}
             payMethod={payMethod}
-            placeOrder={() => placeOrder()}
+
             // nhóm dữ liệu để navigate
             selectedAddress={selectedAddress}
             items={items}
