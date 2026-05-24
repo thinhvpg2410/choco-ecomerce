@@ -42,9 +42,13 @@ export class PaymentsService {
     }
 
     if (order.payment) {
-      throw new ConflictException('Đơn hàng này đã được thanh toán');
+      // Chỉ chặn nếu đơn hàng đã được THANH TOÁN THÀNH CÔNG thực sự
+      if (order.payment.paymentStatus === PaymentStatus.PAID) {
+        throw new ConflictException(
+          'Đơn hàng này đã được thanh toán thành công',
+        );
+      }
     }
-
     if (dto.payment_method === PaymentMethod.COD) {
       return this.createPendingCodPayment(order.id);
     }
@@ -61,6 +65,10 @@ export class PaymentsService {
         userId,
         dto.transaction_code,
       );
+    }
+
+    if (dto.payment_method === PaymentMethod.QR_BANK) {
+      return this.createQrBankPayment(order.id, userId);
     }
 
     throw new BadRequestException('Phương thức thanh toán không được hỗ trợ');
@@ -104,7 +112,9 @@ export class PaymentsService {
         throw new NotFoundException('Đơn hàng không tồn tại');
       }
       if (order.status === OrderStatus.CANCELLED) {
-        throw new BadRequestException('Không thể thanh toán cho đơn hàng đã hủy');
+        throw new BadRequestException(
+          'Không thể thanh toán cho đơn hàng đã hủy',
+        );
       }
 
       const payment = await tx.payment.create({
@@ -148,7 +158,9 @@ export class PaymentsService {
       }
 
       if (order.status === OrderStatus.CANCELLED) {
-        throw new BadRequestException('Không thể thanh toán cho đơn hàng đã hủy');
+        throw new BadRequestException(
+          'Không thể thanh toán cho đơn hàng đã hủy',
+        );
       }
 
       const created = await tx.payment.create({
@@ -218,5 +230,67 @@ export class PaymentsService {
       default:
         return 'PENDING';
     }
+  }
+
+  private async createQrBankPayment(orderId: string, userId: string) {
+    const result = await this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: { id: orderId, userId },
+      });
+
+      if (!order) {
+        throw new NotFoundException('Đơn hàng không tồn tại');
+      }
+
+      if (order.status === OrderStatus.CANCELLED) {
+        throw new BadRequestException(
+          'Không thể thanh toán cho đơn hàng đã hủy',
+        );
+      }
+
+      // Tạo mã nội dung chuyển khoản duy nhất dựa trên ID đơn hàng để không bị trùng
+      const transactionCode = `DH${order.id.split('-')[0].toUpperCase()}`;
+
+      // Sử dụng upsert: Nếu chưa có thì tạo mới, nếu có rồi thì cập nhật lại transactionCode
+      const payment = await tx.payment.upsert({
+        where: { orderId: orderId },
+        update: {
+          transactionCode,
+          paymentMethod: PaymentMethod.QR_BANK,
+          paymentStatus: PaymentStatus.PENDING,
+        },
+        create: {
+          orderId,
+          paymentMethod: PaymentMethod.QR_BANK,
+          paymentStatus: PaymentStatus.PENDING,
+          amount: order.finalAmount,
+          transactionCode,
+        },
+      });
+
+      await tx.order.update({
+        where: { id: orderId },
+        data: { paymentStatus: PaymentStatus.PENDING },
+      });
+
+      // Tạo URL QR SePay mượt mà
+      const qrUrl =
+        `https://qr.sepay.vn/img` +
+        `?acc=0961439551` +
+        `&bank=MBBank` +
+        `&amount=${Number(order.finalAmount)}` +
+        `&des=${transactionCode}`;
+
+      return { payment, qrUrl };
+    });
+
+    return {
+      success: true,
+      message: 'Tạo thanh toán QR thành công',
+      data: {
+        ...this.toPaymentResponse(result.payment),
+        qr_url: result.qrUrl,
+      },
+    };
   }
 }

@@ -28,6 +28,7 @@ enum OrderStatus {
 enum PaymentMethod {
   COD
   PayPal
+  QR_BANK
   // BANKING
   // VNPay
   // Momo

@@ -14,6 +14,13 @@ import {
   Loader2,
   X,
 } from "lucide-react";
+import Section from "@/components/checkout/Section";
+import PayOption from "@/components/checkout/PayOption";
+import SumRow from "@/components/checkout/SumRow";
+import OrderItemsSection from "@/components/checkout/OrderItemsSection";
+import AddressSection from "@/components/checkout/AddressSection";
+import VoucherSection from "@/components/checkout/VoucherSection";
+import OrderSummarySection from "@/components/checkout/OrderSummarySection";
 
 import { getAddresses, createAddress } from "@/services/user-address.service";
 import { applyCoupon } from "@/services/coupon.service";
@@ -59,7 +66,10 @@ export default function CheckoutPage() {
       description?: string;
     }[]
   >([]);
-  const [payMethod, setPayMethod] = useState<"COD" | "PayPal">("COD");
+  const [payMethod, setPayMethod] = useState<"COD" | "PayPal" | "QR_BANK">(
+    "COD",
+  );
+  const [qrUrl, setQrUrl] = useState("");
   const [note, setNote] = useState("");
   const [placing, setPlacing] = useState(false);
 
@@ -79,6 +89,31 @@ export default function CheckoutPage() {
     "client-id": process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
     currency: "USD", // Khuyến nghị dùng USD
     intent: "capture" as const,
+  };
+
+  const goToPaymentPage = async () => {
+    if (!selectedAddress) {
+      toast.error("Vui lòng chọn địa chỉ giao hàng");
+      return;
+    }
+
+    const checkoutData = {
+      items,
+      cartItemIds,
+      selectedAddress,
+      appliedVouchers,
+      note,
+      payMethod,
+      subtotal,
+      shipping: SHIPPING,
+      total,
+      isBuyNow,
+      buyNowProduct,
+    };
+
+    localStorage.setItem("pending_checkout", JSON.stringify(checkoutData));
+
+    router.push("/checkout/payment");
   };
 
   useEffect(() => {
@@ -259,11 +294,15 @@ export default function CheckoutPage() {
       const order = await createOrder(payload);
 
       // Tạo payment record
-      await createPayment({
+      const paymentRes = await createPayment({
         order_id: order.id,
-        payment_method: payMethod === "COD" ? "COD" : "PayPal",
+        payment_method: payMethod,
         transaction_code: paymentId || paypalOrderId,
       });
+
+      console.log("PAYMENT RES:", paymentRes);
+
+     
       toast.success("Đặt hàng thành công!");
 
       localStorage.removeItem("checkout_cart");
@@ -281,7 +320,11 @@ export default function CheckoutPage() {
       );
     } finally {
       setPlacing(false);
-      setOrderLocked(false);
+
+      // QR đang chờ thanh toán -> giữ lock
+      if (payMethod !== "QR_BANK") {
+        setOrderLocked(false);
+      }
     }
   };
 
@@ -334,209 +377,25 @@ export default function CheckoutPage() {
             Đặt hàng
           </h1>
 
-          {/* Sản phẩm */}
-          <Section
-            icon={<ShoppingBag className="w-4 h-4 text-green-600" />}
-            iconBg="bg-green-50"
-            title="Đơn hàng"
-            badge={items.length}
-            right={
-              <span className="text-sm text-gray-400 font-medium">
-                {fmt(subtotal)}
-              </span>
-            }
-          >
-            <div className="flex flex-col divide-y divide-gray-50">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
-                >
-                  <div className="w-14 h-14 rounded-xl bg-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                    <img
-                      src={item.image || "/placeholder.png"}
-                      alt={item.name}
-                      className="w-full h-full object-cover rounded"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-gray-900 truncate">
-                      {item.name}
-                    </p>
-                    <p className="text-[11.5px] text-gray-400 mt-0.5">
-                      {fmt(item.price)}
-                    </p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-[13.5px] font-bold text-gray-900">
-                      {fmt(item.price * item.quantity)}
-                    </p>
-                    <p className="text-[11.5px] text-gray-400 mt-0.5">
-                      × {item.quantity}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Section>
+          <OrderItemsSection items={items} subtotal={subtotal} fmt={fmt} />
 
           {/* Địa chỉ giao hàng */}
-          <Section
-            icon={<MapPin className="w-4 h-4 text-rose-500" />}
-            iconBg="bg-rose-50"
-            title="Địa chỉ giao hàng"
-            right={
-              <button
-                onClick={() => setAddrOpen(true)}
-                className="text-sm font-bold text-rose-500"
-              >
-                + Thêm mới
-              </button>
-            }
-          >
-            <div className="flex flex-col gap-2 max-h-[320px] overflow-y-auto pr-1 custom-scroll">
-              {addresses.length === 0 && (
-                <div className="text-center py-6 border border-dashed border-gray-200 rounded-2xl">
-                  <p className="text-sm text-gray-400">
-                    Chưa có địa chỉ giao hàng
-                  </p>
-                </div>
-              )}
-
-              {addresses.map((addr) => {
-                const active = selectedAddress?.id === addr.id;
-
-                return (
-                  <button
-                    key={addr.id}
-                    onClick={() => setSelectedAddress(addr)}
-                    className={`w-full text-left rounded-2xl border p-3 transition-all duration-200 ${
-                      active
-                        ? "border-rose-400 bg-rose-50 shadow-sm"
-                        : "border-gray-200 bg-white hover:border-rose-200 hover:bg-rose-50/40"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      {/* Radio */}
-                      <div
-                        className={`mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                          active ? "border-rose-500" : "border-gray-300"
-                        }`}
-                      >
-                        {active && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                        )}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-bold text-gray-900">
-                            {addr.receiver_name || addr.receiverName}
-                          </p>
-
-                          <span className="text-[11px] text-gray-400">|</span>
-
-                          <p className="text-xs text-gray-500">
-                            {addr.receiver_phone || addr.receiverPhone}
-                          </p>
-                        </div>
-
-                        <p className="text-xs text-gray-500 mt-1 leading-relaxed break-words">
-                          {addr.address}, {addr.ward}, {addr.city}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </Section>
+          <AddressSection
+            addresses={addresses}
+            selectedAddress={selectedAddress}
+            setSelectedAddress={setSelectedAddress}
+            setAddrOpen={setAddrOpen}
+          />
 
           {/* Voucher */}
-          <Section
-            icon={<Tag className="w-4 h-4 text-violet-500" />}
-            iconBg="bg-violet-50"
-            title="Mã giảm giá"
-          >
-            <div className="flex gap-2">
-              <Input
-                placeholder="Nhập mã voucher..."
-                value={voucherInput}
-                onChange={(e) => {
-                  setVoucherInput(e.target.value);
-                  setVoucherError("");
-                }}
-                onKeyDown={(e) => e.key === "Enter" && applyVoucher()}
-                className="rounded-xl text-sm flex-1"
-                disabled={false}
-              />
-              <Button
-                onClick={applyVoucher}
-                disabled={false}
-                className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-bold text-sm px-5"
-              >
-                Áp dụng
-              </Button>
-            </div>
-
-            {appliedVouchers.length > 0 && (
-              <div className="mt-3 flex flex-col gap-3">
-                {appliedVouchers.map((voucher) => (
-                  <div
-                    key={voucher.code}
-                    className="relative overflow-hidden rounded-2xl border border-rose-200 bg-gradient-to-r from-rose-50 to-pink-50 p-4 shadow-sm"
-                  >
-                    {/* remove */}
-                    <button
-                      onClick={() =>
-                        setAppliedVouchers((prev) =>
-                          prev.filter((v) => v.code !== voucher.code),
-                        )
-                      }
-                      className="absolute top-3 right-3 text-rose-400 hover:text-rose-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-
-                    <div className="flex items-start gap-3">
-                      {/* icon */}
-                      <div className="w-11 h-11 rounded-xl bg-rose-100 flex items-center justify-center flex-shrink-0">
-                        <Tag className="w-5 h-5 text-rose-500" />
-                      </div>
-
-                      {/* content */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-black text-rose-600 tracking-wide">
-                            {voucher.code}
-                          </span>
-
-                          <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[11px] font-bold">
-                            Đã áp dụng
-                          </span>
-                        </div>
-
-                        <p className="text-sm text-gray-600 mt-1">
-                          {voucher.description}
-                        </p>
-
-                        <div className="mt-2 flex items-center gap-2">
-                          <span className="text-xs text-gray-400">
-                            Số tiền giảm:
-                          </span>
-
-                          <span className="text-lg font-black text-green-600">
-                            -{fmt(voucher.discount)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Section>
+          <VoucherSection
+            voucherInput={voucherInput}
+            setVoucherInput={setVoucherInput}
+            applyVoucher={applyVoucher}
+            appliedVouchers={appliedVouchers}
+            setAppliedVouchers={setAppliedVouchers}
+            fmt={fmt}
+          />
 
           {/* Thanh toán */}
           <Section
@@ -561,6 +420,15 @@ export default function CheckoutPage() {
                 icon={<CreditCard className="w-4 h-4 text-blue-600" />}
                 name="Thanh toán qua PayPal"
                 desc="Thanh toán an toàn, nhanh chóng bằng PayPal"
+              />
+
+              <PayOption
+                selected={payMethod === "QR_BANK"}
+                onClick={() => setPayMethod("QR_BANK")}
+                iconBg="bg-emerald-50"
+                icon={<CreditCard className="w-4 h-4 text-emerald-600" />}
+                name="Chuyển khoản ngân hàng (QR Bank)"
+                desc="Quét QR để thanh toán nhanh"
               />
             </div>
 
@@ -639,6 +507,20 @@ export default function CheckoutPage() {
                 </PayPalScriptProvider>
               </div>
             )}
+
+            {payMethod === "QR_BANK" && qrUrl && (
+              <div className="bg-white rounded-2xl border p-5 mt-4">
+                <h3 className="text-center font-bold text-lg mb-4">
+                  Quét mã QR để thanh toán
+                </h3>
+
+                <img src={qrUrl} alt="QR Payment" className="w-72 mx-auto" />
+
+                <p className="text-center text-sm text-gray-500 mt-4">
+                  Hệ thống sẽ tự động xác nhận sau khi chuyển khoản
+                </p>
+              </div>
+            )}
           </Section>
 
           {/* Lời nhắn */}
@@ -656,54 +538,26 @@ export default function CheckoutPage() {
           </Section>
 
           {/* Tổng tiền - Chỉ hiển thị khi chọn COD */}
-          {payMethod === "COD" && (
-            <Section
-              icon={<CreditCard className="w-4 h-4 text-rose-500" />}
-              iconBg="bg-rose-50"
-              title="Chi tiết thanh toán"
-            >
-              <div className="flex flex-col gap-2.5">
-                <SumRow
-                  label={`Tạm tính (${items.length} sản phẩm)`}
-                  value={fmt(subtotal)}
-                />
-                <SumRow label="Phí vận chuyển" value={fmt(SHIPPING)} />
-                {appliedVouchers.map((voucher) => (
-                  <SumRow
-                    key={voucher.code}
-                    label={`Voucher ${voucher.code}`}
-                    value={`-${fmt(voucher.discount)}`}
-                    green
-                  />
-                ))}
-                <div className="h-px bg-gray-100 my-0.5" />
-                <div className="flex items-center justify-between">
-                  <span className="text-[15px] font-extrabold text-gray-900 tracking-tight">
-                    Tổng cộng
-                  </span>
-                  <span className="text-[22px] font-black text-rose-500 tracking-tight">
-                    {fmt(total)}
-                  </span>
-                </div>
-              </div>
 
-              <Button
-                onClick={() => placeOrder()}
-                disabled={placing || orderLocked}
-                className="w-full mt-4 h-14 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white text-[15px] font-black tracking-tight flex items-center justify-center gap-2 transition-all active:scale-[.99]"
-              >
-                {placing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" /> Đang xử lý...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-5 h-5" /> Đặt hàng · {fmt(total)}
-                  </>
-                )}
-              </Button>
-            </Section>
-          )}
+          <OrderSummarySection
+            itemsLength={items.length}
+            subtotal={subtotal}
+            SHIPPING={SHIPPING}
+            appliedVouchers={appliedVouchers}
+            total={total}
+            fmt={fmt}
+            placing={placing}
+            orderLocked={orderLocked}
+            payMethod={payMethod}
+            placeOrder={() => placeOrder()}
+            // nhóm dữ liệu để navigate
+            selectedAddress={selectedAddress}
+            items={items}
+            cartItemIds={cartItemIds}
+            note={note}
+            isBuyNow={isBuyNow}
+            buyNowProduct={buyNowProduct}
+          />
         </div>
 
         {addrOpen && (
@@ -734,116 +588,3 @@ export default function CheckoutPage() {
   );
 }
 
-// ── Sub Components ──────────────────────────────────────────────────────────
-function Section({
-  icon,
-  iconBg,
-  title,
-  badge,
-  right,
-  children,
-}: {
-  icon: React.ReactNode;
-  iconBg: string;
-  title: string;
-  badge?: number;
-  right?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="bg-white rounded-[18px] border border-[#ebebeb] overflow-hidden">
-      <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-50">
-        <div className="flex items-center gap-2">
-          <div
-            className={`w-8 h-8 rounded-[10px] ${iconBg} flex items-center justify-center`}
-          >
-            {icon}
-          </div>
-          <span className="text-[14px] font-bold text-gray-900">{title}</span>
-          {badge !== undefined && (
-            <span className="bg-rose-500 text-white text-[11px] font-extrabold rounded-full px-2 py-0.5">
-              {badge}
-            </span>
-          )}
-        </div>
-        {right}
-      </div>
-      <div className="px-4 py-3.5">{children}</div>
-    </div>
-  );
-}
-
-function PayOption({
-  selected,
-  onClick,
-  iconBg,
-  icon,
-  name,
-  desc,
-  disabled,
-  soon,
-}: {
-  selected: boolean;
-  onClick?: () => void;
-  iconBg: string;
-  icon: React.ReactNode;
-  name: string;
-  desc: string;
-  disabled?: boolean;
-  soon?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex items-center gap-3 p-3 rounded-2xl border-[1.5px] w-full text-left transition-all ${
-        selected ? "border-rose-400 bg-rose-50/50" : "border-gray-100"
-      } ${disabled ? "opacity-50 cursor-not-allowed" : "hover:border-gray-200"}`}
-    >
-      <div
-        className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center flex-shrink-0`}
-      >
-        {icon}
-      </div>
-      <div className="flex-1">
-        <p className="text-[13px] font-bold text-gray-900">{name}</p>
-        <p className="text-[11.5px] text-gray-400 mt-0.5">{desc}</p>
-      </div>
-      {soon && (
-        <span className="text-[11px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
-          Sắp ra mắt
-        </span>
-      )}
-      {!disabled && (
-        <div
-          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-            selected ? "border-rose-500" : "border-gray-200"
-          }`}
-        >
-          {selected && <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />}
-        </div>
-      )}
-    </button>
-  );
-}
-
-function SumRow({
-  label,
-  value,
-  green,
-}: {
-  label: string;
-  value: string;
-  green?: boolean;
-}) {
-  return (
-    <div className="flex justify-between items-center">
-      <span className="text-[13.5px] text-gray-500">{label}</span>
-      <span
-        className={`text-[13.5px] font-semibold ${green ? "text-green-600" : "text-gray-900"}`}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
