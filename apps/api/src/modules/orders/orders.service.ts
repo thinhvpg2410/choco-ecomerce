@@ -11,10 +11,10 @@ import {
   Prisma,
   UserRole,
 } from '@prisma/client';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { isUuid } from '../../common/utils/is-uuid';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 type OrderWithItems = Prisma.OrderGetPayload<{ include: { items: true } }>;
 
@@ -25,12 +25,10 @@ export class OrdersService {
   async createOrder(userId: string, createOrderDto: CreateOrderDto) {
     this.validateUserId(userId);
 
-    // ── BUY NOW: bỏ qua giỏ hàng, tạo order thẳng từ product ────────────
     if (createOrderDto.buy_now === true) {
       return this.createBuyNowOrder(userId, createOrderDto);
     }
 
-    // ── NORMAL: tạo order từ giỏ hàng ────────────────────────────────────
     return this.createCartOrder(userId, createOrderDto);
   }
 
@@ -57,7 +55,7 @@ export class OrdersService {
         );
       }
 
-      // Giảm stock
+      // Giảm stock sản phẩm
       await tx.product.update({
         where: { id: product.id },
         data: { stock: { decrement: quantity } },
@@ -66,50 +64,21 @@ export class OrdersService {
       const unitPrice = Number(product.salePrice ?? product.price);
       const totalAmount = unitPrice * quantity;
 
-      const order = await tx.order.create({
-        data: {
-          userId,
-          totalAmount,
-          shippingFee: 30000,
-          finalAmount: totalAmount + 30000,
-          status: OrderStatus.PENDING,
-
-          paymentStatus:
-            dto.payment_method === PaymentMethod.PayPal
-              ? PaymentStatus.PAID
-              : PaymentStatus.PENDING,
-
-          receiverName: dto.receiver_name,
-          receiverPhone: dto.receiver_phone,
-          shippingAddress: dto.shipping_address,
-          paymentMethod: dto.payment_method,
-          note: dto.note,
-          paypalOrderId: dto.paypal_order_id,
-          items: {
-            create: [
-              {
-                product: { connect: { id: product.id } },
-                productNameAtTime: product.name,
-                productImageAtTime: product.imageUrl,
-                price: product.price,
-                salePrice: product.salePrice,
-                quantity,
-              },
-            ],
-          },
-        },
-        include: { items: true },
-      });
-
+      // --- XỬ LÝ COUPON (CHỈ LÀM 1 LẦN) ---
+      let discountAmount = 0;
       if (dto.coupon_code) {
         const coupon = await tx.coupon.findUnique({
-          where: {
-            code: dto.coupon_code.trim().toUpperCase(),
-          },
+          where: { code: dto.coupon_code.trim().toUpperCase() },
         });
 
         if (!coupon || !coupon.isActive) {
           throw new BadRequestException('Mã giảm giá không hợp lệ');
+        }
+
+        if (coupon['discountType'] === 'PERCENT') {
+          discountAmount = (totalAmount * coupon['discountValue']) / 100;
+        } else {
+          discountAmount = coupon['discountValue'];
         }
 
         const updated = await tx.coupon.updateMany({
@@ -117,18 +86,10 @@ export class OrdersService {
             id: coupon.id,
             OR: [
               { usageLimit: null },
-              {
-                usedCount: {
-                  lt: coupon.usageLimit ?? 0,
-                },
-              },
+              { usedCount: { lt: coupon.usageLimit ?? 0 } },
             ],
           },
-          data: {
-            usedCount: {
-              increment: 1,
-            },
-          },
+          data: { usedCount: { increment: 1 } },
         });
 
         if (updated.count === 0) {
@@ -136,8 +97,44 @@ export class OrdersService {
         }
       }
 
+      const shippingFee = 30000;
+      const finalAmount = Math.max(
+        0,
+        totalAmount + shippingFee - discountAmount,
+      );
+
+      // Tạo cấu trúc dữ liệu Item cho Buy Now thay vì dùng orderItemsData không xác định
+      const orderItemData = {
+        productId: product.id,
+        productNameAtTime: product.name,
+        productImageAtTime: product.imageUrl,
+        price: product.price,
+        salePrice: product.salePrice,
+        quantity: quantity,
+      };
+
+      // Tạo Đơn hàng
+      const order = await tx.order.create({
+        data: {
+          userId,
+          totalAmount,
+          shippingFee,
+          finalAmount,
+          status: OrderStatus.PENDING,
+          paymentStatus: PaymentStatus.PENDING,
+          receiverName: dto.receiver_name,
+          receiverPhone: dto.receiver_phone,
+          shippingAddress: dto.shipping_address,
+          paymentMethod: dto.payment_method,
+          note: dto.note,
+          paypalOrderId: dto.paypal_order_id,
+          items: { create: [orderItemData] }, // Truyền trực tiếp item dạng mảng ở đây
+        },
+        include: { items: true },
+      });
+
       return order;
-    });
+    }); // Sửa lỗi cú pháp };); thành }); tại đây
 
     return {
       success: true,
@@ -159,14 +156,15 @@ export class OrdersService {
       }
 
       const cartItemIds = dto.cart_item_ids ?? [];
-
       const selectedCartItems =
         cartItemIds.length > 0
           ? cart.items.filter((item) => cartItemIds.includes(item.productId))
           : cart.items;
 
       if (!selectedCartItems.length) {
-        throw new BadRequestException('Không có sản phẩm nào được chọn để đặt hàng');
+        throw new BadRequestException(
+          'Không có sản phẩm nào được chọn để đặt hàng',
+        );
       }
 
       const orderItemsData: Prisma.OrderItemCreateWithoutOrderInput[] = [];
@@ -207,19 +205,54 @@ export class OrdersService {
         });
       }
 
+      // --- XỬ LÝ COUPON (ĐÃ XÓA LOGIC LẶP PHÍA DƯỚI) ---
+      let discountAmount = 0;
+      if (dto.coupon_code) {
+        const coupon = await tx.coupon.findUnique({
+          where: { code: dto.coupon_code.trim().toUpperCase() },
+        });
+
+        if (!coupon || !coupon.isActive) {
+          throw new BadRequestException('Mã giảm giá không hợp lệ');
+        }
+
+        if (coupon['discountType'] === 'PERCENT') {
+          discountAmount = (totalAmount * coupon['discountValue']) / 100;
+        } else {
+          discountAmount = coupon['discountValue'];
+        }
+
+        const updated = await tx.coupon.updateMany({
+          where: {
+            id: coupon.id,
+            OR: [
+              { usageLimit: null },
+              { usedCount: { lt: coupon.usageLimit ?? 0 } },
+            ],
+          },
+          data: { usedCount: { increment: 1 } },
+        });
+
+        if (updated.count === 0) {
+          throw new BadRequestException('Mã giảm giá đã hết lượt sử dụng');
+        }
+      }
+
+      const shippingFee = 30000;
+      const finalAmount = Math.max(
+        0,
+        totalAmount + shippingFee - discountAmount,
+      );
+
+      // Tiến hành tạo Đơn hàng
       const order = await tx.order.create({
         data: {
           userId,
           totalAmount,
-          shippingFee: 30000,
-          finalAmount: totalAmount + 30000,
+          shippingFee,
+          finalAmount,
           status: OrderStatus.PENDING,
-
-          paymentStatus:
-            dto.payment_method === PaymentMethod.PayPal
-              ? PaymentStatus.PAID
-              : PaymentStatus.PENDING,
-
+          paymentStatus: PaymentStatus.PENDING,
           receiverName: dto.receiver_name,
           receiverPhone: dto.receiver_phone,
           shippingAddress: dto.shipping_address,
@@ -230,41 +263,6 @@ export class OrdersService {
         },
         include: { items: true },
       });
-
-      if (dto.coupon_code) {
-        const coupon = await tx.coupon.findUnique({
-          where: {
-            code: dto.coupon_code.trim().toUpperCase(),
-          },
-        });
-
-        if (!coupon || !coupon.isActive) {
-          throw new BadRequestException('Mã giảm giá không hợp lệ');
-        }
-
-        const updated = await tx.coupon.updateMany({
-          where: {
-            id: coupon.id,
-            OR: [
-              { usageLimit: null },
-              {
-                usedCount: {
-                  lt: coupon.usageLimit ?? 0,
-                },
-              },
-            ],
-          },
-          data: {
-            usedCount: {
-              increment: 1,
-            },
-          },
-        });
-
-        if (updated.count === 0) {
-          throw new BadRequestException('Mã giảm giá đã hết lượt sử dụng');
-        }
-      }
 
       // Xóa items đã mua khỏi giỏ
       await tx.cartItem.deleteMany({
@@ -284,7 +282,7 @@ export class OrdersService {
     };
   }
 
-  // ── Other methods (không thay đổi) ───────────────────────────────────────
+  // ── Các hàm phụ trợ giữ nguyên không đổi ───────────────────────────────────
   async findMyOrders(userId: string) {
     this.validateUserId(userId);
     const orders = await this.prisma.order.findMany({
@@ -317,7 +315,8 @@ export class OrdersService {
     const isOwner = order.userId === requesterId;
     const isAdmin = requesterRole === UserRole.admin;
 
-    if (!isOwner && !isAdmin) throw new NotFoundException('Không tìm thấy đơn hàng');
+    if (!isOwner && !isAdmin)
+      throw new NotFoundException('Không tìm thấy đơn hàng');
 
     return {
       success: true,
@@ -343,40 +342,24 @@ export class OrdersService {
     updateOrderStatusDto: UpdateOrderStatusDto,
   ) {
     this.validateOrderId(orderId);
-
     const newStatus = updateOrderStatusDto.status;
 
     const result = await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
-        include: {
-          items: true,
-          payment: true,
-        },
+        include: { items: true, payment: true },
       });
 
-      if (!order) {
-        throw new NotFoundException('Không tìm thấy đơn hàng');
-      }
-
-      // Không cho update nếu đã cancel
-      if (order.status === OrderStatus.CANCELLED) {
+      if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+      if (order.status === OrderStatus.CANCELLED)
         throw new BadRequestException('Không thể cập nhật đơn hàng đã hủy');
-      }
 
-      // Update order status
       const updatedOrder = await tx.order.update({
         where: { id: orderId },
-        data: {
-          status: newStatus,
-        },
-        include: {
-          items: true,
-          payment: true,
-        },
+        data: { status: newStatus },
+        include: { items: true, payment: true },
       });
 
-      // COD => giao thành công mới PAID
       if (
         newStatus === OrderStatus.DELIVERED &&
         order.payment &&
@@ -384,22 +367,13 @@ export class OrdersService {
         order.payment.paymentStatus === PaymentStatus.PENDING
       ) {
         await tx.payment.update({
-          where: {
-            id: order.payment.id,
-          },
-          data: {
-            paymentStatus: PaymentStatus.PAID,
-            paidAt: new Date(),
-          },
+          where: { id: order.payment.id },
+          data: { paymentStatus: PaymentStatus.PAID, paidAt: new Date() },
         });
 
         await tx.order.update({
-          where: {
-            id: order.id,
-          },
-          data: {
-            paymentStatus: PaymentStatus.PAID,
-          },
+          where: { id: order.id },
+          data: { paymentStatus: PaymentStatus.PAID },
         });
 
         updatedOrder.paymentStatus = PaymentStatus.PAID;
@@ -417,20 +391,9 @@ export class OrdersService {
 
   async getReviewableOrders(userId: string) {
     const orders = await this.prisma.order.findMany({
-      where: {
-        userId,
-        status: OrderStatus.DELIVERED,
-      },
-      include: {
-        items: {
-          include: {
-            review: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      where: { userId, status: OrderStatus.DELIVERED },
+      include: { items: { include: { review: true } } },
+      orderBy: { createdAt: 'desc' },
     });
 
     return {
