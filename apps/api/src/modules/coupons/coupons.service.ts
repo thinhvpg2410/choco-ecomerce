@@ -245,9 +245,11 @@ export class CouponsService {
       {
         type: coupon.couponType,
         value:
-          (coupon.couponType === CouponType.PERCENT
-            ? coupon.discountPercent
-            : coupon.discountAmount) || new Prisma.Decimal(0),
+          coupon.couponType === CouponType.PERCENT
+            ? (coupon.discountPercent ?? new Prisma.Decimal(0))
+            : coupon.couponType === CouponType.FIXED
+              ? (coupon.discountAmount ?? new Prisma.Decimal(0))
+              : new Prisma.Decimal(30000), // Nếu là FREE_SHIP, gán mặc định trị giá 30k
         maxDiscount: coupon.maxDiscountAmount,
       },
       subtotal,

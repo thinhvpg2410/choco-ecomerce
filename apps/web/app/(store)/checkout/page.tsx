@@ -189,7 +189,8 @@ export default function CheckoutPage() {
     return isMetroCity(address.city) ? 15000 : 30000;
   };
 
-  const SHIPPING = getShippingFee(selectedAddress);
+  // const SHIPPING = getShippingFee(selectedAddress);
+  const SHIPPING = 0; 
 
   const totalDiscount = appliedVouchers.reduce(
     (sum, item) => sum + item.discount,
@@ -214,40 +215,78 @@ export default function CheckoutPage() {
     }
 
     try {
-      const data = await applyCoupon({
+      const response = await applyCoupon({
         code,
         subtotal,
       });
 
-      if (!data) {
-        throw new Error("Coupon không hợp lệ");
+      // 🟢 [LOG 1]: In toàn bộ dữ liệu gốc từ API trả về để kiểm tra cấu trúc
+      console.log("🎁 [Voucher API Response gốc]:", response);
+
+      // Tự động nhận diện cấu trúc dữ liệu từ các kiểu cấu hình Axios khác nhau
+      let couponData = null;
+
+      if (response?.data?.data) {
+        // Kiểu 1: response.data = { success: true, data: { code, discount_amount... } }
+        couponData = response.data.data;
+      } else if (response?.data) {
+        // Kiểu 2: response.data là thẳng object chứa thông tin voucher { code, discount_amount... }
+        couponData = response.data.code ? response.data : response.data;
+      } else if (response?.code) {
+        // Kiểu 3: Đã unwrap qua interceptor, response chính là object voucher { code, discount_amount... }
+        couponData = response;
       }
 
-      const discount = Number(data.discount_amount || 0);
+      // 🟢 [LOG 2]: In ra dữ liệu sau khi code cố gắng bóc tách
+      console.log("🔍 [Dữ liệu Voucher bóc tách được]:", couponData);
+
+      // Kiểm tra nếu không tìm thấy dữ liệu voucher hoặc thiếu trường code hợp lệ
+      if (!couponData || !couponData.code) {
+        const errorMsg =
+          response?.message ||
+          response?.data?.message ||
+          "Mã giảm giá không hợp lệ (Sai cấu trúc dữ liệu)";
+        toast.error(errorMsg);
+        return;
+      }
+
+      const discount = Number(couponData.discount_amount || 0);
 
       if (discount > subtotal) {
         toast.error("Giảm giá vượt quá giá trị sản phẩm");
         return;
       }
 
-      setAppliedVouchers((prev) => [
-        ...prev,
+      // Cập nhật State hiển thị giảm giá công khai
+      setAppliedVouchers([
         {
-          code: data.code,
-          discount,
-          finalAmount: data.final_amount,
-          description: `Giảm ${fmt(discount)} cho đơn hàng`,
+          code: couponData.code,
+          discount: discount,
+          finalAmount: couponData.final_amount ?? subtotal - discount,
+          description: `Giảm ${discount.toLocaleString("vi-VN")}đ từ mã ${couponData.code}`,
         },
       ]);
 
       setVoucherInput("");
-
-      toast.success(`Áp dụng mã ${data.code} thành công`);
+      toast.success(`Áp dụng mã ${couponData.code} thành công!`);
     } catch (err: any) {
-      toast.error(
-        err?.response?.data?.message ||
-          "Mã giảm giá không hợp lệ hoặc đã hết lượt dùng",
-      );
+      // 🟢 [LOG 3]: In chi tiết khi API lỗi (ví dụ: lỗi mạng, lỗi 400, 500 từ server)
+      console.error("❌ [Voucher Catch Error]:", {
+        errorObject: err,
+        responseData: err?.response?.data,
+        status: err?.response?.status,
+        message: err?.message,
+      });
+
+      const serverMessage = err?.response?.data?.message;
+
+      if (Array.isArray(serverMessage)) {
+        toast.error(serverMessage[0]);
+      } else {
+        toast.error(
+          serverMessage || "Không thể kết nối đến máy chủ xử lý mã giảm giá",
+        );
+      }
     }
   };
 
@@ -302,7 +341,6 @@ export default function CheckoutPage() {
 
       console.log("PAYMENT RES:", paymentRes);
 
-     
       toast.success("Đặt hàng thành công!");
 
       localStorage.removeItem("checkout_cart");

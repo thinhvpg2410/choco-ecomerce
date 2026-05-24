@@ -24,6 +24,7 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { PrismaModule } from './prisma/prisma.module';
 import { AppCacheModule } from './common/cache/cache.module';
 import { PayPalModule } from './modules/paypal/paypal.module';
+import { SepayModule } from './modules/sepay/sepay.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { PayPalModule } from './modules/paypal/paypal.module';
     ProductImagesModule,
     AdminModule,
     PayPalModule,
+    SepayModule,
   ],
   controllers: [AppController],
   providers: [

@@ -22,19 +22,75 @@ import api from "@/services/axios";
 
 import { Button } from "@/components/ui/button";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import { useRef } from "react";
+
+
 
 export default function PaymentPage() {
   const router = useRouter();
-
+const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkoutData, setCheckoutData] = useState<any>(null);
   const [placing, setPlacing] = useState(false);
   const [qrUrl, setQrUrl] = useState("");
 
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  
+
   // Trạng thái xử lý giao diện thành công sau khi quét mã/Thanh toán
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState("");
   const [verifyingQR, setVerifyingQR] = useState(false);
+
+  const createdRef = useRef(false);
+
+
+  const startCheckingPayment = (orderId: string) => {
+    console.log("START POLLING:", orderId);
+
+    setCheckingPayment(true);
+
+    intervalRef.current = setInterval(async () => {
+      try {
+        console.log("CALL CHECK PAYMENT API");
+
+        const res = await api.get(`/sepay/payment/${orderId}`);
+
+        console.log("CHECK PAYMENT RESPONSE:", res.data);
+
+        const status = res.data?.paymentStatus;
+
+        console.log("PAYMENT STATUS:", status);
+
+        if (status === "PAID") {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+          }
+
+          setCheckingPayment(false);
+          setIsSuccess(true);
+
+          toast.success("Thanh toán thành công!");
+
+          localStorage.removeItem("pending_checkout");
+          localStorage.removeItem("checkout_cart");
+        }
+
+        if (status === "FAILED") {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+          }
+
+          setCheckingPayment(false);
+          toast.error("Thanh toán thất bại!");
+          router.push("/checkout");
+        }
+      } catch (err) {
+        console.error("CHECK PAYMENT ERROR:", err);
+      }
+    }, 3000);
+  };
+
 
   // LOAD DATA FROM LOCALSTORAGE
   useEffect(() => {
@@ -49,14 +105,23 @@ export default function PaymentPage() {
     setLoading(false);
   }, [router]);
 
-  // AUTO GENERATE QR BANK IF CHOSEN
   useEffect(() => {
     if (!checkoutData) return;
+    if (checkoutData.payMethod !== "QR_BANK") return;
 
-    if (checkoutData.payMethod === "QR_BANK") {
-      handleCreateOrder();
-    }
+    if (createdRef.current) return;
+    createdRef.current = true;
+
+    handleCreateOrder();
   }, [checkoutData]);
+  
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
 
   const handleCreateOrder = async (transactionCode?: string) => {
     try {
@@ -97,6 +162,10 @@ export default function PaymentPage() {
       // Nếu là QR BANK thì giữ lại giao diện để khách quét mã
       if (checkoutData.payMethod === "QR_BANK") {
         setQrUrl(paymentRes.qr_url);
+
+        // START REAL CHECK
+        startCheckingPayment(order.id);
+
         return;
       }
 
@@ -112,28 +181,18 @@ export default function PaymentPage() {
     }
   };
 
-  // Giả lập hoặc xử lý check chuyển khoản QR thành công
-  const handleVerifyQR = () => {
-    setVerifyingQR(true);
-    // Giả lập thời gian check hệ thống bưu điện/ngân hàng trong 1.5s
-    setTimeout(() => {
-      setVerifyingQR(false);
-      setIsSuccess(true);
-      toast.success("Hệ thống đã ghi nhận thanh toán thành công!");
-      localStorage.removeItem("pending_checkout");
-      localStorage.removeItem("checkout_cart");
-    }, 1500);
-  };
+ const handleCancelPayment = () => {
+   if (intervalRef.current) {
+     clearInterval(intervalRef.current);
+     intervalRef.current = null;
+   }
 
-  const handleCancelPayment = () => {
-    if (
-      confirm(
-        "Bạn có chắc chắn muốn hủy quá trình thanh toán này? Đơn hàng hiện tại sẽ không được lưu lại.",
-      )
-    ) {
-      router.push("/checkout");
-    }
-  };
+   setCheckingPayment(false);
+
+   if (confirm("Bạn có chắc chắn muốn hủy quá trình thanh toán này?")) {
+     router.push("/checkout");
+   }
+ };
 
   if (loading || !checkoutData) {
     return (
@@ -294,20 +353,16 @@ export default function PaymentPage() {
                         </p>
                       </div>
 
-                      <Button
-                        onClick={handleVerifyQR}
-                        disabled={verifyingQR}
-                        className="w-full mt-6 bg-emerald-600 hover:bg-emerald-500 text-white h-12 rounded-xl font-bold transition-all shadow-md shadow-emerald-100"
-                      >
-                        {verifyingQR ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />{" "}
-                            Đang kiểm tra giao dịch...
-                          </>
-                        ) : (
-                          "Tôi đã chuyển khoản thành công"
-                        )}
-                      </Button>
+                      <div className="w-full mt-6 p-4 rounded-xl bg-blue-50 border border-blue-100">
+                        <div className="flex items-center justify-center gap-2 text-blue-700 text-sm font-medium">
+                          {checkingPayment && (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Đang chờ xác nhận chuyển khoản từ ngân hàng...
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
