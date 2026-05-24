@@ -8,7 +8,7 @@ export class SepayService {
   constructor(private readonly prisma: PrismaService) {}
 
   async handleWebhook(body: any, authorization: string) {
-    console.log('🔥 WEBHOOK RECEIVED');
+    console.log('WEBHOOK RECEIVED');
 
     console.log('AUTH HEADER:', authorization);
     console.log('BODY:', body);
@@ -22,7 +22,6 @@ export class SepayService {
 
     const content = body.transactionContent || body.content || '';
 
-    // SePay gửi transferAmount chứ không phải amount
     const amount = Number(
       body.transferAmount || body.amountIn || body.amount || 0,
     );
@@ -64,7 +63,7 @@ export class SepayService {
       return { success: false };
     }
 
-    console.log('🔥 START UPDATE PAYMENT');
+    console.log('START UPDATE PAYMENT');
 
     try {
       await this.prisma.$transaction(async (tx) => {
@@ -99,7 +98,6 @@ export class SepayService {
     return { success: true };
   }
 
-  // 👇 API cho frontend check
   async getPaymentStatus(orderId: string) {
     const payment = await this.prisma.payment.findFirst({
       where: { orderId },

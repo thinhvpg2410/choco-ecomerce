@@ -23,9 +23,9 @@ export class BannersService {
       select: {
         id: true,
         description: true,
-        imageUrl: true, 
-        productId: true, 
-        isActive: true, 
+        imageUrl: true,
+        productId: true,
+        isActive: true,
         sortOrder: true,
         createdAt: true,
         updatedAt: true,
@@ -54,7 +54,7 @@ export class BannersService {
     const imageUrl = await this.uploadService.uploadImage(file, 'banners');
     return this.prisma.banner.update({
       where: { id },
-      data: { imageUrl }, // ← sửa thành imageUrl
+      data: { imageUrl },
     });
   }
 

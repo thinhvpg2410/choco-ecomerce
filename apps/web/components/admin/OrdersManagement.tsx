@@ -21,128 +21,247 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getAdminOrders } from "@/services/admin.service";
-import type { Order } from "@/types/type";
+import { OrderDetailModal } from "./OrderDetailModal";
 import { toast } from "sonner";
-import { Search, Eye } from "lucide-react";
-import { OrderDetailModal } from "./order-detail-modal";
+import {
+  Search,
+  Eye,
+  Loader2,
+  TrendingUp,
+  Package,
+  Truck,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  RefreshCw,
+} from "lucide-react";
 
 const statusConfig: Record<
   string,
-  { label: string; variant: any; color: string }
+  {
+    label: string;
+    variant: any;
+    color: string;
+    bg: string;
+    icon: any;
+    ring: string;
+  }
 > = {
-  PENDING: { label: "Chờ xử lý", variant: "outline", color: "text-amber-600" },
+  PENDING: {
+    label: "Chờ xử lý",
+    variant: "outline",
+    color: "text-amber-600",
+    bg: "bg-amber-50",
+    icon: Clock,
+    ring: "ring-amber-400",
+  },
   SHIPPING: {
     label: "Đang giao",
     variant: "default",
-    color: "text-indigo-600",
+    color: "text-blue-600",
+    bg: "bg-blue-50",
+    icon: Truck,
+    ring: "ring-blue-400",
   },
-  DELIVERED: { label: "Đã giao", variant: "default", color: "text-green-600" },
-  CANCELLED: { label: "Đã hủy", variant: "destructive", color: "text-red-600" },
+  DELIVERED: {
+    label: "Đã giao",
+    variant: "default",
+    color: "text-emerald-600",
+    bg: "bg-emerald-50",
+    icon: CheckCircle2,
+    ring: "ring-emerald-400",
+  },
+  CANCELLED: {
+    label: "Đã hủy",
+    variant: "destructive",
+    color: "text-red-500",
+    bg: "bg-red-50",
+    icon: XCircle,
+    ring: "ring-red-400",
+  },
 };
 
-const paymentConfig: Record<string, { label: string; variant: any }> = {
-  PAID: { label: "Đã thanh toán", variant: "default" },
-  PENDING: { label: "Chưa thanh toán", variant: "outline" },
+const paymentConfig: Record<
+  string,
+  { label: string; variant: any; color: string; bg: string }
+> = {
+  PAID: {
+    label: "Đã thanh toán",
+    variant: "default",
+    color: "text-emerald-700",
+    bg: "bg-emerald-100",
+  },
+  PENDING: {
+    label: "Chưa thanh toán",
+    variant: "outline",
+    color: "text-amber-700",
+    bg: "bg-amber-100",
+  },
 };
 
 export function OrdersManagement() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [allOrders, setAllOrders] = useState<any[]>([]); // cho stat cards
+  const [orders, setOrders] = useState<any[]>([]); // cho table
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    loadOrders();
-  }, [statusFilter]);
+  // Luôn fetch ALL để tính stats cards đúng
+  const loadAllOrders = async () => {
+    try {
+      const data = await getAdminOrders({ page: 1 });
+      const list = data?.data?.orders ?? data?.orders ?? [];
+      setAllOrders(list);
+    } catch {
+      // silent
+    }
+  };
 
-  const loadOrders = async () => {
-    setLoading(true);
+  // Fetch có filter cho table
+  const loadOrders = async (silent = false) => {
+    silent ? setRefreshing(true) : setLoading(true);
     try {
       const data = await getAdminOrders({
         page: 1,
         search: search.trim() || undefined,
         status: statusFilter === "ALL" ? undefined : statusFilter,
       });
-      console.log("ADMIN ORDERS DATA:", data);
-      setOrders(data.orders ?? []);
-    } catch (error) {
-      console.error(error);
+      const list = data?.data?.orders ?? data?.orders ?? [];
+      setOrders(list);
+    } catch {
+      toast.error("Không thể tải danh sách đơn hàng");
       setOrders([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
+  useEffect(() => {
+    loadAllOrders();
+  }, []); // mount 1 lần
+
+  useEffect(() => {
+    loadOrders();
+  }, [statusFilter]);
+
+  useEffect(() => {
+    const t = setTimeout(() => loadOrders(), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const handleCloseModal = () => {
     setOpen(false);
-    loadOrders();
+    loadOrders(true);
+    loadAllOrders();
   };
 
-  const filtered = orders.filter((o) => {
-    const userDisplay =
-      (o as any).user?.username || (o as any).user?.email || "";
-    const matchSearch =
-      o.id.toLowerCase().includes(search.toLowerCase()) ||
-      userDisplay.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "ALL" || o.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const totalRevenue = allOrders
+    .filter((o) => o.status !== "CANCELLED")
+    .reduce((s, o) => s + (Number(o.finalAmount) || 0), 0);
 
-  const totalRevenue = orders
-    .filter((o: any) => o.status !== "CANCELLED")
-    .reduce(
-      (sum, o: any) => sum + Number(o.finalAmount || o.totalAmount || 0),
-      0,
-    );
+  const pendingCount = allOrders.filter((o) => o.status === "PENDING").length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 p-1">
+      {/* ── HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold">Đơn Hàng</h2>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            {orders.length} đơn hàng · Doanh thu: ₫
-            {totalRevenue.toLocaleString("vi-VN")}
+          <h2 className="text-2xl font-bold tracking-tight">
+            Quản lý đơn hàng
+          </h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {orders.length} đơn hàng ·{" "}
+            <span className="font-semibold text-emerald-600">
+              {totalRevenue.toLocaleString("vi-VN")}đ
+            </span>{" "}
+            doanh thu
+            {pendingCount > 0 && (
+              <span className="ml-2 inline-flex items-center gap-1 text-amber-600 font-semibold">
+                · <Clock className="w-3.5 h-3.5" /> {pendingCount} chờ duyệt
+              </span>
+            )}
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5 self-start"
+          onClick={() => loadOrders(true)}
+          disabled={refreshing}
+        >
+          <RefreshCw
+            className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`}
+          />
+          Làm mới
+        </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-5 gap-3">
-        {Object.entries(statusConfig).map(([key, cfg]) => (
-          <Card
-            key={key}
-            className={`py-3 px-4 cursor-pointer transition-all ${statusFilter === key ? "ring-2 ring-primary" : "hover:shadow-md"}`}
-            onClick={() => setStatusFilter(statusFilter === key ? "ALL" : key)}
-          >
-            <p className="text-xs text-muted-foreground">{cfg.label}</p>
-            <p className={`text-2xl font-bold mt-1 ${cfg.color}`}>
-              {orders.filter((o) => o.status === key).length}
-            </p>
-          </Card>
-        ))}
+      {/* ── STAT CARDS ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {Object.entries(statusConfig).map(([key, cfg]) => {
+          const Icon = cfg.icon;
+          const count = allOrders.filter((o) => o.status === key).length;
+          const active = statusFilter === key;
+          return (
+            <button
+              key={key}
+              onClick={() => setStatusFilter(active ? "ALL" : key)}
+              className={`
+                group relative text-left rounded-xl border p-4 transition-all duration-150
+                ${
+                  active
+                    ? `ring-2 ${cfg.ring} border-transparent shadow-md`
+                    : "border-border hover:shadow-md hover:border-border/80"
+                }
+                ${cfg.bg}
+              `}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {cfg.label}
+                  </p>
+                  <p
+                    className={`text-3xl font-black mt-1 tabular-nums ${cfg.color}`}
+                  >
+                    {count}
+                  </p>
+                </div>
+                <div
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center ${cfg.bg} border border-white/60`}
+                >
+                  <Icon className={`w-4.5 h-4.5 ${cfg.color}`} />
+                </div>
+              </div>
+              {active && (
+                <div className="absolute inset-x-0 bottom-0 h-0.5 rounded-b-xl bg-current opacity-30" />
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-3">
-        <div className="relative max-w-xs flex-1">
+      {/* ── FILTERS ── */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Tìm theo mã đơn hàng..."
+            placeholder="Tìm mã đơn, tên khách hàng..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && loadOrders()}
-            className="pl-9"
+            className="pl-9 h-9"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Trạng thái" />
+          <SelectTrigger className="w-48 h-9">
+            <SelectValue placeholder="Lọc trạng thái" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">Tất cả</SelectItem>
+            <SelectItem value="ALL">Tất cả đơn hàng</SelectItem>
             {Object.entries(statusConfig).map(([key, cfg]) => (
               <SelectItem key={key} value={key}>
                 {cfg.label}
@@ -152,135 +271,190 @@ export function OrdersManagement() {
         </Select>
       </div>
 
-      <Card>
+      {/* ── TABLE ── */}
+      <Card className="overflow-hidden border-border/60">
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <p className="text-sm">Đang tải đơn hàng...</p>
             </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              Không tìm thấy đơn hàng nào
+          ) : orders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
+              <Package className="h-10 w-10 opacity-30" />
+              <p className="text-sm">Không tìm thấy đơn hàng nào</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/40">
-                    <TableHead className="w-36">Mã đơn</TableHead>
-                    <TableHead>Khách hàng</TableHead>
-                    <TableHead className="text-right">Tổng tiền</TableHead>
-                    <TableHead className="text-center">Trạng thái</TableHead>
-                    <TableHead className="text-center">Thanh toán</TableHead>
-                    <TableHead className="w-44">Cập nhật</TableHead>
-                    <TableHead className="text-right">Hành động</TableHead>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead className="w-36 font-semibold">Mã đơn</TableHead>
+                    <TableHead className="font-semibold">Khách hàng</TableHead>
+                    <TableHead className="font-semibold">Sản phẩm</TableHead>
+                    <TableHead className="text-right font-semibold">
+                      Tổng tiền
+                    </TableHead>
+                    <TableHead className="text-center font-semibold">
+                      Đơn hàng
+                    </TableHead>
+                    <TableHead className="text-center font-semibold">
+                      Thanh toán
+                    </TableHead>
+                    <TableHead className="font-semibold">Ngày tạo</TableHead>
+                    <TableHead className="text-right font-semibold">
+                      Thao tác
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((order: any) => {
+                  {orders.map((order) => {
                     const status = statusConfig[order.status] ?? {
                       label: order.status,
                       variant: "outline",
                       color: "",
+                      bg: "",
                     };
-
-                    const payment = paymentConfig[order.paymentStatus] ?? {
-                      label: order.paymentStatus ?? "N/A",
+                    const payment = paymentConfig[
+                      order.paymentStatus ?? order.payment_status ?? ""
+                    ] ?? {
+                      label: "N/A",
                       variant: "outline",
+                      color: "",
+                      bg: "",
                     };
+                    const isPending = order.status === "PENDING";
 
                     return (
                       <TableRow
                         key={order.id}
-                        className="hover:bg-muted/20 transition-colors"
+                        className={`
+                          transition-colors hover:bg-muted/30
+                          ${isPending ? "border-l-2 border-l-amber-400" : ""}
+                        `}
                       >
                         {/* Mã đơn */}
                         <TableCell>
-                          <code className="text-[11px] bg-muted px-2 py-1 rounded-md font-mono font-semibold">
-                            #{order.id.slice(-8).toUpperCase()}
-                          </code>
+                          <div className="flex flex-col gap-0.5">
+                            <code className="text-[11px] bg-muted px-2 py-1 rounded font-mono font-semibold w-fit">
+                              #{order.id?.slice(-8).toUpperCase()}
+                            </code>
+                            {isPending && (
+                              <span className="text-[10px] text-amber-600 font-medium">
+                                ● Chờ duyệt
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
 
-                        {/* Tên KH */}
+                        {/* Khách hàng */}
                         <TableCell>
-                          <div className="font-medium">
-                            {order.user?.username || "Không rõ"}
+                          <p className="font-medium text-sm leading-tight">
+                            {order.receiverName ||
+                              order.user?.username ||
+                              "Không rõ"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {order.receiverPhone || order.user?.email}
+                          </p>
+                        </TableCell>
+
+                        {/* Sản phẩm */}
+                        <TableCell>
+                          <div className="flex -space-x-2">
+                            {order.items
+                              ?.slice(0, 3)
+                              .map((item: any, i: number) => (
+                                <img
+                                  key={i}
+                                  src={item.productImageAtTime || item.image}
+                                  alt={item.productNameAtTime}
+                                  className="w-8 h-8 rounded-lg border-2 border-white object-cover"
+                                />
+                              ))}
+                            {(order.items?.length ?? 0) > 3 && (
+                              <div className="w-8 h-8 rounded-lg border-2 border-white bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                                +{order.items.length - 3}
+                              </div>
+                            )}
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {order.user?.email}
-                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {order.items?.length ?? 0} sản phẩm
+                          </p>
                         </TableCell>
 
                         {/* Tổng tiền */}
-                        <TableCell className="text-right font-semibold whitespace-nowrap">
-                          {Number(
-                            order.finalAmount || order.totalAmount || 0,
-                          ).toLocaleString("vi-VN")}{" "}
-                          ₫
+                        <TableCell className="text-right">
+                          <p className="font-bold text-sm tabular-nums">
+                            {Number(order.finalAmount || 0).toLocaleString(
+                              "vi-VN",
+                            )}
+                            đ
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {order.paymentMethod}
+                          </p>
                         </TableCell>
 
-                        {/* Status */}
+                        {/* Trạng thái đơn */}
                         <TableCell className="text-center">
-                          <Badge
-                            variant={status.variant}
-                            className="text-xs px-2.5 py-1"
+                          <span
+                            className={`
+                            inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full
+                            ${status.bg} ${status.color}
+                          `}
                           >
                             {status.label}
-                          </Badge>
+                          </span>
                         </TableCell>
 
-                        {/* Payment Status */}
+                        {/* Trạng thái thanh toán */}
                         <TableCell className="text-center">
-                          <Badge
-                            variant={payment.variant}
-                            className="text-xs px-2.5 py-1"
+                          <span
+                            className={`
+                            inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full
+                            ${payment.bg} ${payment.color}
+                          `}
                           >
                             {payment.label}
-                          </Badge>
+                          </span>
                         </TableCell>
 
-                        {/* Ngày */}
+                        {/* Ngày tạo */}
                         <TableCell>
-                          <div className="text-sm">
-                            {new Date(order.updatedAt).toLocaleDateString(
-                              "vi-VN",
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(order.updatedAt).toLocaleTimeString(
-                              "vi-VN",
-                            )}
-                          </div>
+                          <p className="text-sm tabular-nums">
+                            {new Date(
+                              order.createdAt || order.created_at,
+                            ).toLocaleDateString("vi-VN")}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(
+                              order.createdAt || order.created_at,
+                            ).toLocaleTimeString("vi-VN", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
                         </TableCell>
 
-                        {/* Action */}
+                        {/* Thao tác */}
                         <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 px-3 gap-1"
-                              onClick={() => {
-                                setSelectedOrder(order);
-                                setOpen(true);
-                              }}
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                              Xem
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 px-3 text-xs"
-                              onClick={() => {
-                                setSelectedOrder(order);
-                                setOpen(true);
-                              }}
-                            >
-                              Cập nhật
-                            </Button>
-                          </div>
+                          <Button
+                            variant={isPending ? "default" : "outline"}
+                            size="sm"
+                            className={`h-8 px-3 gap-1.5 text-xs font-semibold ${
+                              isPending
+                                ? "bg-amber-500 hover:bg-amber-600 text-white border-0"
+                                : ""
+                            }`}
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setOpen(true);
+                            }}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            {isPending ? "Duyệt ngay" : "Xem"}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -291,11 +465,12 @@ export function OrdersManagement() {
           )}
         </CardContent>
       </Card>
+
       <OrderDetailModal
         open={open}
-        onOpenChange={(value) => {
-          if (!value) handleCloseModal();
-          setOpen(value);
+        onOpenChange={(v) => {
+          if (!v) handleCloseModal();
+          else setOpen(v);
         }}
         order={selectedOrder}
       />

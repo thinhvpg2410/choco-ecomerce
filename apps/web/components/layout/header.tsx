@@ -64,7 +64,7 @@ export function Header() {
   const handleLeave = () => {
     timeoutRef.current = setTimeout(() => {
       setOpenCart(false);
-    }, 150); // delay nhỏ để không bị flick
+    }, 150);
   };
 
   useEffect(() => {

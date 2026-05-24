@@ -32,7 +32,7 @@ export class OrdersService {
     return this.createCartOrder(userId, createOrderDto);
   }
 
-  // ── Buy Now ──────────────────────────────────────────────────────────────
+  //Buy Now
   private async createBuyNowOrder(userId: string, dto: CreateOrderDto) {
     const { product_id, quantity = 1 } = dto;
 
@@ -64,7 +64,7 @@ export class OrdersService {
       const unitPrice = Number(product.salePrice ?? product.price);
       const totalAmount = unitPrice * quantity;
 
-      // --- XỬ LÝ COUPON (CHỈ LÀM 1 LẦN) ---
+      // XỬ LÝ COUPON (CHỈ LÀM 1 LẦN)
       let discountAmount = 0;
       if (dto.coupon_code) {
         const coupon = await tx.coupon.findUnique({
@@ -103,7 +103,6 @@ export class OrdersService {
         totalAmount + shippingFee - discountAmount,
       );
 
-      // Tạo cấu trúc dữ liệu Item cho Buy Now thay vì dùng orderItemsData không xác định
       const orderItemData = {
         productId: product.id,
         productNameAtTime: product.name,
@@ -128,13 +127,13 @@ export class OrdersService {
           paymentMethod: dto.payment_method,
           note: dto.note,
           paypalOrderId: dto.paypal_order_id,
-          items: { create: [orderItemData] }, // Truyền trực tiếp item dạng mảng ở đây
+          items: { create: [orderItemData] },
         },
         include: { items: true },
       });
 
       return order;
-    }); // Sửa lỗi cú pháp };); thành }); tại đây
+    });
 
     return {
       success: true,
@@ -143,7 +142,7 @@ export class OrdersService {
     };
   }
 
-  // ── Cart Order ────────────────────────────────────────────────────────────
+  //Cart Order
   private async createCartOrder(userId: string, dto: CreateOrderDto) {
     const createdOrder = await this.prisma.$transaction(async (tx) => {
       const cart = await tx.cart.findUnique({
@@ -205,7 +204,6 @@ export class OrdersService {
         });
       }
 
-      // --- XỬ LÝ COUPON (ĐÃ XÓA LOGIC LẶP PHÍA DƯỚI) ---
       let discountAmount = 0;
       if (dto.coupon_code) {
         const coupon = await tx.coupon.findUnique({
@@ -282,7 +280,6 @@ export class OrdersService {
     };
   }
 
-  // ── Các hàm phụ trợ giữ nguyên không đổi ───────────────────────────────────
   async findMyOrders(userId: string) {
     this.validateUserId(userId);
     const orders = await this.prisma.order.findMany({

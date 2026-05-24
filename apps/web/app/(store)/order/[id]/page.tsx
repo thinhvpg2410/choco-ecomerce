@@ -15,7 +15,6 @@ import {
   ChevronLeft,
   MapPin,
   Star,
-  Edit2,
   Truck,
   Receipt,
   MessageCircle,
@@ -67,7 +66,6 @@ export default function OrderDetailPage({
   const [loading, setLoading] = useState(true);
   const [myReviews, setMyReviews] = useState<Record<string, Review | null>>({});
 
-  // Modal Review
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [rating, setRating] = useState(5);
@@ -181,8 +179,6 @@ export default function OrderDetailPage({
     );
   }
 
-  // ── Tổng tiền — dùng trực tiếp fields từ backend ───────────────────────
-  // Backend đã fix: trả đúng salePrice, shippingFee theo địa chỉ, discount_amount
   const subtotal =
     order.subtotal ??
     order.items.reduce(
@@ -192,7 +188,6 @@ export default function OrderDetailPage({
   const shippingFee: number = order.shipping_fee ?? 30000;
   const discount: number = order.discount_amount ?? 0;
   const totalAmount: number = Math.max(0, subtotal + shippingFee - discount);
-  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <ProtectedRoute>
@@ -210,9 +205,9 @@ export default function OrderDetailPage({
           </h1>
         </div>
 
-        {/* Scrollable content with bottom padding for fixed button */}
+        {/* Scrollable content */}
         <div className="flex flex-col gap-2 pb-6">
-          {/* ── PHẦN 1: Giao hàng ── */}
+          {/* Giao hàng */}
           <div className="bg-white px-4 pt-4 pb-5">
             {/* Status banner */}
             <div className="flex items-center gap-2 bg-blue-50 rounded-xl px-3 py-2.5 mb-4">
@@ -244,7 +239,7 @@ export default function OrderDetailPage({
             </div>
           </div>
 
-          {/* ── PHẦN 2: Sản phẩm ── */}
+          {/* Sản phẩm */}
           <div className="bg-white px-4 pt-4 pb-5">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">
               Sản phẩm đã mua
@@ -279,7 +274,6 @@ export default function OrderDetailPage({
 
                         {/* Brand */}
                         <p className="text-[11px] text-gray-400 font-medium mb-0.5">
-                          {/* item.brand nếu có, fallback để trống */}
                           {(item as any).brand ?? ""}
                         </p>
 

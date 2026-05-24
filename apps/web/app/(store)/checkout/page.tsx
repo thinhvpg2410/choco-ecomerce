@@ -1,22 +1,17 @@
 "use client";
 
 import { useDispatch } from "react-redux";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ShoppingBag,
-  MapPin,
-  Tag,
   CreditCard,
   MessageSquare,
-  Check,
   Loader2,
-  X,
+  ChevronRight,
 } from "lucide-react";
 import Section from "@/components/checkout/Section";
 import PayOption from "@/components/checkout/PayOption";
-import SumRow from "@/components/checkout/SumRow";
 import OrderItemsSection from "@/components/checkout/OrderItemsSection";
 import AddressSection from "@/components/checkout/AddressSection";
 import VoucherSection from "@/components/checkout/VoucherSection";
@@ -25,14 +20,10 @@ import OrderSummarySection from "@/components/checkout/OrderSummarySection";
 import { getAddresses, createAddress } from "@/services/user-address.service";
 import { applyCoupon } from "@/services/coupon.service";
 import type { UserAddress } from "@/types/type";
-
-import api from "@/services/axios";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { CartItem } from "@/types/type";
-import { clearCartState } from "@/store/cartSlice";
 import {
   AddressFormModal,
   type AddressFormData,
@@ -41,7 +32,6 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function CheckoutPage() {
   const router = useRouter();
-
   const [loadingCart, setLoadingCart] = useState(true);
   const [loadingAddress, setLoadingAddress] = useState(true);
   const [items, setItems] = useState<CartItem[]>([]);
@@ -65,10 +55,8 @@ export default function CheckoutPage() {
   const [payMethod, setPayMethod] = useState<"COD" | "PayPal" | "QR_BANK">(
     "COD",
   );
-  const [qrUrl, setQrUrl] = useState("");
   const [note, setNote] = useState("");
   const [placing, setPlacing] = useState(false);
-
   const [isBuyNow, setIsBuyNow] = useState(false);
   const [buyNowProduct, setBuyNowProduct] = useState<{
     product_id: string;
@@ -80,60 +68,18 @@ export default function CheckoutPage() {
     setIsBuyNow(mode === "buy_now");
   }, []);
 
-  // PayPal Configuration
-  const paypalOptions = {
-    "client-id": process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
-    currency: "USD", // Khuyến nghị dùng USD
-    intent: "capture" as const,
-  };
-
-const goToPaymentPage = () => {
-  if (!selectedAddress) {
-    toast.error("Vui lòng chọn địa chỉ giao hàng");
-    return;
-  }
-
-  const checkoutData = {
-    items,
-    cartItemIds,
-    selectedAddress,
-    appliedVouchers,
-    note,
-    payMethod,
-    subtotal,
-    shipping: SHIPPING,
-    total,
-    isBuyNow,
-    buyNowProduct,
-  };
-
-  localStorage.setItem("pending_checkout", JSON.stringify(checkoutData));
-
-  localStorage.setItem(
-    "payment_meta",
-    JSON.stringify({
-      method: payMethod, 
-    }),
-  );
-
-  router.push("/checkout/payment");
-};
   useEffect(() => {
     const loadData = async () => {
       try {
         const data = localStorage.getItem("checkout_cart");
-
         if (data) {
           const parsed = JSON.parse(data);
-
           setCartItemIds(parsed.cart_item_ids ?? []);
-
           if (parsed.buy_now) {
             setBuyNowProduct({
               product_id: parsed.product_id,
               quantity: Number(parsed.quantity ?? 1),
             });
-
             setItems([
               {
                 id: parsed.product_id,
@@ -158,7 +104,6 @@ const goToPaymentPage = () => {
       try {
         const res = await getAddresses();
         setAddresses(res);
-
         if (res.length > 0) setSelectedAddress(res[0]);
       } finally {
         setLoadingAddress(false);
@@ -170,133 +115,72 @@ const goToPaymentPage = () => {
   }, []);
 
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
-
-  const normalizeCity = (city: string) =>
-    city
-      .trim()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "")
-      .replace(/\s+/g, " ");
-
-  const isMetroCity = (city: string) => {
-    const normalized = normalizeCity(city);
-    return ["ho chi minh", "ha noi"].some((keyword) =>
-      normalized.includes(keyword),
-    );
-  };
-
-  const getShippingFee = (address: UserAddress | null) => {
-    if (!address?.city) return 30000;
-    return isMetroCity(address.city) ? 15000 : 30000;
-  };
-
-  // const SHIPPING = getShippingFee(selectedAddress);
-  const SHIPPING = 0; 
-
+  const SHIPPING = 0;
   const totalDiscount = appliedVouchers.reduce(
     (sum, item) => sum + item.discount,
     0,
   );
-
   const total = Math.max(0, subtotal + SHIPPING - totalDiscount);
-
   const fmt = (n: number) => n.toLocaleString("vi-VN") + "đ";
-  console.log("📦 ITEMS STATE:", items);
+
   const applyVoucher = async () => {
     const code = voucherInput.trim().toUpperCase();
-
     if (!code) {
       toast.error("Vui lòng nhập mã giảm giá");
       return;
     }
-
     if (appliedVouchers.some((v) => v.code === code)) {
       toast.error("Mã giảm giá đã được sử dụng");
       return;
     }
-
     try {
-      const response = await applyCoupon({
-        code,
-        subtotal,
-      });
-
-      // 🟢 [LOG 1]: In toàn bộ dữ liệu gốc từ API trả về để kiểm tra cấu trúc
-      console.log("🎁 [Voucher API Response gốc]:", response);
-
-      // Tự động nhận diện cấu trúc dữ liệu từ các kiểu cấu hình Axios khác nhau
+      const response = await applyCoupon({ code, subtotal });
       let couponData = null;
-
-      if (response?.data?.data) {
-        // Kiểu 1: response.data = { success: true, data: { code, discount_amount... } }
-        couponData = response.data.data;
-      } else if (response?.data) {
-        // Kiểu 2: response.data là thẳng object chứa thông tin voucher { code, discount_amount... }
+      if (response?.data?.data) couponData = response.data.data;
+      else if (response?.data)
         couponData = response.data.code ? response.data : response.data;
-      } else if (response?.code) {
-        // Kiểu 3: Đã unwrap qua interceptor, response chính là object voucher { code, discount_amount... }
-        couponData = response;
-      }
+      else if (response?.code) couponData = response;
 
-      // 🟢 [LOG 2]: In ra dữ liệu sau khi code cố gắng bóc tách
-      console.log("🔍 [Dữ liệu Voucher bóc tách được]:", couponData);
-
-      // Kiểm tra nếu không tìm thấy dữ liệu voucher hoặc thiếu trường code hợp lệ
       if (!couponData || !couponData.code) {
-        const errorMsg =
+        toast.error(
           response?.message ||
-          response?.data?.message ||
-          "Mã giảm giá không hợp lệ (Sai cấu trúc dữ liệu)";
-        toast.error(errorMsg);
+            response?.data?.message ||
+            "Mã giảm giá không hợp lệ",
+        );
         return;
       }
-
       const discount = Number(couponData.discount_amount || 0);
-
       if (discount > subtotal) {
         toast.error("Giảm giá vượt quá giá trị sản phẩm");
         return;
       }
-
-      // Cập nhật State hiển thị giảm giá công khai
       setAppliedVouchers([
         {
           code: couponData.code,
-          discount: discount,
+          discount,
           finalAmount: couponData.final_amount ?? subtotal - discount,
           description: `Giảm ${discount.toLocaleString("vi-VN")}đ từ mã ${couponData.code}`,
         },
       ]);
-
       setVoucherInput("");
       toast.success(`Áp dụng mã ${couponData.code} thành công!`);
     } catch (err: any) {
-      // 🟢 [LOG 3]: In chi tiết khi API lỗi (ví dụ: lỗi mạng, lỗi 400, 500 từ server)
-      console.error("❌ [Voucher Catch Error]:", {
-        errorObject: err,
-        responseData: err?.response?.data,
-        status: err?.response?.status,
-        message: err?.message,
-      });
-
       const serverMessage = err?.response?.data?.message;
-
-      if (Array.isArray(serverMessage)) {
-        toast.error(serverMessage[0]);
-      } else {
-        toast.error(
-          serverMessage || "Không thể kết nối đến máy chủ xử lý mã giảm giá",
-        );
-      }
+      if (Array.isArray(serverMessage)) toast.error(serverMessage[0]);
+      else toast.error(serverMessage || "Không thể kết nối đến máy chủ");
     }
   };
 
   if (loadingCart || loadingAddress) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="w-6 h-6 animate-spin text-pink-500" />
+        <div className="min-h-screen flex items-center justify-center bg-[#F7F7F8]">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-7 h-7 animate-spin text-orange-500" />
+            <p className="text-sm text-gray-400 font-medium">
+              Đang tải đơn hàng...
+            </p>
+          </div>
         </div>
       </ProtectedRoute>
     );
@@ -305,25 +189,29 @@ const goToPaymentPage = () => {
   if (!items.length) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center px-4">
-          <div className="max-w-xl w-full rounded-3xl bg-white p-10 text-center shadow-lg">
-            <div className="mx-auto mb-6 h-20 w-20 rounded-full bg-rose-50 flex items-center justify-center">
-              <ShoppingBag className="w-10 h-10 text-rose-500" />
+        <div className="min-h-screen bg-[#F7F7F8] flex items-center justify-center px-4">
+          <div className="max-w-sm w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center mx-auto mb-5">
+              <ShoppingBag className="w-8 h-8 text-orange-400" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              Không có sản phẩm để thanh toán
+            <h2 className="text-lg font-bold text-gray-900">
+              Không có sản phẩm
             </h2>
-            <p className="mt-3 text-sm text-gray-500">
-              Vui lòng chọn sản phẩm trong giỏ hàng để tới trang thanh toán.
+            <p className="mt-2 text-sm text-gray-400 leading-relaxed">
+              Vui lòng chọn sản phẩm trong giỏ hàng để tiến hành thanh toán.
             </p>
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="mt-7 flex flex-col gap-2">
               <Button
                 onClick={() => router.push("/cart")}
-                className="bg-gray-900 hover:bg-gray-800 text-white"
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl h-11"
               >
                 Quay lại giỏ hàng
               </Button>
-              <Button onClick={() => router.push("/")} variant="outline">
+              <Button
+                onClick={() => router.push("/")}
+                variant="outline"
+                className="w-full rounded-xl h-11 text-gray-600"
+              >
                 Tiếp tục mua sắm
               </Button>
             </div>
@@ -335,117 +223,113 @@ const goToPaymentPage = () => {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-[#f5f5f7]">
-        <div className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-3">
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight pb-1">
-            Đặt hàng
-          </h1>
+      <div className="min-h-screen bg-[#F7F7F8]">
+        {/* ── TOP BAR ── */}
+        <div className="bg-white border-b border-gray-100 sticky top-0 z-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 flex items-center gap-2 text-xs text-gray-400">
+            <span
+              className="text-orange-500 font-semibold cursor-pointer hover:text-orange-600"
+              onClick={() => router.push("/cart")}
+            >
+              Giỏ hàng
+            </span>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span className="font-bold text-gray-800">Đặt hàng</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span>Thanh toán</span>
+          </div>
+        </div>
 
-          <OrderItemsSection items={items} subtotal={subtotal} fmt={fmt} />
-
-          {/* Địa chỉ giao hàng */}
-          <AddressSection
-            addresses={addresses}
-            selectedAddress={selectedAddress}
-            setSelectedAddress={setSelectedAddress}
-            setAddrOpen={setAddrOpen}
-          />
-
-          {/* Voucher */}
-          <VoucherSection
-            voucherInput={voucherInput}
-            setVoucherInput={setVoucherInput}
-            applyVoucher={applyVoucher}
-            appliedVouchers={appliedVouchers}
-            setAppliedVouchers={setAppliedVouchers}
-            fmt={fmt}
-          />
-
-          {/* Thanh toán */}
-          <Section
-            icon={<CreditCard className="w-4 h-4 text-blue-500" />}
-            iconBg="bg-blue-50"
-            title="Phương thức thanh toán"
-          >
-            <div className="flex flex-col gap-2">
-              <PayOption
-                selected={payMethod === "COD"}
-                onClick={() => setPayMethod("COD")}
-                iconBg="bg-orange-50"
-                icon={<ShoppingBag className="w-4 h-4 text-orange-500" />}
-                name="Thanh toán khi nhận hàng (COD)"
-                desc="Trả tiền mặt khi nhận hàng"
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
+            {/* ── LEFT COLUMN: FORM ── */}
+            <div className="space-y-4">
+              <OrderItemsSection items={items} subtotal={subtotal} fmt={fmt} />
+              <AddressSection
+                addresses={addresses}
+                selectedAddress={selectedAddress}
+                setSelectedAddress={setSelectedAddress}
+                setAddrOpen={setAddrOpen}
+              />
+              <VoucherSection
+                voucherInput={voucherInput}
+                setVoucherInput={setVoucherInput}
+                applyVoucher={applyVoucher}
+                appliedVouchers={appliedVouchers}
+                setAppliedVouchers={setAppliedVouchers}
+                fmt={fmt}
               />
 
-              <PayOption
-                selected={payMethod === "PayPal"}
-                onClick={() => setPayMethod("PayPal")}
+              {/* Payment method */}
+              <Section
+                icon={<CreditCard className="w-4 h-4 text-blue-500" />}
                 iconBg="bg-blue-50"
-                icon={<CreditCard className="w-4 h-4 text-blue-600" />}
-                name="Thanh toán qua PayPal"
-                desc="Thanh toán an toàn, nhanh chóng bằng PayPal"
-              />
+                title="Phương thức thanh toán"
+              >
+                <div className="flex flex-col gap-2">
+                  <PayOption
+                    selected={payMethod === "COD"}
+                    onClick={() => setPayMethod("COD")}
+                    iconBg="bg-orange-50"
+                    icon={<ShoppingBag className="w-4 h-4 text-orange-500" />}
+                    name="Thanh toán khi nhận hàng (COD)"
+                    desc="Trả tiền mặt khi nhận hàng"
+                  />
+                  <PayOption
+                    selected={payMethod === "PayPal"}
+                    onClick={() => setPayMethod("PayPal")}
+                    iconBg="bg-blue-50"
+                    icon={<CreditCard className="w-4 h-4 text-blue-600" />}
+                    name="Thanh toán qua PayPal"
+                    desc="Thanh toán an toàn, nhanh chóng bằng PayPal"
+                  />
+                  <PayOption
+                    selected={payMethod === "QR_BANK"}
+                    onClick={() => setPayMethod("QR_BANK")}
+                    iconBg="bg-emerald-50"
+                    icon={<CreditCard className="w-4 h-4 text-emerald-600" />}
+                    name="Chuyển khoản ngân hàng (QR)"
+                    desc="Quét QR để thanh toán nhanh"
+                  />
+                </div>
+              </Section>
 
-              <PayOption
-                selected={payMethod === "QR_BANK"}
-                onClick={() => setPayMethod("QR_BANK")}
-                iconBg="bg-emerald-50"
-                icon={<CreditCard className="w-4 h-4 text-emerald-600" />}
-                name="Chuyển khoản ngân hàng (QR Bank)"
-                desc="Quét QR để thanh toán nhanh"
-              />
+              {/* Note */}
+              <Section
+                icon={<MessageSquare className="w-4 h-4 text-gray-500" />}
+                iconBg="bg-gray-100"
+                title="Lời nhắn"
+              >
+                <Textarea
+                  placeholder="Ghi chú cho người bán (tùy chọn)..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="rounded-xl text-sm resize-none h-20 border-gray-200 focus-visible:ring-orange-400"
+                />
+              </Section>
             </div>
 
-            {payMethod === "QR_BANK" && qrUrl && (
-              <div className="bg-white rounded-2xl border p-5 mt-4">
-                <h3 className="text-center font-bold text-lg mb-4">
-                  Quét mã QR để thanh toán
-                </h3>
-
-                <img src={qrUrl} alt="QR Payment" className="w-72 mx-auto" />
-
-                <p className="text-center text-sm text-gray-500 mt-4">
-                  Hệ thống sẽ tự động xác nhận sau khi chuyển khoản
-                </p>
-              </div>
-            )}
-          </Section>
-
-          {/* Lời nhắn */}
-          <Section
-            icon={<MessageSquare className="w-4 h-4 text-green-600" />}
-            iconBg="bg-green-50"
-            title="Lời nhắn"
-          >
-            <Textarea
-              placeholder="Ghi chú cho người bán..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="rounded-xl text-sm resize-none h-20 border-gray-200 focus:border-rose-400"
-            />
-          </Section>
-
-          {/* Tổng tiền - Chỉ hiển thị khi chọn COD */}
-
-          <OrderSummarySection
-            itemsLength={items.length}
-            subtotal={subtotal}
-            SHIPPING={SHIPPING}
-            appliedVouchers={appliedVouchers}
-            total={total}
-            fmt={fmt}
-            placing={placing}
-            orderLocked={orderLocked}
-            payMethod={payMethod}
-
-            // nhóm dữ liệu để navigate
-            selectedAddress={selectedAddress}
-            items={items}
-            cartItemIds={cartItemIds}
-            note={note}
-            isBuyNow={isBuyNow}
-            buyNowProduct={buyNowProduct}
-          />
+            {/* ── RIGHT COLUMN: SUMMARY STICKY ── */}
+            <div className="lg:sticky lg:top-[60px]">
+              <OrderSummarySection
+                itemsLength={items.length}
+                subtotal={subtotal}
+                SHIPPING={SHIPPING}
+                appliedVouchers={appliedVouchers}
+                total={total}
+                fmt={fmt}
+                placing={placing}
+                orderLocked={orderLocked}
+                payMethod={payMethod}
+                selectedAddress={selectedAddress}
+                items={items}
+                cartItemIds={cartItemIds}
+                note={note}
+                isBuyNow={isBuyNow}
+                buyNowProduct={buyNowProduct}
+              />
+            </div>
+          </div>
         </div>
 
         {addrOpen && (
@@ -459,12 +343,9 @@ const goToPaymentPage = () => {
                 ward: data.ward,
                 city: data.city,
               });
-
               setAddresses((prev) => [...prev, created]);
               setSelectedAddress(created);
-
               setAddrOpen(false);
-
               toast.success("Thêm địa chỉ thành công");
             }}
             onClose={() => setAddrOpen(false)}
@@ -475,4 +356,3 @@ const goToPaymentPage = () => {
     </ProtectedRoute>
   );
 }
-

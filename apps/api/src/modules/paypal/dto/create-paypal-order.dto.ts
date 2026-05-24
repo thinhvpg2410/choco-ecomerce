@@ -1,4 +1,3 @@
-// src/modules/paypal/dto/create-paypal-order.dto.ts
 import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreatePayPalOrderDto {

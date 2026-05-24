@@ -1,18 +1,20 @@
-// services/admin.service.ts
 import api from "@/services/axios";
 import type { User, Order, Product, Coupon } from "@/types/type";
 
-// ==================== USERS ====================
+//USERS
 export const getAdminUsers = async (params: {
   page?: number;
   search?: string;
 }): Promise<any> => {
   try {
     const res = await api.get("/admin/users", { params });
-    console.log("✅ Admin users loaded:", res.data);
+    console.log("Tải danh sách người dùng thành công:", res.data);
     return res.data.data || res.data;
   } catch (error: any) {
-    console.error("❌ Get admin users error:", error?.response?.data || error);
+    console.error(
+      "Lỗi khi lấy danh sách người dùng:",
+      error?.response?.data || error,
+    );
     throw error;
   }
 };
@@ -23,15 +25,18 @@ export const toggleUserStatus = async (
 ) => {
   try {
     const res = await api.patch(`/admin/users/${userId}/status`, { status });
-    console.log("✅ Toggle status success:", res.data);
+    console.log("Cập nhật trạng thái người dùng thành công:", res.data);
     return res.data;
   } catch (error: any) {
-    console.error("❌ Toggle status error:", error?.response?.data || error);
+    console.error(
+      "Lỗi khi cập nhật trạng thái người dùng:",
+      error?.response?.data || error,
+    );
     throw error;
   }
 };
 
-// ==================== PRODUCTS ====================
+//PRODUCTS
 export const getAdminProducts = async (params: {
   page?: number;
   search?: string;
@@ -39,60 +44,62 @@ export const getAdminProducts = async (params: {
   brand_id?: string;
 }) => {
   try {
-    const res = await api.get("/admin/products", { params }); // ← sửa
-    console.log("✅ Admin products loaded:", res.data);
+    const res = await api.get("/admin/products", { params });
+    console.log("Tải danh sách sản phẩm thành công:", res.data);
     return res.data.data || res.data;
   } catch (error: any) {
     console.error(
-      "❌ Get admin products error:",
+      "Lỗi khi lấy danh sách sản phẩm:",
       error?.response?.data || error,
     );
     throw error;
   }
 };
 
-// ==================== ORDERS ====================
+//ORDERS
 export const getAdminOrders = async (params: {
   page?: number;
   search?: string;
   status?: string;
 }) => {
   try {
-    const res = await api.get("/admin/orders", { params }); // ← sửa
-    console.log("✅ Admin orders loaded:", res.data);
+    const res = await api.get("/admin/orders", { params });
+    console.log("Tải danh sách đơn hàng thành công:", res.data);
     return res.data.data || res.data;
   } catch (error: any) {
-    console.error("❌ Get admin orders error:", error?.response?.data || error);
+    console.error(
+      "Lỗi khi lấy danh sách đơn hàng:",
+      error?.response?.data || error,
+    );
     throw error;
   }
 };
 
-
-
-// ==================== STATISTICS ====================
+//STATISTICS
 export const getAdminStatistics = async (year?: number) => {
   try {
     const res = await api.get("/admin/statistics", {
       params: { year },
     });
-    console.log("✅ Statistics loaded:", res.data);
+    console.log("Tải thống kê thành công:", res.data);
     return res.data.data || res.data;
   } catch (error: any) {
-    console.error("❌ Get statistics error:", error?.response?.data || error);
+    console.error("Lỗi khi lấy thống kê:", error?.response?.data || error);
     throw error;
   }
 };
 
-// // ==================== COUPONS ====================
+//COUPONS
 export const getAdminCoupons = async (params: any) => {
   try {
-    const res = await api.get("/coupons", { params });
-
-    console.log("✅ Admin coupons loaded:", res.data);
-
-    return res.data.data || [];
+    const res = await api.get("/admin/coupons", { params });
+    console.log("Tải danh sách mã giảm giá thành công:", res.data);
+    return res.data.data?.coupons ?? res.data.data ?? [];
   } catch (error: any) {
-    console.error("❌ Get coupons error:", error?.response?.data || error);
+    console.error(
+      "Lỗi khi lấy danh sách mã giảm giá:",
+      error?.response?.data || error,
+    );
     throw error;
   }
 };
@@ -104,21 +111,21 @@ export const createCoupon = async (payload: any) => {
 
     return res.data.data || res.data;
   } catch (error: any) {
-    console.error("❌ Create coupon error:", error?.response?.data || error);
+    console.error("Lỗi khi tạo mã giảm giá:", error?.response?.data || error);
     throw error;
   }
 };
 
-export const updateCoupon = async (
-  couponId: string,
-  payload: any,
-) => {
+export const updateCoupon = async (couponId: string, payload: any) => {
   try {
     const res = await api.put(`/coupons/${couponId}`, payload);
 
     return res.data.data || res.data;
   } catch (error: any) {
-    console.error("❌ Update coupon error:", error?.response?.data || error);
+    console.error(
+      "Lỗi khi cập nhật mã giảm giá:",
+      error?.response?.data || error,
+    );
     throw error;
   }
 };
@@ -129,7 +136,7 @@ export const deleteCoupon = async (couponId: string) => {
 
     return res.data;
   } catch (error: any) {
-    console.error("❌ Delete coupon error:", error?.response?.data || error);
+    console.error("Lỗi khi xóa mã giảm giá:", error?.response?.data || error);
     throw error;
   }
 };
@@ -139,7 +146,10 @@ export const getOrderById = async (orderId: string) => {
     const res = await api.get(`/admin/orders/${orderId}`);
     return res.data.data || res.data;
   } catch (error: any) {
-    console.error("❌ Get order detail error:", error?.response?.data || error);
+    console.error(
+      "Lỗi khi lấy chi tiết đơn hàng:",
+      error?.response?.data || error,
+    );
     throw error;
   }
 };
@@ -150,12 +160,13 @@ export const updateOrderStatus = async (orderId: string, status: string) => {
     return res.data;
   } catch (error: any) {
     console.error(
-      "❌ Update order status error:",
+      "Lỗi khi cập nhật trạng thái đơn hàng:",
       error?.response?.data || error,
     );
     throw error;
   }
 };
+
 export const updateOrderPaymentStatus = async (
   orderId: string,
   paymentStatus: string,
@@ -168,7 +179,7 @@ export const updateOrderPaymentStatus = async (
     return res.data;
   } catch (error: any) {
     console.error(
-      "❌ Update payment status error:",
+      "Lỗi khi cập nhật trạng thái thanh toán:",
       error?.response?.data || error,
     );
     throw error;

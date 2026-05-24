@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-/** Matches `apps/web/types/type.ts` Payment */
 export class PaymentDataDto {
   @ApiProperty()
   id: string;

@@ -68,7 +68,7 @@ export class UsersController {
     };
   }
 
-  // ==================== CHỈ ADMIN MỚI ĐƯỢC XÓA USER ====================
+  //CHỈ ADMIN MỚI ĐƯỢC XÓA USER
   @Delete(':id')
   @ApiOperation({ summary: 'Admin xóa user (set status = inactive)' })
   async deleteUserByAdmin(@Param('id') id: string) {

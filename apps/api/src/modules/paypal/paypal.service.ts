@@ -13,7 +13,7 @@ export class PayPalService {
   constructor(private configService: ConfigService) {
     this.clientId = this.configService.get<string>('PAYPAL_CLIENT_ID')!;
     this.secret = this.configService.get<string>('PAYPAL_SECRET')!;
-    this.baseUrl = 'https://api.sandbox.paypal.com'; // Sandbox
+    this.baseUrl = 'https://api.sandbox.paypal.com';
   }
 
   private async getAccessToken(): Promise<string> {
@@ -71,11 +71,11 @@ export class PayPalService {
         },
       );
 
-      console.log('✅ Tạo đơn hàng PayPal thành công: ', data.id);
+      console.log('Tạo đơn hàng PayPal thành công: ', data.id);
       return data;
     } catch (error: any) {
       console.error(
-        '❌ Lỗi API PayPal:',
+        'Lỗi API PayPal:',
         error.response?.data || error.message,
       );
       throw new Error(error.response?.data?.message || error.message);
@@ -98,7 +98,7 @@ export class PayPalService {
 
       return data;
     } catch (error: any) {
-      console.error('❌ Lỗi Capture:', error.response?.data || error.message);
+      console.error('Lỗi Capture:', error.response?.data || error.message);
 
       throw new Error(error.response?.data?.message || error.message);
     }

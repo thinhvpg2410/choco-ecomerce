@@ -349,7 +349,6 @@ export class ProductsService {
       ...(query.is_new !== undefined && { isNew: Boolean(query.is_new) }),
     };
 
-    // Build price filters to use salePrice when available, otherwise fallback to price
     const where: Prisma.ProductWhereInput = { ...whereBase };
 
     if (minPrice !== undefined) {
@@ -557,7 +556,6 @@ export class ProductsService {
       stock: product.stock,
       image_url: product.imageUrl,
 
-      // ← Phần ảnh đồng bộ từ productImages
       product_images: product.productImages.map((img) => ({
         id: img.id,
         product_id: product.id,

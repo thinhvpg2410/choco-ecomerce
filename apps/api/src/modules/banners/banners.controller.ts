@@ -1,4 +1,3 @@
-// src/modules/banners/banners.controller.ts
 import {
   Body,
   Controller,

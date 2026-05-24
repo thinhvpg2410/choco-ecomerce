@@ -1,24 +1,15 @@
 "use client";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-  FieldSeparator,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { useDispatch } from "react-redux";
 import { login } from "@/store/authSlice";
-import {  fetchCart } from "@/store/cartSlice";
+import { fetchCart } from "@/store/cartSlice";
 import { setAccessToken } from "@/services/axios";
 import { authLogin } from "@/services/auth.service";
 import { useState } from "react";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
@@ -35,6 +26,7 @@ export function LoginForm({
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [e.target.id]: e.target.value }));
@@ -42,7 +34,6 @@ export function LoginForm({
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const result = loginSchema.safeParse(form);
     if (!result.success) {
       setErrors(result.error.flatten().fieldErrors);
@@ -50,24 +41,17 @@ export function LoginForm({
     }
     setErrors({});
     setLoading(true);
-
     try {
       const guestCart = JSON.parse(localStorage.getItem("cart") || "[]");
       const { accessToken, user } = await authLogin({ ...form, guestCart });
-
       if (user.role !== "user") {
         toast.error("Trang này chỉ dành cho khách hàng");
         return;
       }
-
       setAccessToken(accessToken);
-
       dispatch(login(user));
-
       await dispatch(fetchCart() as any);
-
       toast.success(`Chào mừng ${user.username} quay trở lại!`);
-
       router.replace("/");
       router.refresh();
     } catch (err: any) {
@@ -78,90 +62,167 @@ export function LoginForm({
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="overflow-hidden p-0">
-        <CardContent className="grid p-0 md:grid-cols-2">
-          <form onSubmit={handleLogin} className="p-6 md:p-8">
-            <FieldGroup>
-              <div className="flex flex-col items-center gap-2 text-center">
-                <h1 className="text-2xl font-bold">Chào mừng bạn trở lại</h1>
-                <p className="text-balance text-muted-foreground">
-                  Đăng nhập vào tài khoản của bạn
-                </p>
+    <div className={cn("w-full", className)} {...props}>
+      <div className="min-h-screen flex bg-white">
+        {/* ── Hình bên trái ── */}
+        <div className="hidden lg:block relative w-[480px] flex-shrink-0 overflow-hidden">
+          <img
+            src="/image/login.jpg"
+            alt="Choco Kingdom"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-amber-900/60 via-transparent to-transparent" />
+
+          
+        </div>
+
+        {/* ── Form bên phải ── */}
+        <div className="flex-1 flex items-center justify-center px-6 py-12 bg-stone-50">
+          <div className="w-full max-w-[400px]">
+            
+
+            {/* Heading */}
+            <div className="mb-8">
+              <h1 className="text-[28px] font-black text-stone-900 tracking-tight leading-tight">
+                Chào mừng
+                <br />
+                <span className="text-amber-600">quay trở lại!</span>
+              </h1>
+              <p className="mt-2 text-sm text-stone-500">
+                Đăng nhập để tiếp tục mua sắm nhé
+              </p>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleLogin} className="space-y-4">
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label
+                  className="text-sm font-semibold text-stone-700"
+                  htmlFor="email"
+                >
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="ban@example.com"
+                    value={form.email}
+                    onChange={handleChange}
+                    className={cn(
+                      "w-full h-11 pl-10 pr-4 rounded-xl border text-sm text-stone-900 placeholder:text-stone-400 bg-white outline-none transition-all",
+                      "focus:border-amber-400 focus:ring-2 focus:ring-amber-100",
+                      errors.email
+                        ? "border-red-300 bg-red-50"
+                        : "border-stone-200 hover:border-stone-300",
+                    )}
+                  />
+                </div>
+                {errors.email && (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <span>⚠</span> {errors.email[0]}
+                  </p>
+                )}
               </div>
 
-              <Field>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input
-                  id="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange}
-                />
-                {errors.email && (
-                  <p className="text-red-500 text-xs">{errors.email[0]}</p>
-                )}
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="password">Mật khẩu</FieldLabel>
-                <Input
-                  id="password"
-                  type="password"
-                  value={form.password}
-                  onChange={handleChange}
-                />
+              {/* Password */}
+              <div className="space-y-1.5">
+                <label
+                  className="text-sm font-semibold text-stone-700"
+                  htmlFor="password"
+                >
+                  Mật khẩu
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={handleChange}
+                    className={cn(
+                      "w-full h-11 pl-10 pr-11 rounded-xl border text-sm text-stone-900 placeholder:text-stone-400 bg-white outline-none transition-all",
+                      "focus:border-amber-400 focus:ring-2 focus:ring-amber-100",
+                      errors.password
+                        ? "border-red-300 bg-red-50"
+                        : "border-stone-200 hover:border-stone-300",
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
                 {errors.password && (
-                  <p className="text-red-500 text-xs">{errors.password[0]}</p>
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <span>⚠</span> {errors.password[0]}
+                  </p>
                 )}
-              </Field>
+              </div>
 
-              <Field>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Đang đăng nhập..." : "Đăng nhập"}
-                </Button>
-              </Field>
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 mt-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 shadow-md shadow-amber-200 hover:shadow-amber-300 active:scale-[0.98]"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Đang đăng nhập...
+                  </>
+                ) : (
+                  <>
+                    Đăng nhập
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
 
-              {/* <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
-                Hoặc tiếp tục với
-              </FieldSeparator>
+            {/* Divider */}
+            <div className="my-6 flex items-center gap-3">
+              <div className="flex-1 h-px bg-stone-200" />
+              <span className="text-xs text-stone-400 font-medium">hoặc</span>
+              <div className="flex-1 h-px bg-stone-200" />
+            </div>
 
-              <Field className="grid grid-cols-1 gap-4">
-                <Button variant="outline" type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" fill="currentColor"/>
-                  </svg>
-                  <span className="sr-only">Login with Google</span>
-                </Button>
-              </Field> */}
+            {/* Register link */}
+            <p className="text-center text-sm text-stone-500">
+              Chưa có tài khoản?{" "}
+              <a
+                href="/auth/register"
+                className="font-semibold text-amber-600 hover:text-amber-700 underline underline-offset-2"
+              >
+                Đăng ký ngay
+              </a>
+            </p>
 
-              <FieldDescription className="text-center">
-                Chưa có tài khoản? <a href="/auth/register">Đăng ký</a>
-              </FieldDescription>
-            </FieldGroup>
-          </form>
-
-          <div className="relative hidden bg-muted md:block">
-            <img
-              src="/image/login.jpg"
-              alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-            />
+            {/* ToS */}
+            <p className="mt-6 text-center text-[11px] text-stone-400 leading-relaxed">
+              Bằng việc đăng nhập, bạn đồng ý với{" "}
+              <a href="#" className="underline hover:text-stone-600">
+                Điều khoản dịch vụ
+              </a>{" "}
+              và{" "}
+              <a href="#" className="underline hover:text-stone-600">
+                Chính sách bảo mật
+              </a>
+            </p>
           </div>
-        </CardContent>
-      </Card>
-
-      <FieldDescription className="px-6 text-center">
-        Bằng việc đăng nhập, bạn đồng ý với{" "}
-        <a href="#" className="underline">
-          Điều khoản dịch vụ
-        </a>{" "}
-        và{" "}
-        <a href="#" className="underline">
-          Chính sách bảo mật
-        </a>
-        .
-      </FieldDescription>
+        </div>
+      </div>
     </div>
   );
 }

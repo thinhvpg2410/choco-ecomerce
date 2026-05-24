@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,11 +52,63 @@ const defaultForm = {
   is_active: true,
 };
 
+type FilterTab = "ALL" | "ACTIVE" | "INACTIVE" | "EXPIRED";
+
+const TAB_CONFIG: {
+  key: FilterTab;
+  label: string;
+  color: string;
+  activeBg: string;
+  activeBorder: string;
+}[] = [
+  {
+    key: "ALL",
+    label: "Tất cả",
+    color: "text-foreground",
+    activeBg: "bg-foreground",
+    activeBorder: "border-foreground",
+  },
+  {
+    key: "ACTIVE",
+    label: "Đang hoạt động",
+    color: "text-emerald-600",
+    activeBg: "bg-emerald-500",
+    activeBorder: "border-emerald-500",
+  },
+  {
+    key: "INACTIVE",
+    label: "Vô hiệu",
+    color: "text-slate-500",
+    activeBg: "bg-slate-500",
+    activeBorder: "border-slate-500",
+  },
+  {
+    key: "EXPIRED",
+    label: "Hết hạn / Hết lượt",
+    color: "text-rose-500",
+    activeBg: "bg-rose-500",
+    activeBorder: "border-rose-500",
+  },
+];
+
+/** Kiểm tra coupon có "hết hạn sử dụng" không (hết ngày HOẶC hết lượt) */
+const isCouponExpired = (c: Coupon) => {
+  const dateExpired = c.expiration_date
+    ? new Date(c.expiration_date) < new Date(new Date().toDateString())
+    : false;
+  const usageExpired =
+    c.max_uses !== undefined && c.current_uses !== undefined
+      ? c.current_uses >= c.max_uses
+      : false;
+  return dateExpired || usageExpired;
+};
+
 export function CouponsManagement() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<FilterTab>("ALL");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [formData, setFormData] = useState(defaultForm);
@@ -65,54 +117,55 @@ export function CouponsManagement() {
     loadCoupons();
   }, []);
 
-  const mapCoupon = (coupon: any): Coupon => ({
-    id: coupon.id,
+  const normalizeCouponType = (
+    raw: string,
+  ): "PERCENT" | "FIXED" | "FREE_SHIP" => {
+    const v = (raw ?? "").toUpperCase().trim();
+    if (v === "PERCENT" || v === "PERCENTAGE") return "PERCENT";
+    if (v === "FIXED" || v === "AMOUNT") return "FIXED";
+    if (v === "FREE_SHIP" || v === "FREESHIP" || v === "FREE_SHIPPING")
+      return "FREE_SHIP";
+    // fallback an toàn
+    return "PERCENT";
+  };
 
-    code: coupon.code,
-
-    coupon_type: coupon.type,
-
-    discount_percent:
-      coupon.type === "PERCENT" ? Number(coupon.value) : undefined,
-
-    discount_amount: coupon.type === "FIXED" ? Number(coupon.value) : undefined,
-
-    min_order_amount: Number(coupon.minOrderAmount) || 0,
-
-    expiration_date: coupon.expiresAt ? coupon.expiresAt.split("T")[0] : "",
-
-    is_active: coupon.isActive,
-
-    max_uses: coupon.usageLimit ?? undefined,
-
-    current_uses: coupon.usedCount ?? 0,
-  });
+  const mapCoupon = (coupon: any): Coupon => {
+    const type = normalizeCouponType(coupon.couponType ?? coupon.type ?? "");
+    return {
+      id: coupon.id,
+      code: coupon.code,
+      coupon_type: type,
+      discount_percent:
+        type === "PERCENT"
+          ? Number(coupon.discountPercent ?? coupon.value ?? 0)
+          : undefined,
+      discount_amount:
+        type === "FIXED"
+          ? Number(coupon.discountAmount ?? coupon.value ?? 0)
+          : undefined,
+      min_order_amount: Number(coupon.minOrderAmount ?? 0),
+      expiration_date: (coupon.expiryDate ?? coupon.expiresAt ?? "").split(
+        "T",
+      )[0],
+      is_active: coupon.isActive ?? false,
+      max_uses: coupon.usageLimit ?? undefined,
+      current_uses: coupon.usedCount ?? 0,
+    };
+  };
 
   const loadCoupons = async () => {
     setLoading(true);
-
     try {
-      const data = await getAdminCoupons({
-        page: 1,
-      });
-
-      console.log("RAW:", data);
-
-      const mapped = (data || []).map(mapCoupon);
-
-      console.log("MAPPED:", mapped);
-
-      setCoupons(mapped);
+      const data = await getAdminCoupons({ page: 1 });
+      setCoupons((data || []).map(mapCoupon));
     } catch (error) {
-      console.error(error);
-
       toast.error("Không thể tải danh sách coupon");
-
       setCoupons([]);
     } finally {
       setLoading(false);
     }
   };
+
   const handleAdd = () => {
     setEditingCoupon(null);
     setFormData(defaultForm);
@@ -136,30 +189,25 @@ export function CouponsManagement() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Xóa mã giảm giá này?")) return;
-
     try {
       await deleteCoupon(id);
       toast.success("Đã xóa mã giảm giá");
       loadCoupons();
     } catch (error: any) {
-      console.error(error);
       toast.error(error?.response?.data?.message || "Không thể xóa coupon");
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!formData.code.trim()) {
       toast.error("Vui lòng nhập mã coupon");
       return;
     }
-
     if (formData.coupon_type === "PERCENT" && !formData.discount_percent) {
       toast.error("Vui lòng nhập phần trăm giảm giá");
       return;
     }
-
     if (formData.coupon_type === "FIXED" && !formData.discount_amount) {
       toast.error("Vui lòng nhập số tiền giảm giá");
       return;
@@ -172,8 +220,8 @@ export function CouponsManagement() {
         formData.coupon_type === "PERCENT"
           ? Number(formData.discount_percent || 0)
           : formData.coupon_type === "FIXED"
-          ? Number(formData.discount_amount || 0)
-          : 0,
+            ? Number(formData.discount_amount || 0)
+            : 0,
       min_order_amount: Number(formData.min_order_amount) || 0,
       expires_at: formData.expiration_date || null,
       usage_limit: formData.max_uses ? Number(formData.max_uses) : null,
@@ -192,34 +240,96 @@ export function CouponsManagement() {
       loadCoupons();
       setIsDialogOpen(false);
     } catch (error: any) {
-      console.error(error);
       toast.error(error?.response?.data?.message || "Có lỗi xảy ra khi lưu");
     } finally {
       setSaving(false);
     }
   };
 
-  const filtered = coupons.filter((c) =>
-    c.code.toLowerCase().includes(search.toLowerCase()),
+  // ── Counts for tabs ──
+  const counts = useMemo(
+    () => ({
+      ALL: coupons.length,
+      ACTIVE: coupons.filter((c) => c.is_active && !isCouponExpired(c)).length,
+      INACTIVE: coupons.filter((c) => !c.is_active && !isCouponExpired(c))
+        .length,
+      EXPIRED: coupons.filter(isCouponExpired).length,
+    }),
+    [coupons],
   );
+
+  // ── Filter + sort (expired → bottom) ──
+  const filtered = useMemo(() => {
+    const byTab = coupons.filter((c) => {
+      const expired = isCouponExpired(c);
+      if (activeTab === "ACTIVE") return c.is_active && !expired;
+      if (activeTab === "INACTIVE") return !c.is_active && !expired;
+      if (activeTab === "EXPIRED") return expired;
+      // ALL: search only
+      return true;
+    });
+
+    const bySearch = byTab.filter((c) =>
+      c.code.toLowerCase().includes(search.toLowerCase()),
+    );
+
+    // Sort: non-expired first, expired last
+    return [...bySearch].sort((a, b) => {
+      const ea = isCouponExpired(a) ? 1 : 0;
+      const eb = isCouponExpired(b) ? 1 : 0;
+      return ea - eb;
+    });
+  }, [coupons, activeTab, search]);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Mã Giảm Giá</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Mã Giảm Giá</h2>
           <p className="text-muted-foreground text-sm mt-0.5">
             Quản lý các coupon khuyến mãi
           </p>
         </div>
-        <Button onClick={handleAdd} className="gap-2">
+        <Button onClick={handleAdd} className="gap-2 self-start sm:self-auto">
           <Plus className="w-4 h-4" />
           Tạo mã mới
         </Button>
       </div>
 
-      {/* Search */}
+      {/* ── Filter Tabs ── */}
+      <div className="flex flex-wrap gap-2">
+        {TAB_CONFIG.map((tab) => {
+          const active = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`
+                inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+                border transition-all duration-150
+                ${
+                  active
+                    ? `${tab.activeBg} text-white ${tab.activeBorder} shadow-sm`
+                    : `bg-background border-border ${tab.color} hover:bg-muted`
+                }
+              `}
+            >
+              {tab.label}
+              <span
+                className={`
+                  text-xs px-1.5 py-0.5 rounded-full font-bold
+                  ${active ? "bg-white/20" : "bg-muted text-muted-foreground"}
+                `}
+              >
+                {counts[tab.key]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Search ── */}
       <div className="relative max-w-xs">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -230,26 +340,8 @@ export function CouponsManagement() {
         />
       </div>
 
-      {/* Stats */}
-      <div className="flex gap-4 text-sm text-muted-foreground">
-        <span>
-          Tổng: <strong className="text-foreground">{coupons.length}</strong>
-        </span>
-        <span>
-          Đang hoạt động:{" "}
-          <strong className="text-green-600">
-            {coupons.filter((c) => c.is_active).length}
-          </strong>
-        </span>
-        <span>
-          Vô hiệu:{" "}
-          <strong className="text-red-500">
-            {coupons.filter((c) => !c.is_active).length}
-          </strong>
-        </span>
-      </div>
-
-      {/* Coupon grid */}
+      {/* ── Coupon Grid ── */}
+      {/* ── Coupon Grid ── */}
       {loading ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
@@ -261,31 +353,165 @@ export function CouponsManagement() {
           Không tìm thấy mã nào
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((c) => (
-            <div key={c.id} className="relative group">
-              <CouponCard {...c} />
-              {/* Admin action buttons on hover */}
-              <div className="absolute top-3 right-3 hidden group-hover:flex gap-1.5 z-10">
-                <button
-                  onClick={() => handleEdit(c)}
-                  className="p-1.5 rounded-lg bg-background/90 backdrop-blur border border-border shadow-sm hover:bg-muted transition-colors"
+        <div className="space-y-8">
+          {(() => {
+            const valid = filtered.filter(
+              (c) => !isCouponExpired(c) && c.is_active,
+            );
+            const inactive = filtered.filter(
+              (c) => !isCouponExpired(c) && !c.is_active,
+            );
+            const expired = filtered.filter((c) => isCouponExpired(c));
+
+            const SectionHeader = ({
+              dot,
+              label,
+              count,
+              dotColor,
+              labelColor,
+              lineColor,
+              badgeBg,
+              badgeText,
+            }: {
+              dot: string;
+              label: string;
+              count: number;
+              dotColor: string;
+              labelColor: string;
+              lineColor: string;
+              badgeBg: string;
+              badgeText: string;
+            }) => (
+              <div className="flex items-center gap-3 mb-4">
+                <span
+                  className={`flex items-center gap-1.5 text-sm font-semibold ${labelColor}`}
                 >
-                  <Pencil className="h-3.5 w-3.5 text-foreground" />
-                </button>
-                <button
-                  onClick={() => handleDelete(c.id)}
-                  className="p-1.5 rounded-lg bg-background/90 backdrop-blur border border-border shadow-sm hover:bg-red-50 hover:border-red-200 transition-colors"
-                >
-                  <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                </button>
+                  <span
+                    className={`w-2 h-2 rounded-full inline-block ${dotColor}`}
+                  />
+                  {label}
+                  <span
+                    className={`ml-1 text-xs font-bold px-1.5 py-0.5 rounded-full ${badgeBg} ${badgeText}`}
+                  >
+                    {count}
+                  </span>
+                </span>
+                <div className={`flex-1 h-px ${lineColor}`} />
               </div>
-            </div>
-          ))}
+            );
+
+            const CardGrid = ({
+              list,
+              isExpired = false,
+              isInactive = false,
+            }: {
+              list: Coupon[];
+              isExpired?: boolean;
+              isInactive?: boolean;
+            }) => (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {list.map((c) => (
+                  <div
+                    key={c.id}
+                    className={`relative group transition-all duration-200 ${
+                      isExpired || isInactive ? "opacity-50 grayscale" : ""
+                    }`}
+                  >
+                    {isExpired && (
+                      <div className="absolute top-3 left-3 z-10 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-700 text-slate-200 uppercase tracking-wider">
+                        Hết hạn
+                      </div>
+                    )}
+                    {isInactive && (
+                      <div className="absolute top-3 left-3 z-10 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-500 text-slate-100 uppercase tracking-wider">
+                        Vô hiệu
+                      </div>
+                    )}
+                    <CouponCard {...c} />
+                    <div className="absolute top-3 right-3 hidden group-hover:flex gap-1.5 z-10">
+                      <button
+                        onClick={() => handleEdit(c)}
+                        className="p-1.5 rounded-lg bg-background/90 backdrop-blur border border-border shadow-sm hover:bg-muted transition-colors"
+                      >
+                        <Pencil className="h-3.5 w-3.5 text-foreground" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        className="p-1.5 rounded-lg bg-background/90 backdrop-blur border border-border shadow-sm hover:bg-red-50 hover:border-red-200 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+
+            return (
+              <>
+                {/* Section 1 — Đang hoạt động */}
+                {valid.length > 0 && (
+                  <div>
+                    {activeTab === "ALL" && (
+                      <SectionHeader
+                        dot=""
+                        label="Đang sử dụng được"
+                        count={valid.length}
+                        dotColor="bg-emerald-500"
+                        labelColor="text-emerald-600"
+                        lineColor="bg-emerald-100"
+                        badgeBg="bg-emerald-100"
+                        badgeText="text-emerald-700"
+                      />
+                    )}
+                    <CardGrid list={valid} />
+                  </div>
+                )}
+
+                {/* Section 2 — Vô hiệu (inactive, chưa hết hạn) */}
+                {inactive.length > 0 && (
+                  <div>
+                    {activeTab === "ALL" && (
+                      <SectionHeader
+                        dot=""
+                        label="Đã vô hiệu hóa"
+                        count={inactive.length}
+                        dotColor="bg-slate-400"
+                        labelColor="text-slate-500"
+                        lineColor="bg-slate-200"
+                        badgeBg="bg-slate-100"
+                        badgeText="text-slate-500"
+                      />
+                    )}
+                    <CardGrid list={inactive} isInactive />
+                  </div>
+                )}
+
+                {/* Section 3 — Hết hạn */}
+                {expired.length > 0 && (
+                  <div>
+                    {activeTab === "ALL" && (
+                      <SectionHeader
+                        dot=""
+                        label="Hết hạn / Hết lượt"
+                        count={expired.length}
+                        dotColor="bg-rose-400"
+                        labelColor="text-rose-500"
+                        lineColor="bg-rose-100"
+                        badgeBg="bg-rose-100"
+                        badgeText="text-rose-600"
+                      />
+                    )}
+                    <CardGrid list={expired} isExpired />
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
 
-      {/* Dialog */}
+      {/* ── Dialog ── */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -357,7 +583,7 @@ export function CouponsManagement() {
                 <Input
                   type="number"
                   min={1}
-                  placeholder="VD: 10"
+                  placeholder="VD: 50000"
                   value={formData.discount_amount}
                   onChange={(e) =>
                     setFormData({
@@ -408,7 +634,7 @@ export function CouponsManagement() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between py-1">
               <Label>Kích hoạt ngay</Label>
               <button
                 type="button"
@@ -436,8 +662,8 @@ export function CouponsManagement() {
               >
                 Hủy
               </Button>
-              <Button type="submit" className="flex-1">
-                {editingCoupon ? "Cập nhật" : "Tạo mã"}
+              <Button type="submit" className="flex-1" disabled={saving}>
+                {saving ? "Đang lưu..." : editingCoupon ? "Cập nhật" : "Tạo mã"}
               </Button>
             </div>
           </form>

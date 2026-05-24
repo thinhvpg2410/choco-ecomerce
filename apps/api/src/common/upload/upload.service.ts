@@ -27,7 +27,7 @@ export class UploadService {
             return reject(error || new Error('Upload failed'));
           }
 
-          resolve(result.secure_url); // ✅ string
+          resolve(result.secure_url);
         },
       );
 

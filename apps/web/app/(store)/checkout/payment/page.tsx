@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Loader2,
@@ -13,6 +13,9 @@ import {
   QrCode,
   CreditCard,
   ExternalLink,
+  ChevronRight,
+  Shield,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createOrder } from "@/services/order.service";
@@ -21,10 +24,9 @@ import api from "@/services/axios";
 import { fetchCart } from "@/store/cartSlice";
 import { Button } from "@/components/ui/button";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
-import { useRef } from "react";
 import { useDispatch } from "react-redux";
-import { clearCartState } from "@/store/cartSlice";
-
+import { clearCartState, restoreCartState } from "@/store/cartSlice";
+ 
 export default function PaymentPage() {
   const router = useRouter();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -32,36 +34,58 @@ export default function PaymentPage() {
   const [checkoutData, setCheckoutData] = useState<any>(null);
   const [placing, setPlacing] = useState(false);
   const [qrUrl, setQrUrl] = useState("");
-
   const [checkingPayment, setCheckingPayment] = useState(false);
-
-  // Trạng thái xử lý giao diện thành công sau khi quét mã/Thanh toán
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState("");
   const [verifyingQR, setVerifyingQR] = useState(false);
-
+  const [timeLeft, setTimeLeft] = useState(120);
+  const [countdownActive, setCountdownActive] = useState(false);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const createdRef = useRef(false);
   const dispatch = useDispatch();
+  const formatTime = (s: number) =>
+    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+  const startCountdown = () => {
+    setTimeLeft(120);
+    setCountdownActive(true); // ← thêm
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    countdownRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current!);
+          handleTimeout();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleTimeout = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setCountdownActive(false);
+    toast.error("Hết thời gian thanh toán. Vui lòng thử lại.");
+    localStorage.removeItem("pending_checkout");
+    localStorage.removeItem("payment_meta");
+    router.push("/checkout");
+  };
 
   useEffect(() => {
     const raw = localStorage.getItem("pending_checkout");
-
     if (!raw) {
       router.push("/checkout");
       return;
     }
-
-    const data = JSON.parse(raw);
-
-    setCheckoutData(data);
+    setCheckoutData(JSON.parse(raw));
     setLoading(false);
   }, []);
+
   useEffect(() => {
     if (!checkoutData) return;
     if (createdRef.current) return;
-
     createdRef.current = true;
-
     if (
       checkoutData.payMethod === "QR_BANK" ||
       checkoutData.payMethod === "COD"
@@ -73,60 +97,50 @@ export default function PaymentPage() {
   useEffect(() => {
     const meta = localStorage.getItem("payment_meta");
     if (!meta) return;
-
     const parsed = JSON.parse(meta);
     if (parsed.method === "PayPal" && parsed.paypalOrderId) {
-      // Chỉ xử lý PayPal từ meta
       handleCreateOrder(parsed.paypalOrderId);
     }
   }, [checkoutData]);
 
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
+      }
+      setCheckingPayment(false);
+    };
+  }, []);
+
   const startCheckingPayment = (orderId: string) => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
+    if (intervalRef.current) clearInterval(intervalRef.current);
     setCheckingPayment(true);
-
+    startCountdown();
     intervalRef.current = setInterval(async () => {
       try {
         const res = await api.get(`/sepay/payment/${orderId}`);
         const status = res.data?.paymentStatus;
-
         if (status === "PAID") {
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-          }
-
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
           setCheckingPayment(false);
-
-          // 1. tạo payment record (KHÔNG tạo order lại)
-          await createPayment({
-            order_id: orderId,
-            payment_method: "QR_BANK",
-          });
-
-          // 2. clear storage
+          await createPayment({ order_id: orderId, payment_method: "QR_BANK" });
           localStorage.removeItem("pending_checkout");
           localStorage.removeItem("checkout_cart");
           localStorage.removeItem("payment_meta");
-
           dispatch(clearCartState());
           dispatch(fetchCart() as any);
-
-          // 3. success cuối cùng
           setIsSuccess(true);
-
           toast.success("Thanh toán thành công!");
         }
-
         if (status === "FAILED") {
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-          }
-
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
           setCheckingPayment(false);
           toast.error("Thanh toán thất bại!");
           router.push("/checkout");
@@ -144,17 +158,14 @@ export default function PaymentPage() {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-
       setCheckingPayment(false);
     };
   }, []);
 
   const handleCreateOrder = async (transactionCode?: string) => {
     if (!checkoutData || placing) return;
-
     try {
       setPlacing(true);
-
       const addr = checkoutData.selectedAddress;
       const payload: any = {
         receiver_name: addr.receiverName || addr.receiver_name,
@@ -166,24 +177,15 @@ export default function PaymentPage() {
         buy_now: checkoutData.isBuyNow || false,
         coupon_code: checkoutData.appliedVouchers?.[0]?.code || null,
       };
-
       if (checkoutData.isBuyNow) {
         payload.product_id = checkoutData.buyNowProduct.product_id;
         payload.quantity = checkoutData.buyNowProduct.quantity;
       }
-
       const order = await createOrder(payload);
       setCreatedOrderId(order.id);
 
-      await createPayment({
-        order_id: order.id,
-        payment_method: checkoutData.payMethod,
-        transaction_code: transactionCode,
-      });
-
       if (checkoutData.payMethod === "QR_BANK") {
         const paymentRes = await createPayment({
-          // Lấy QR
           order_id: order.id,
           payment_method: "QR_BANK",
         });
@@ -192,7 +194,11 @@ export default function PaymentPage() {
         return;
       }
 
-      // COD & PayPal → Thành công ngay
+      await createPayment({
+        order_id: order.id,
+        payment_method: checkoutData.payMethod,
+        transaction_code: transactionCode,
+      });
       handlePaymentSuccess(order.id);
     } catch (err: any) {
       console.error(err);
@@ -204,46 +210,53 @@ export default function PaymentPage() {
   };
 
   const handlePaymentSuccess = (orderId: string) => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setCountdownActive(false);
     setCheckingPayment(false);
-
     dispatch(clearCartState());
     dispatch(fetchCart() as any);
-
     localStorage.removeItem("pending_checkout");
     localStorage.removeItem("checkout_cart");
     localStorage.removeItem("payment_meta");
-
+    localStorage.removeItem("cart_backup"); 
     setIsSuccess(true);
     setCreatedOrderId(orderId);
     toast.success("Thanh toán thành công!");
   };
 
   const handleCancelPayment = () => {
-    // Dừng polling nếu đang chạy
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
     setCheckingPayment(false);
+    setCountdownActive(false);
 
     if (
       confirm("Bạn có chắc chắn muốn hủy quá trình thanh toán này và quay lại?")
     ) {
-      // ✅ CHỈ xóa dữ liệu tạm, KHÔNG xóa giỏ hàng
       localStorage.removeItem("pending_checkout");
       localStorage.removeItem("payment_meta");
-      // KHÔNG gọi clearCartState() ở đây
 
-      router.push("/checkout");
+      const backup = localStorage.getItem("cart_backup");
+      if (backup) {
+        const items = JSON.parse(backup);
+        dispatch(restoreCartState(items)); 
+      }
+
+      router.push("/cart");
     }
   };
 
   if (loading || !checkoutData) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f5f5f7] gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
-        <p className="text-sm font-medium text-gray-500">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F7F8] gap-3">
+        <Loader2 className="w-7 h-7 animate-spin text-orange-500" />
+        <p className="text-sm text-gray-400 font-medium">
           Đang tải thông tin thanh toán...
         </p>
       </div>
@@ -262,63 +275,68 @@ export default function PaymentPage() {
   const totalDiscount =
     appliedVouchers?.reduce((sum: number, v: any) => sum + v.discount, 0) || 0;
   const fmt = (n: number) => n.toLocaleString("vi-VN") + "đ";
-
   const paypalClientId =
     process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ||
     "ASFKGN8SnTQC9y2NLY2uY1Y3x28pKrY2V8Z4iqDAWYMaQPXmBFhkYrpXShl4JNbEYGRlUruBdjWi2ryl";
 
-  // ==================== INTERFACE 1: THANH TOÁN THÀNH CÔNG ====================
+  /* ── SUCCESS SCREEN ── */
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center px-4 py-12">
-        <div className="max-w-md w-full bg-white rounded-[32px] p-8 text-center shadow-xl border border-gray-100 transform transition-all animate-in fade-in zoom-in-95 duration-300">
-          <div className="mx-auto mb-5 h-20 w-20 rounded-full bg-emerald-50 flex items-center justify-center scale-in">
-            <CheckCircle2 className="w-12 h-12 text-emerald-500" />
+      <div className="min-h-screen bg-[#F7F7F8] flex items-center justify-center px-4 py-12">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+          {/* Icon */}
+          <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 className="w-11 h-11 text-emerald-500" />
           </div>
-          <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+          <h2
+            className="text-2xl font-black text-gray-900 tracking-tight"
+            style={{ letterSpacing: "-0.03em" }}
+          >
             Đặt hàng thành công!
           </h2>
-          <p className="mt-2 text-sm text-gray-500 px-2">
-            Cảm ơn bạn đã mua sắm tại Choco Kingdom. Đơn hàng của bạn đã được
-            ghi nhận và đang chuẩn bị xử lý.
+          <p className="mt-2.5 text-sm text-gray-400 leading-relaxed px-4">
+            Cảm ơn bạn đã tin tưởng Choco Kingdom. Đơn hàng của bạn đã được ghi
+            nhận.
           </p>
 
-          <div className="mt-6 p-4 rounded-2xl bg-gray-50 border border-gray-100 text-left space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Mã đơn hàng:</span>
-              <span className="font-bold text-gray-900">
-                #{createdOrderId || "N/A"}
+          {/* Order info */}
+          <div className="mt-6 p-4 rounded-xl bg-gray-50 border border-gray-100 text-left space-y-3 text-sm">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">Mã đơn hàng</span>
+              <span className="font-bold text-gray-900 font-mono">
+                #{createdOrderId?.slice(-8)?.toUpperCase() || "N/A"}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Phương thức:</span>
-              <span className="font-medium text-gray-800">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">Phương thức</span>
+              <span className="font-medium text-gray-700">
                 {payMethod === "QR_BANK"
                   ? "Chuyển khoản QR"
                   : payMethod === "COD"
-                    ? "Thanh toán COD"
-                    : "Cổng PayPal"}
+                    ? "COD"
+                    : "PayPal"}
               </span>
             </div>
-            <div className="flex justify-between border-t border-dashed pt-2 mt-2">
-              <span className="text-gray-900 font-medium">
-                Tổng thanh toán:
+            <div className="flex justify-between items-center pt-2 border-t border-dashed border-gray-200">
+              <span className="font-bold text-gray-900">Tổng thanh toán</span>
+              <span className="font-black text-orange-600 text-lg">
+                {fmt(total)}
               </span>
-              <span className="font-extrabold text-rose-500">{fmt(total)}</span>
             </div>
           </div>
 
-          <div className="mt-8 flex flex-col gap-2">
+          <div className="mt-6 flex flex-col gap-2.5">
             <Button
               onClick={() => router.push(`/order/${createdOrderId}`)}
-              className="w-full bg-gray-900 hover:bg-gray-800 text-white h-12 rounded-xl font-medium flex items-center justify-center gap-2"
+              className="w-full bg-gray-900 hover:bg-gray-800 text-white h-11 rounded-xl font-semibold flex items-center justify-center gap-2"
             >
-              Xem thông tin đơn hàng <ExternalLink className="w-4 h-4" />
+              Xem chi tiết đơn hàng
+              <ExternalLink className="w-3.5 h-3.5" />
             </Button>
             <Button
               onClick={() => router.push("/")}
               variant="outline"
-              className="w-full h-12 rounded-xl font-medium text-gray-600"
+              className="w-full h-11 rounded-xl font-medium text-gray-600 border-gray-200"
             >
               Tiếp tục mua sắm
             </Button>
@@ -328,221 +346,281 @@ export default function PaymentPage() {
     );
   }
 
+  /* ── PAYMENT SCREEN ── */
   return (
-    <div className="min-h-screen bg-[#f5f5f7] py-8 px-4">
+    <div className="min-h-screen bg-[#F7F7F8] py-8 px-4">
       <div className="max-w-5xl mx-auto">
-        {/* Nút quay lại nhanh */}
-        <button
-          onClick={handleCancelPayment}
-          className="mb-6 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Quay lại thông tin đặt hàng
-        </button>
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-xs text-gray-400 mb-6">
+          <button
+            onClick={() => router.push("/cart")}
+            className="text-orange-500 font-semibold hover:text-orange-600"
+          >
+            Giỏ hàng
+          </button>
+          <ChevronRight className="w-3.5 h-3.5" />
+          <button
+            onClick={handleCancelPayment}
+            className="text-orange-500 font-semibold hover:text-orange-600"
+          >
+            Đặt hàng
+          </button>
+          <ChevronRight className="w-3.5 h-3.5" />
+          <span className="font-bold text-gray-800">Thanh toán</span>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          {/* CỘT TRÁI: TIẾN HÀNH THANH TOÁN (Chiếm 2 phần) */}
-          <div className="md:col-span-2 space-y-4">
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 pb-4 mb-6 border-b border-gray-100">
-                <div className="p-2 rounded-xl bg-rose-50 text-rose-500">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-6 items-start">
+          {/* ── LEFT: PAYMENT WIDGET ── */}
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center">
                   {payMethod === "QR_BANK" ? (
-                    <QrCode className="w-5 h-5" />
+                    <QrCode className="w-4.5 h-4.5 text-orange-500" />
                   ) : (
-                    <CreditCard className="w-5 h-5" />
+                    <CreditCard className="w-4.5 h-4.5 text-orange-500" />
                   )}
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">
+                  <h2 className="text-sm font-bold text-gray-900">
                     Cổng thanh toán an toàn
                   </h2>
-                  <p className="text-xs text-gray-400">
-                    Vui lòng hoàn tất bước thanh toán dưới đây
+                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                    <Shield className="w-3 h-3" />
+                    Kết nối mã hóa SSL 256-bit
                   </p>
                 </div>
               </div>
 
-              {/* KHU VỰC QR BANK */}
-              {payMethod === "QR_BANK" && (
-                <div className="space-y-6">
-                  {!qrUrl ? (
-                    <div className="text-gray-500 flex flex-col items-center justify-center py-12 gap-3">
-                      <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
-                      <p className="text-sm font-medium">
-                        Hệ thống đang tạo mã QR giao dịch...
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center text-center">
-                      <div className="p-4 bg-white border-2 border-dashed border-gray-200 rounded-2xl shadow-inner max-w-[280px]">
-                        <img
-                          src={qrUrl}
-                          alt="Mã QR Chuyển Khoản"
-                          className="w-full h-auto rounded-lg"
-                        />
-                      </div>
-
-                      <div className="mt-4 max-w-sm space-y-1">
-                        <p className="font-bold text-gray-900 text-base">
-                          Quét mã QR bằng Ứng dụng Ngân hàng
-                        </p>
-                        <p className="text-xs text-gray-400 leading-relaxed px-4">
-                          Mở app ngân hàng bất kỳ (Vietcombank, Techcombank,
-                          MB,...) chọn chức năng quét **QR Pay** để hoàn tất tự
-                          động điền thông tin.
+              <div className="p-6">
+                {/* QR BANK */}
+                {payMethod === "QR_BANK" && (
+                  <div className="space-y-6">
+                    {!qrUrl ? (
+                      <div className="flex flex-col items-center justify-center py-14 gap-3 text-gray-400">
+                        <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
+                        <p className="text-sm font-medium">
+                          Đang tạo mã QR giao dịch...
                         </p>
                       </div>
-
-                      <div className="w-full mt-6 p-3 bg-amber-50 rounded-xl border border-amber-100 text-left flex gap-3 items-start">
-                        <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                        <p className="text-xs text-amber-800 leading-relaxed">
-                          Sau khi chuyển khoản thành công, vui lòng ấn vào nút
-                          **"Xác nhận đã chuyển khoản"** bên dưới để hệ thống
-                          cập nhật đơn hàng của bạn.
-                        </p>
-                      </div>
-
-                      <div className="w-full mt-6 p-4 rounded-xl bg-blue-50 border border-blue-100">
-                        <div className="flex items-center justify-center gap-2 text-blue-700 text-sm font-medium">
-                          {checkingPayment && (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Đang chờ xác nhận chuyển khoản từ ngân hàng...
-                            </>
-                          )}
+                    ) : (
+                      <div className="flex flex-col items-center text-center gap-5">
+                        {/* QR code */}
+                        <div className="p-3 bg-white border-2 border-gray-100 rounded-2xl shadow-sm">
+                          <img
+                            src={qrUrl}
+                            alt="QR Payment"
+                            className="w-56 h-56 object-contain rounded-lg"
+                          />
                         </div>
+
+                        <div>
+                          <p className="font-bold text-gray-900">
+                            Quét mã bằng ứng dụng ngân hàng
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1 leading-relaxed max-w-xs">
+                            Mở app bất kỳ (Vietcombank, Techcombank, MB...) và
+                            chọn chức năng QR Pay
+                          </p>
+                        </div>
+
+                        {/* Warning */}
+                        <div className="w-full p-3.5 bg-amber-50 rounded-xl border border-amber-100 flex gap-3 items-start text-left">
+                          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                          <p className="text-xs text-amber-800 leading-relaxed">
+                            Không thay đổi nội dung chuyển khoản. Hệ thống sẽ tự
+                            động xác nhận sau khi nhận tiền.
+                          </p>
+                        </div>
+
+                        {/* Checking status */}
+                        {checkingPayment && (
+                          <div className="w-full p-3.5 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-center gap-2 text-blue-600 text-sm font-medium">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Đang chờ xác nhận từ ngân hàng...
+                          </div>
+                        )}
+
+                        {/* Countdown timer */}
+                        {countdownActive && (
+                          <div
+                            className={`w-full p-3.5 rounded-xl border flex items-center justify-center gap-2 text-sm font-medium transition-colors ${
+                              timeLeft <= 30
+                                ? "bg-red-50 border-red-100 text-red-600"
+                                : "bg-gray-50 border-gray-100 text-gray-600"
+                            }`}
+                          >
+                            <Clock className="w-4 h-4" />
+                            <span>
+                              Mã QR hết hạn sau:{" "}
+                              <span className="font-mono font-bold text-base">
+                                {formatTime(timeLeft)}
+                              </span>
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* KHU VỰC PAYPAL */}
-              {payMethod === "PayPal" && paypalClientId && (
-                <div className="py-4 px-2 space-y-4">
-                  <div className="p-3 bg-blue-50 rounded-xl text-xs text-blue-700 font-medium mb-2">
-                    Giá trị đơn hàng sẽ được tự động quy đổi tương đương sang
-                    đơn vị **USD**.
+                    )}
                   </div>
-                  <PayPalScriptProvider
-                    options={{
-                      "client-id": paypalClientId,
-                      currency: "USD",
-                      intent: "capture",
-                    }}
-                  >
-                    <PayPalButtons
-                      style={{
-                        layout: "vertical",
-                        shape: "rect",
-                        color: "blue",
-                        height: 48,
-                      }}
-                      createOrder={async () => {
-                        const usd = Math.max(
-                          0.01,
-                          Math.round((total / 23000) * 100) / 100,
-                        );
+                )}
 
-                        const res = await api.post("/paypal/create-order", {
-                          amount: usd,
-                          currency: "USD",
-                        });
+                {/* PAYPAL */}
+                {payMethod === "PayPal" && paypalClientId && (
+                  <div className="space-y-4">
+                    <div className="p-3.5 bg-blue-50 rounded-xl border border-blue-100 text-xs text-blue-700 font-medium">
+                      Giá trị đơn hàng sẽ được quy đổi tương đương sang USD theo
+                      tỷ giá hiện tại.
+                    </div>
 
-                        return res.data.id;
-                      }}
-                      onApprove={async (data) => {
-                        localStorage.setItem(
-                          "payment_meta",
-                          JSON.stringify({
-                            paypalOrderId: data.orderID,
-                            method: "PayPal",
-                          }),
-                        );
-                        await handleCreateOrder(data.orderID, checkoutData);
-                      }}
-                      onError={() => {
-                        toast.error(
-                          "PayPal gặp sự cố khi xử lý, vui lòng thử lại sau.",
-                        );
-                      }}
-                    />
-                  </PayPalScriptProvider>
-                </div>
-              )}
+                    {/* ✅ Countdown cho PayPal */}
+                    {countdownActive && (
+                      <div
+                        className={`w-full p-3.5 rounded-xl border flex items-center justify-center gap-2 text-sm font-medium transition-colors ${
+                          timeLeft <= 30
+                            ? "bg-red-50 border-red-100 text-red-600"
+                            : "bg-amber-50 border-amber-100 text-amber-700"
+                        }`}
+                      >
+                        <Clock className="w-4 h-4" />
+                        <span>
+                          Hoàn tất thanh toán trong:{" "}
+                          <span className="font-mono font-bold text-base">
+                            {formatTime(timeLeft)}
+                          </span>
+                        </span>
+                      </div>
+                    )}
 
-              {payMethod === "PayPal" && !paypalClientId && (
-                <div className="p-6 text-center border rounded-2xl bg-red-50 border-red-100">
-                  <p className="text-red-500 font-semibold text-sm">
-                    Lỗi kết nối cấu hình hệ thống: Thiếu PayPal Client ID (.env)
-                  </p>
-                </div>
-              )}
+                    <PayPalScriptProvider
+                      options={{
+                        "client-id": paypalClientId,
+                        currency: "USD",
+                        intent: "capture",
+                      }}
+                    >
+                      <PayPalButtons
+                        style={{
+                          layout: "vertical",
+                          shape: "rect",
+                          color: "blue",
+                          height: 48,
+                        }}
+                        onInit={() => startCountdown()}
+                        createOrder={async () => {
+                          const usd = Math.max(
+                            0.01,
+                            Math.round((total / 23000) * 100) / 100,
+                          );
+                          const res = await api.post("/paypal/create-order", {
+                            amount: usd,
+                            currency: "USD",
+                          });
+                          return res.data.id;
+                        }}
+                        onApprove={async (data) => {
+                          if (countdownRef.current)
+                            clearInterval(countdownRef.current);
+                          setCountdownActive(false);
+                          localStorage.setItem(
+                            "payment_meta",
+                            JSON.stringify({
+                              paypalOrderId: data.orderID,
+                              method: "PayPal",
+                            }),
+                          );
+                          await handleCreateOrder(data.orderID);
+                        }}
+                        onError={() =>
+                          toast.error("PayPal gặp sự cố, vui lòng thử lại.")
+                        }
+                      />
+                    </PayPalScriptProvider>
+                  </div>
+                )}
+
+                {payMethod === "PayPal" && !paypalClientId && (
+                  <div className="p-6 text-center rounded-xl bg-red-50 border border-red-100">
+                    <p className="text-sm text-red-500 font-semibold">
+                      Lỗi cấu hình: Thiếu PayPal Client ID
+                    </p>
+                  </div>
+                )}
+
+                {/* COD loading */}
+                {payMethod === "COD" && placing && (
+                  <div className="flex flex-col items-center justify-center py-14 gap-3 text-gray-400">
+                    <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
+                    <p className="text-sm font-medium">
+                      Đang xử lý đơn hàng...
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* NÚT HỦY GIAO DỊCH AN TOÀN */}
-            <Button
-              variant="ghost"
+            {/* Cancel */}
+            <button
               disabled={placing || verifyingQR}
               onClick={handleCancelPayment}
-              className="w-full text-gray-400 hover:text-red-500 hover:bg-red-50 h-11 rounded-xl transition-all"
+              className="w-full py-3 text-sm text-gray-400 hover:text-gray-600 transition-colors flex items-center justify-center gap-1.5"
             >
-              Hủy bỏ giao dịch và chọn lại phương thức
-            </Button>
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Quay lại và chọn phương thức khác
+            </button>
           </div>
 
-          {/* CỘT PHẢI: THÔNG TIN ĐƠN HÀNG TỔNG QUAN (Chiếm 1 phần) */}
+          {/* ── RIGHT: ORDER SUMMARY ── */}
           <div className="space-y-4 md:sticky md:top-6">
-            {/* Hộp địa chỉ nhận hàng */}
-            <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 text-sm">
-              <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-rose-500" /> Địa chỉ giao hàng
-              </h3>
-              <div className="space-y-1 text-gray-600 text-xs">
-                <p className="font-semibold text-gray-800">
+            {/* Address */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <MapPin className="w-4 h-4 text-orange-500" />
+                <h3 className="text-sm font-bold text-gray-900">Giao đến</h3>
+              </div>
+              <div className="text-xs text-gray-600 space-y-1">
+                <p className="font-semibold text-gray-800 text-sm">
                   {selectedAddress?.receiver_name ||
                     selectedAddress?.receiverName}
-                  <span className="font-normal text-gray-400 ml-1">
-                    (
+                  <span className="text-gray-400 font-normal ml-2">
                     {selectedAddress?.receiver_phone ||
                       selectedAddress?.receiverPhone}
-                    )
                   </span>
                 </p>
-                <p className="leading-relaxed">
+                <p className="text-gray-500 leading-relaxed">
                   {selectedAddress?.address}, {selectedAddress?.ward},{" "}
                   {selectedAddress?.city}
                 </p>
               </div>
             </div>
 
-            {/* Danh sách tóm tắt sản phẩm mua */}
-            <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 text-sm">
-              <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <ShoppingBag className="w-4 h-4 text-orange-500" /> Sản phẩm mua
-                ({items.length})
-              </h3>
-              <div className="divide-y divide-gray-50 max-h-48 overflow-y-auto pr-1">
+            {/* Items */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <ShoppingBag className="w-4 h-4 text-orange-500" />
+                <h3 className="text-sm font-bold text-gray-900">
+                  Sản phẩm ({items.length})
+                </h3>
+              </div>
+              <div className="space-y-3 max-h-44 overflow-y-auto">
                 {items.map((item: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className="py-2.5 flex gap-3 items-center first:pt-0 last:pb-0"
-                  >
+                  <div key={idx} className="flex gap-3 items-center">
                     {item.image && (
                       <img
                         src={item.image}
                         alt={item.name}
-                        className="w-10 h-10 object-cover rounded-lg bg-gray-50 border shrink-0"
+                        className="w-10 h-10 object-cover rounded-lg border border-gray-100 shrink-0"
                       />
                     )}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-800 text-xs truncate">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-800 truncate">
                         {item.name}
                       </p>
                       <p className="text-[11px] text-gray-400">
-                        Số lượng: {item.quantity}
+                        x{item.quantity}
                       </p>
                     </div>
-                    <span className="font-semibold text-gray-900 text-xs shrink-0">
+                    <span className="text-xs font-semibold text-gray-800 shrink-0">
                       {fmt(item.price * item.quantity)}
                     </span>
                   </div>
@@ -550,34 +628,46 @@ export default function PaymentPage() {
               </div>
             </div>
 
-            {/* Chi tiết biên lai thanh toán tổng cộng */}
-            <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 text-sm">
-              <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-blue-500" /> Tóm tắt thanh toán
-              </h3>
-
-              <div className="space-y-2.5 text-xs pb-3 border-b border-gray-100">
+            {/* Bill */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Receipt className="w-4 h-4 text-orange-500" />
+                <h3 className="text-sm font-bold text-gray-900">
+                  Chi tiết thanh toán
+                </h3>
+              </div>
+              <div className="space-y-2 text-xs">
                 <div className="flex justify-between text-gray-500">
                   <span>Tạm tính</span>
                   <span>{fmt(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-gray-500">
-                  <span>Phí vận chuyển</span>
-                  <span>{fmt(shipping)}</span>
+                  <span>Phí ship</span>
+                  <span
+                    className={
+                      shipping === 0 ? "text-emerald-600 font-medium" : ""
+                    }
+                  >
+                    {shipping === 0 ? "Miễn phí" : fmt(shipping)}
+                  </span>
                 </div>
                 {totalDiscount > 0 && (
                   <div className="flex justify-between text-emerald-600 font-medium">
-                    <span>Mã giảm giá</span>
+                    <span>Giảm giá</span>
                     <span>-{fmt(totalDiscount)}</span>
                   </div>
                 )}
-              </div>
-
-              <div className="flex justify-between items-center pt-3">
-                <span className="font-bold text-gray-900">Tổng cộng</span>
-                <span className="font-black text-rose-500 text-lg">
-                  {fmt(total)}
-                </span>
+                <div className="flex justify-between items-center pt-2.5 border-t border-dashed border-gray-100">
+                  <span className="font-bold text-gray-900 text-sm">
+                    Tổng cộng
+                  </span>
+                  <span
+                    className="font-black text-orange-600 text-xl"
+                    style={{ letterSpacing: "-0.03em" }}
+                  >
+                    {fmt(total)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
