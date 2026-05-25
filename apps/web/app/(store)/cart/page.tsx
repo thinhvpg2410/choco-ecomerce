@@ -9,16 +9,177 @@ import {
   updateCartItem,
 } from "@/services/cart.service";
 import { CartItem } from "@/types/type";
-import { ShoppingBag, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ShoppingBag, Loader2, Trash2, X, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { fetchCart } from "@/store/cartSlice";
 import { useDispatch } from "react-redux";
 
+function getEffectivePrice(
+  item: CartItem,
+  productsMap: Record<string, any>,
+): number {
+  const p = productsMap[item.product_id];
+  if (!p) return item.price;
+
+  const disc =
+    p.discounted_price ?? p.sale_price ?? p.discount_price ?? p.promo_price;
+  if (typeof disc === "number" && disc > 0 && disc < (p.price ?? Infinity))
+    return disc;
+  return p.price ?? item.price;
+}
+
+function getOriginalPrice(
+  item: CartItem,
+  productsMap: Record<string, any>,
+): number | null {
+  const p = productsMap[item.product_id];
+  if (!p) return null;
+  const disc =
+    p.discounted_price ?? p.sale_price ?? p.discount_price ?? p.promo_price;
+  if (typeof disc === "number" && disc > 0 && disc < (p.price ?? Infinity))
+    return p.price;
+  return null;
+}
+
+const fmt = (n: number) => n.toLocaleString("vi-VN") + "đ";
+
+
+function DeleteConfirmModal({
+  productName,
+  onConfirm,
+  onCancel,
+}: {
+  productName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(15,10,5,0.45)",
+        backdropFilter: "blur(4px)",
+        animation: "fadeIn 0.15s ease",
+      }}
+      onClick={onCancel}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: "20px",
+          padding: "32px 28px 24px",
+          maxWidth: 360,
+          width: "calc(100% - 32px)",
+          boxShadow:
+            "0 24px 60px rgba(15,10,5,0.22), 0 4px 16px rgba(15,10,5,0.08)",
+          animation: "slideUp 0.18s ease",
+          textAlign: "center",
+          fontFamily: "'Nunito', sans-serif",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: "50%",
+            background: "#fef2f2",
+            border: "1.5px solid #fecaca",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 16px",
+          }}
+        >
+          <Trash2 style={{ width: 22, height: 22, color: "#ef4444" }} />
+        </div>
+        <h3
+          style={{
+            fontSize: "16px",
+            fontWeight: 700,
+            color: "#1a0f0a",
+            margin: "0 0 8px",
+          }}
+        >
+          Xóa sản phẩm?
+        </h3>
+        <p
+          style={{
+            fontSize: "13.5px",
+            color: "#7a6a60",
+            margin: "0 0 24px",
+            lineHeight: 1.5,
+          }}
+        >
+          Bạn có chắc muốn xóa{" "}
+          <strong style={{ color: "#3b1d14" }}>"{productName}"</strong> khỏi giỏ
+          hàng không?
+        </p>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1,
+              padding: "10px 0",
+              background: "#f5f0eb",
+              border: "none",
+              borderRadius: "10px",
+              fontSize: "13.5px",
+              fontWeight: 600,
+              color: "#7a6a60",
+              cursor: "pointer",
+              fontFamily: "'Nunito', sans-serif",
+              transition: "background 0.14s",
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.background = "#ede6de")}
+            onMouseOut={(e) => (e.currentTarget.style.background = "#f5f0eb")}
+          >
+            Hủy
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{
+              flex: 1,
+              padding: "10px 0",
+              background: "#be123c",
+              border: "none",
+              borderRadius: "10px",
+              fontSize: "13.5px",
+              fontWeight: 700,
+              color: "#fff",
+              cursor: "pointer",
+              fontFamily: "'Nunito', sans-serif",
+              boxShadow: "0 2px 8px rgba(190,18,60,0.28)",
+              transition: "background 0.14s, transform 0.12s",
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "#9f1239";
+              e.currentTarget.style.transform = "translateY(-1px)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "#be123c";
+              e.currentTarget.style.transform = "none";
+            }}
+          >
+            Xóa
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CartPage() {
   const router = useRouter();
+  const dispatch = useDispatch();
+
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
@@ -26,32 +187,25 @@ export default function CartPage() {
     {},
   );
   const [productsMap, setProductsMap] = useState<Record<string, any>>({});
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
-  const dispatch = useDispatch();
   useEffect(() => {
     (async () => {
       try {
         const cart = await getCart();
         const cartItems = cart?.items ?? [];
         setItems(cartItems);
-        // Fetch thông tin product cho từng item
         const productIds = cartItems.map((item) => item.product_id);
         const products: Record<string, any> = {};
-
-        const data = localStorage.getItem("checkout_cart");
-        if (data) {
-          const parsed = JSON.parse(data);
-          console.log(parsed.items);
-          console.log(parsed.subtotal);
-        }
-
         await Promise.all(
           productIds.map(async (id) => {
             const product = await getProductById(id);
             products[id] = product;
           }),
         );
-
         setProductsMap(products);
       } finally {
         setLoading(false);
@@ -59,13 +213,34 @@ export default function CartPage() {
     })();
   }, []);
 
-  // Lọc ra các item đã chọn
   const selectedItems = useMemo(
     () => items.filter((item) => selected.includes(String(item.product_id))),
     [items, selected],
   );
 
-  // Xóa sản phẩm khỏi giỏ
+  const subtotal = useMemo(
+    () =>
+      selectedItems.reduce(
+        (sum, item) =>
+          sum + getEffectivePrice(item, productsMap) * item.quantity,
+        0,
+      ),
+    [selectedItems, productsMap],
+  );
+
+  const originalTotal = useMemo(
+    () =>
+      selectedItems.reduce((sum, item) => {
+        const orig = getOriginalPrice(item, productsMap);
+        return (
+          sum + (orig ?? getEffectivePrice(item, productsMap)) * item.quantity
+        );
+      }, 0),
+    [selectedItems, productsMap],
+  );
+
+  const totalSaved = originalTotal - subtotal;
+
   const handleRemove = async (productId: string) => {
     try {
       await removeFromCart(productId);
@@ -73,20 +248,26 @@ export default function CartPage() {
       setItems((prev) =>
         prev.filter((item) => String(item.product_id) !== String(productId)),
       );
-
       setSelected((prev) => prev.filter((id) => id !== String(productId)));
     } catch (error) {
       console.error("Xóa sản phẩm thất bại:", error);
+      toast.error("Xóa sản phẩm thất bại");
     }
   };
 
-  // Xử lý mua ngay
+  const confirmDelete = (productId: string) => {
+    const name =
+      productsMap[productId]?.name ??
+      items.find((i) => String(i.product_id) === productId)?.product?.name ??
+      "sản phẩm";
+    setDeleteTarget({ id: String(productId), name });
+  };
+
   const handleBuyNow = () => {
     if (selectedItems.length === 0) {
       toast.error("Vui lòng chọn sản phẩm trước khi thanh toán");
       return;
     }
-
     const checkoutData = selectedItems.map((item) => ({
       id: item.product_id,
       product_id: item.product_id,
@@ -95,81 +276,29 @@ export default function CartPage() {
         item.product?.image_url ??
         productsMap[item.product_id]?.image_url ??
         "",
-      price: item.price,
+      price: getEffectivePrice(item, productsMap), // ← effective price
+      original_price: getOriginalPrice(item, productsMap),
       quantity: item.quantity,
     }));
-
-    const cartItemIds = selectedItems.map((item) => item.product_id);
-
     localStorage.setItem(
       "checkout_cart",
       JSON.stringify({
         items: checkoutData,
         subtotal,
-        cart_item_ids: cartItemIds,
+        cart_item_ids: selectedItems.map((item) => item.product_id),
       }),
     );
-
     router.push("/checkout");
   };
-
-  // Tính tổng tiền của các sản phẩm đã chọn
-  const subtotal = selectedItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
-
-  // Định dạng tiền Việt
-  const fmt = (n: number) => n.toLocaleString("vi-VN") + "đ";
-
-  if (loading) {
-    return (
-      <ProtectedRoute>
-        <div className="min-h-screen flex items-center justify-center py-14">
-          <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
-        </div>
-      </ProtectedRoute>
-    );
-  }
-
-  if (!items.length) {
-    return (
-      <ProtectedRoute>
-        <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4 text-center">
-          <div className="w-24 h-24 rounded-full bg-rose-50 flex items-center justify-center">
-            <ShoppingBag className="w-10 h-10 text-rose-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            Giỏ hàng của bạn đang trống
-          </h2>
-          <p className="max-w-sm text-sm text-gray-500">
-            Thêm sản phẩm yêu thích vào giỏ rồi quay lại đây để thanh toán nhanh
-            chóng.
-          </p>
-          <Link
-            href="/"
-            className="px-6 py-3 rounded-full bg-rose-500 text-white font-semibold hover:bg-rose-600"
-          >
-            Tiếp tục mua sắm
-          </Link>
-        </div>
-      </ProtectedRoute>
-    );
-  }
 
   const isAllSelected =
     items.length > 0 &&
     items.every((item) => selected.includes(String(item.product_id)));
 
   const toggleSelectAll = () => {
-    if (isAllSelected) {
-      setSelected([]);
-    } else {
-      setSelected(items.map((i) => String(i.product_id)));
-    }
+    setSelected(isAllSelected ? [] : items.map((i) => String(i.product_id)));
   };
 
-  // Cập nhật số lượng sản phẩm trong giỏ
   const getStock = (productId: string, item: CartItem) =>
     item.product?.stock ?? productsMap[productId]?.stock ?? 100;
 
@@ -180,32 +309,19 @@ export default function CartPage() {
   ) => {
     const item = items.find((i) => String(i.product_id) === productId);
     if (!item) return;
-
     const stock = getStock(productId, item);
     const targetQty = absolute ? deltaOrQty : item.quantity + deltaOrQty;
     const newQty = Math.max(1, Math.min(stock, targetQty));
-
-    // Cập nhật giao diện và input đồng bộ
     setItems((prev) =>
       prev.map((i) =>
         String(i.product_id) === productId ? { ...i, quantity: newQty } : i,
       ),
     );
-    setQuantityInputs((prev) => ({
-      ...prev,
-      [productId]: String(newQty),
-    }));
-
+    setQuantityInputs((prev) => ({ ...prev, [productId]: String(newQty) }));
     try {
-      await updateCartItem({
-        product_id: productId,
-        quantity: newQty,
-      });
+      await updateCartItem({ product_id: productId, quantity: newQty });
       dispatch(fetchCart() as any);
-    } catch (error) {
-      console.error("Update cart failed:", error);
-
-      // rollback nếu fail
+    } catch {
       setItems((prev) =>
         prev.map((i) => (String(i.product_id) === productId ? item : i)),
       );
@@ -216,193 +332,507 @@ export default function CartPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <ProtectedRoute>
+        <style>{cartStyles}</style>
+        <div className="cart-loading">
+          <Loader2 className="cart-spinner" />
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
+  if (!items.length) {
+    return (
+      <ProtectedRoute>
+        <style>{cartStyles}</style>
+        <div className="cart-empty">
+          <div className="cart-empty-icon">
+            <ShoppingBag style={{ width: 40, height: 40, color: "#be123c" }} />
+          </div>
+          <h2 className="cart-empty-title">Giỏ hàng đang trống</h2>
+          <p className="cart-empty-sub">
+            Thêm những món ngon vào giỏ rồi quay lại đây thanh toán nhé!
+          </p>
+          <Link href="/" className="cart-empty-btn">
+            Khám phá sản phẩm
+          </Link>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute>
-      <div className="p-4 mx-auto py-6">
-        <h1 className="text-xl font-bold mb-4">Giỏ hàng</h1>
+      <style>{cartStyles}</style>
 
-        <div className="space-y-3 ">
-          {/* HEADER */}
-          <div className="grid grid-cols-12 items-center bg-gray-100 px-4 py-3 rounded-md text-sm font-semibold text-gray-700">
-            <div className="col-span-1 flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={isAllSelected}
-                onChange={toggleSelectAll}
-              />
-              <span>Tất cả</span>
-            </div>
+      {deleteTarget && (
+        <DeleteConfirmModal
+          productName={deleteTarget.name}
+          onConfirm={() => {
+            handleRemove(deleteTarget.id);
+            setDeleteTarget(null);
+          }}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
 
-            <div className="col-span-4">Sản phẩm</div>
-
-            <div className="col-span-2 text-center">Đơn giá</div>
-
-            <div className="col-span-2 text-center">Số lượng</div>
-
-            <div className="col-span-2 text-center">Số tiền</div>
-
-            <div className="col-span-1 text-center">Thao tác</div>
+      <div className="cart-root">
+        <div className="cart-container">
+          {/* Page title */}
+          <div className="cart-page-head">
+            <h1 className="cart-page-title">Giỏ hàng</h1>
+            <span className="cart-count">{items.length} sản phẩm</span>
           </div>
 
-          {/* ITEMS */}
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="grid grid-cols-12 items-center border p-3 rounded-lg"
-            >
-              {/* Checkbox */}
-              <div className="col-span-1 flex items-center">
-                <input
-                  type="checkbox"
-                  checked={selected.includes(String(item.product_id))}
-                  onChange={() => {
-                    setSelected((prev) =>
-                      prev.includes(String(item.product_id))
-                        ? prev.filter((id) => id !== String(item.product_id))
-                        : [...prev, String(item.product_id)],
-                    );
-                  }}
-                />
-              </div>
-
-              {/* Sản phẩm */}
-              <div className="col-span-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center">
-                  <img
-                    src={
-                      productsMap[item.product_id]?.image_url ||
-                      item.product?.image_url ||
-                      "https://via.placeholder.com/40"
-                    }
-                    alt={
-                      productsMap[item.product_id]?.name ||
-                      item.product?.name ||
-                      "Không có sản phẩm"
-                    }
-                    className="w-full h-full object-cover rounded"
-                  />
-                </div>
-                <div>
-                  <Link href={`/product/${item.product_id}`} className="group">
-                    <p className="font-medium hover:text-[#3b1d14] transition-colors">
-                      {productsMap[item.product_id]?.name ??
-                        item.product?.name ??
-                        "Không có sản phẩm"}
-                    </p>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Đơn giá */}
-              <div className="col-span-2 text-center font-semibold text-sm">
-                {fmt(item.price)}
-              </div>
-
-              {/* Số lượng */}
-              <div className="col-span-2 text-center w-min mx-auto">
-                <div className="flex items-center border-[1.5px] border-[#f0ede8] rounded-[10px] overflow-hidden bg-[#fafafa]">
-                  <button
-                    onClick={() => updateQty(String(item.product_id), -1)}
-                    disabled={item.quantity <= 1}
-                    className="w-[30px] h-[28px] flex items-center justify-center text-base font-medium text-gray-700 hover:bg-pink-50 hover:text-pink-600 disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
-                  >
-                    −
-                  </button>
+          <div className="cart-layout">
+            {/* ── LEFT: item list ── */}
+            <div className="cart-list-col">
+              {/* Select all bar */}
+              <div className="cart-select-bar">
+                <label className="cart-check-label">
                   <input
-                    type="number"
-                    min={1}
-                    max={getStock(String(item.product_id), item)}
-                    value={
-                      quantityInputs[String(item.product_id)] ??
-                      String(item.quantity)
-                    }
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      if (/^\d*$/.test(raw)) {
-                        setQuantityInputs((prev) => ({
-                          ...prev,
-                          [String(item.product_id)]: raw,
-                        }));
-                      }
-                    }}
-                    onBlur={() => {
-                      const raw =
-                        quantityInputs[String(item.product_id)] ??
-                        String(item.quantity);
-                      const parsed = Number(raw);
-                      const stock = getStock(String(item.product_id), item);
-                      const qty = Number.isNaN(parsed)
-                        ? item.quantity
-                        : Math.max(1, Math.min(stock, parsed));
-                      updateQty(String(item.product_id), qty, true);
-                    }}
-                    className="w-[50px] h-[28px] text-center text-base font-bold text-[#1a1a1a] outline-none bg-transparent"
+                    type="checkbox"
+                    className="cart-check"
+                    checked={isAllSelected}
+                    onChange={toggleSelectAll}
                   />
-                  <button
-                    onClick={() => updateQty(String(item.product_id), 1)}
-                    disabled={
-                      item.quantity >= getStock(String(item.product_id), item)
-                    }
-                    className="w-[30px] h-[28px] flex items-center justify-center text-base font-medium text-gray-700 hover:bg-pink-50 hover:text-pink-600 disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors appearance-none"
-                  >
-                    +
-                  </button>
+                  <span>Chọn tất cả ({items.length})</span>
+                </label>
+                {selected.length > 0 && (
+                  <span className="cart-selected-hint">
+                    {selected.length} đã chọn
+                  </span>
+                )}
+              </div>
+
+              {/* Items */}
+              <div className="cart-items">
+                {items.map((item) => {
+                  const pid = String(item.product_id);
+                  const effectivePrice = getEffectivePrice(item, productsMap);
+                  const originalPrice = getOriginalPrice(item, productsMap);
+                  const isOnSale = originalPrice !== null;
+                  const productName =
+                    productsMap[pid]?.name ?? item.product?.name ?? "Sản phẩm";
+                  const imageUrl =
+                    productsMap[pid]?.image_url ??
+                    item.product?.image_url ??
+                    "";
+                  const isChecked = selected.includes(pid);
+                  const stock = getStock(pid, item);
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`cart-item${isChecked ? " cart-item--checked" : ""}`}
+                    >
+                      {/* Checkbox */}
+                      <label className="cart-item-check-wrap">
+                        <input
+                          type="checkbox"
+                          className="cart-check"
+                          checked={isChecked}
+                          onChange={() =>
+                            setSelected((prev) =>
+                              prev.includes(pid)
+                                ? prev.filter((id) => id !== pid)
+                                : [...prev, pid],
+                            )
+                          }
+                        />
+                      </label>
+
+                      {/* Image */}
+                      <div className="cart-item-img-wrap">
+                        {isOnSale && (
+                          <span className="cart-sale-badge">Sale</span>
+                        )}
+                        <img
+                          src={imageUrl || "https://via.placeholder.com/80"}
+                          alt={productName}
+                          className="cart-item-img"
+                        />
+                      </div>
+
+                      {/* Info */}
+                      <div className="cart-item-info">
+                        <Link
+                          href={`/product/${pid}`}
+                          className="cart-item-name"
+                        >
+                          {productName}
+                        </Link>
+                        {/* Price */}
+                        <div className="cart-item-price-row">
+                          <span className="cart-item-price-eff">
+                            {fmt(effectivePrice)}
+                          </span>
+                          {isOnSale && (
+                            <span className="cart-item-price-orig">
+                              {fmt(originalPrice!)}
+                            </span>
+                          )}
+                          {isOnSale && (
+                            <span className="cart-item-discount-tag">
+                              -
+                              {Math.round(
+                                (1 - effectivePrice / originalPrice!) * 100,
+                              )}
+                              %
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Qty */}
+                      <div className="cart-qty-wrap">
+                        <div className="cart-qty">
+                          <button
+                            className="cart-qty-btn"
+                            onClick={() => updateQty(pid, -1)}
+                            disabled={item.quantity <= 1}
+                          >
+                            −
+                          </button>
+                          <input
+                            type="number"
+                            className="cart-qty-input"
+                            min={1}
+                            max={stock}
+                            value={quantityInputs[pid] ?? String(item.quantity)}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              if (/^\d*$/.test(raw))
+                                setQuantityInputs((prev) => ({
+                                  ...prev,
+                                  [pid]: raw,
+                                }));
+                            }}
+                            onBlur={() => {
+                              const raw =
+                                quantityInputs[pid] ?? String(item.quantity);
+                              const parsed = Number(raw);
+                              const qty = Number.isNaN(parsed)
+                                ? item.quantity
+                                : Math.max(1, Math.min(stock, parsed));
+                              updateQty(pid, qty, true);
+                            }}
+                          />
+                          <button
+                            className="cart-qty-btn"
+                            onClick={() => updateQty(pid, 1)}
+                            disabled={item.quantity >= stock}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Line total */}
+                      <div className="cart-item-total">
+                        <span>{fmt(effectivePrice * item.quantity)}</span>
+                        {isOnSale && (
+                          <span className="cart-item-total-saved">
+                            -
+                            {fmt(
+                              (originalPrice! - effectivePrice) * item.quantity,
+                            )}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Delete */}
+                      <button
+                        className="cart-item-del"
+                        title="Xóa"
+                        onClick={() => confirmDelete(pid)}
+                      >
+                        <X style={{ width: 14, height: 14 }} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ── RIGHT: summary ── */}
+            <div className="cart-summary">
+              <h2 className="cart-summary-title">Tóm tắt đơn hàng</h2>
+
+              <div className="cart-summary-rows">
+                <div className="cart-summary-row">
+                  <span>Tạm tính ({selected.length} sản phẩm)</span>
+                  <span>{fmt(originalTotal)}</span>
+                </div>
+                {totalSaved > 0 && (
+                  <div className="cart-summary-row cart-summary-saved">
+                    <span>Tiết kiệm</span>
+                    <span>-{fmt(totalSaved)}</span>
+                  </div>
+                )}
+                <div className="cart-summary-row cart-summary-ship">
+                  <span>Phí giao hàng</span>
+                  <span className="cart-free-ship">Miễn phí</span>
                 </div>
               </div>
 
-              {/* Số tiền */}
-              <div className="col-span-2 text-center text-red-500 font-semibold">
-                {fmt(item.price * item.quantity)}
+              <div className="cart-summary-divider" />
+
+              <div className="cart-summary-total">
+                <span>Tổng cộng</span>
+                <span className="cart-total-amount">{fmt(subtotal)}</span>
               </div>
 
-              {/* Thao tác */}
-              <div
-                className="col-span-1 text-center hover:text-red-500 cursor-pointer"
-                onClick={() => {
-                  toast("Xác nhận xóa sản phẩm?", {
-                    position: "top-center",
-                    closeButton: false,
-                    classNames: {
-                      root: "flex items-center justify-between gap-3 ",
-                      content: "flex-1",
-                    },
-                    cancel: {
-                      label: "Hủy",
-                      onClick: () => {},
-                    },
-                    action: {
-                      label: "Xóa",
-                      onClick: () => handleRemove(String(item.product_id)),
-                    },
-                    cancelButtonStyle: { marginLeft: 0, marginRight: 0 },
-                    actionButtonStyle: { marginLeft: 3, marginRight: 0 },
-                  });
-                }}
+              {totalSaved > 0 && (
+                <div className="cart-saving-banner">
+                  🎉 Bạn đang tiết kiệm <strong>{fmt(totalSaved)}</strong>
+                </div>
+              )}
+
+              <button
+                className="cart-checkout-btn"
+                onClick={handleBuyNow}
+                disabled={selected.length === 0}
               >
-                Xóa
-              </div>
-            </div>
-          ))}
-        </div>
-        {/* Tổng tiền */}
-        <div className="sticked bg-white border-t shadow-lg z-50 rounded-md">
-          <div className="max-w-6xl mx-auto p-4 flex items-center justify-between gap-10 text-lg">
-            <div className="font-bold ">
-              Tổng:
-              <span className="text-xl font-bold text-red-500 p-3">
-                {fmt(subtotal)}
-              </span>
-            </div>
+                Thanh toán ngay
+              </button>
 
-            <Button
-              onClick={handleBuyNow}
-              className="p-5 px-10 rounded-sm text-lg font-semibold tracking-wide transition-all duration-300 bg-[#3b1d14] hover:bg-[#e7c27d] text-white hover:text-[#3b1d14] disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
-            >
-              Mua Ngay
-            </Button>
+              <Link href="/" className="cart-continue-link">
+                ← Tiếp tục mua sắm
+              </Link>
+            </div>
           </div>
         </div>
       </div>
     </ProtectedRoute>
   );
 }
+
+// ─── Styles ────────────────────────────────────────────────────────────────────
+
+const cartStyles = `
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Playfair+Display:wght@400;500;600&display=swap');
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes slideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
+
+:root {
+  --brand: #be123c;
+  --brand-dark: #9f1239;
+  --brand-soft: #fff0f3;
+  --brand-border: #fecdd3;
+  --warm-bg: #fdf8f4;
+  --warm-card: #fffcfa;
+  --warm-border: #f0e8df;
+  --warm-border-2: #e8ddd3;
+  --ink: #1a0f0a;
+  --ink-2: #3b1d14;
+  --ink-3: #7a6a60;
+  --ink-4: #b0a098;
+  --gold: #c8933a;
+  --gold-soft: #fef9ee;
+  --font: 'Nunito', system-ui, sans-serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --shadow-sm: 0 1px 3px rgba(58,29,20,0.06), 0 1px 2px rgba(58,29,20,0.04);
+  --shadow-md: 0 4px 18px rgba(58,29,20,0.09), 0 1px 4px rgba(58,29,20,0.04);
+  --shadow-lg: 0 12px 40px rgba(58,29,20,0.12), 0 2px 8px rgba(58,29,20,0.06);
+}
+
+.cart-root { font-family:var(--font); min-height:100vh; background:var(--warm-bg); padding:36px 0 80px; }
+.cart-container { max-width:1100px; margin:0 auto; padding:0 20px; }
+
+.cart-loading { min-height:60vh; display:flex; align-items:center; justify-content:center; }
+.cart-spinner { width:36px; height:36px; animation:spin 0.8s linear infinite; color:var(--brand); }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* Empty state */
+.cart-empty { min-height:70vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center; padding:0 24px; font-family:var(--font); }
+.cart-empty-icon { width:88px; height:88px; border-radius:50%; background:var(--brand-soft); border:2px dashed var(--brand-border); display:flex; align-items:center; justify-content:center; }
+.cart-empty-title { font-family:var(--font-display); font-size:22px; font-weight:500; color:var(--ink); margin:4px 0 0; }
+.cart-empty-sub { font-size:13.5px; color:var(--ink-3); max-width:300px; line-height:1.6; margin:0; }
+.cart-empty-btn { margin-top:8px; padding:11px 28px; background:var(--brand); color:#fff; border-radius:100px; font-size:14px; font-weight:700; text-decoration:none; font-family:var(--font); box-shadow:0 2px 10px rgba(190,18,60,0.25); transition:background 0.15s,transform 0.12s; }
+.cart-empty-btn:hover { background:var(--brand-dark); transform:translateY(-1px); }
+
+/* Page head */
+.cart-page-head { display:flex; align-items:baseline; gap:14px; margin-bottom:24px; }
+.cart-page-title { font-family:var(--font-display); font-size:26px; font-weight:500; color:var(--ink); margin:0; letter-spacing:-0.01em; }
+.cart-count { font-size:13px; color:var(--ink-4); font-weight:500; }
+
+/* Layout */
+.cart-layout { display:grid; grid-template-columns:1fr 320px; gap:22px; align-items:start; }
+@media(max-width:860px) { .cart-layout { grid-template-columns:1fr; } }
+
+/* Select all bar */
+.cart-select-bar { display:flex; align-items:center; justify-content:space-between; padding:13px 18px; background:var(--warm-card); border:1px solid var(--warm-border); border-radius:var(--r-md); margin-bottom:10px; }
+.cart-check-label { display:flex; align-items:center; gap:9px; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--ink-2); }
+.cart-check { width:16px; height:16px; accent-color:var(--brand); cursor:pointer; border-radius:4px; flex-shrink:0; }
+.cart-selected-hint { font-size:12.5px; color:var(--brand); font-weight:600; }
+
+/* Item list */
+.cart-items { display:flex; flex-direction:column; gap:10px; }
+
+/* Cart item */
+.cart-item {
+  display:grid;
+  grid-template-columns: 28px 76px 1fr 110px 90px 28px;
+  align-items:center;
+  gap:14px;
+  padding:14px 16px;
+  background:var(--warm-card);
+  border:1.5px solid var(--warm-border);
+  border-radius:var(--r-md);
+  box-shadow:var(--shadow-sm);
+  transition:border-color 0.15s, box-shadow 0.15s;
+  position:relative;
+}
+.cart-item:hover { border-color:var(--warm-border-2); box-shadow:var(--shadow-md); }
+.cart-item--checked { border-color:var(--brand-border); background:#fffafb; }
+@media(max-width:600px) {
+  .cart-item { grid-template-columns:28px 60px 1fr 28px; grid-template-rows:auto auto; gap:10px 12px; }
+}
+
+.cart-item-check-wrap { display:flex; align-items:center; justify-content:center; }
+
+/* Item image */
+.cart-item-img-wrap { position:relative; width:76px; height:76px; border-radius:12px; overflow:hidden; flex-shrink:0; background:#f5ede4; }
+.cart-item-img { width:100%; height:100%; object-fit:cover; }
+.cart-sale-badge {
+  position:absolute; top:5px; left:5px; z-index:1;
+  background:var(--brand); color:#fff;
+  font-size:10px; font-weight:800; padding:2px 6px;
+  border-radius:5px; letter-spacing:0.04em;
+  font-family:var(--font);
+}
+
+/* Item info */
+.cart-item-info { min-width:0; display:flex; flex-direction:column; gap:6px; }
+.cart-item-name {
+  font-size:13.5px; font-weight:700; color:var(--ink);
+  text-decoration:none; line-height:1.35;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  transition:color 0.13s;
+}
+.cart-item-name:hover { color:var(--brand); }
+.cart-item-price-row { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.cart-item-price-eff { font-size:14px; font-weight:800; color:var(--brand); }
+.cart-item-price-orig { font-size:12px; color:var(--ink-4); text-decoration:line-through; font-weight:500; }
+.cart-item-discount-tag {
+  font-size:10.5px; font-weight:800; color:var(--gold);
+  background:var(--gold-soft); border:1px solid #f0d9a8;
+  padding:1.5px 6px; border-radius:5px;
+}
+
+/* Qty */
+.cart-qty-wrap { display:flex; justify-content:center; }
+.cart-qty {
+  display:flex; align-items:center;
+  border:1.5px solid var(--warm-border-2);
+  border-radius:10px; overflow:hidden;
+  background:#faf7f4;
+}
+.cart-qty-btn {
+  width:32px; height:34px;
+  display:flex; align-items:center; justify-content:center;
+  background:transparent; border:none;
+  font-size:16px; font-weight:700; color:var(--ink-3);
+  cursor:pointer; transition:background 0.13s, color 0.13s;
+  font-family:var(--font);
+}
+.cart-qty-btn:hover:not(:disabled) { background:var(--brand-soft); color:var(--brand); }
+.cart-qty-btn:disabled { color:var(--warm-border-2); cursor:not-allowed; }
+.cart-qty-input {
+  width:44px; height:34px;
+  text-align:center; border:none; outline:none;
+  background:transparent;
+  font-size:14px; font-weight:800; color:var(--ink);
+  font-family:var(--font);
+  -moz-appearance:textfield;
+}
+.cart-qty-input::-webkit-inner-spin-button,
+.cart-qty-input::-webkit-outer-spin-button { -webkit-appearance:none; }
+
+/* Line total */
+.cart-item-total { display:flex; flex-direction:column; align-items:flex-end; gap:3px; }
+.cart-item-total span { font-size:14px; font-weight:800; color:var(--ink-2); }
+.cart-item-total-saved { font-size:11px; color:var(--brand); font-weight:600; }
+
+/* Delete btn */
+.cart-item-del {
+  width:28px; height:28px;
+  display:flex; align-items:center; justify-content:center;
+  border:none; background:transparent; border-radius:8px;
+  color:var(--ink-4); cursor:pointer;
+  transition:background 0.13s, color 0.13s;
+}
+.cart-item-del:hover { background:#fef2f2; color:#ef4444; }
+
+/* ── Summary ── */
+.cart-summary {
+  background:var(--warm-card);
+  border:1.5px solid var(--warm-border);
+  border-radius:var(--r-lg);
+  padding:24px 22px;
+  box-shadow:var(--shadow-md);
+  position:sticky; top:24px;
+  font-family:var(--font);
+}
+.cart-summary-title {
+  font-family:var(--font-display); font-size:18px; font-weight:500;
+  color:var(--ink); margin:0 0 18px; letter-spacing:-0.01em;
+}
+.cart-summary-rows { display:flex; flex-direction:column; gap:10px; }
+.cart-summary-row { display:flex; justify-content:space-between; font-size:13.5px; color:var(--ink-3); font-weight:500; }
+.cart-summary-saved { color:#15803d; }
+.cart-summary-saved span:last-child { font-weight:700; }
+.cart-free-ship { color:#15803d; font-weight:700; }
+.cart-summary-divider { height:1px; background:var(--warm-border); margin:16px 0; }
+.cart-summary-total { display:flex; justify-content:space-between; align-items:baseline; }
+.cart-summary-total > span:first-child { font-size:15px; font-weight:700; color:var(--ink); }
+.cart-total-amount { font-family:var(--font-display); font-size:22px; font-weight:600; color:var(--brand); }
+
+.cart-saving-banner {
+  margin:14px 0 0;
+  padding:10px 14px;
+  background:linear-gradient(135deg,#fff8ec,#fff3f6);
+  border:1px solid #f5dfc0;
+  border-radius:10px;
+  font-size:12.5px;
+  color:var(--ink-2);
+  font-weight:600;
+  line-height:1.5;
+}
+
+.cart-checkout-btn {
+  display:block; width:100%;
+  margin-top:18px;
+  padding:13px 0;
+  background:var(--brand);
+  color:#fff; border:none;
+  border-radius:12px;
+  font-size:15px; font-weight:800;
+  font-family:var(--font);
+  cursor:pointer; letter-spacing:0.02em;
+  box-shadow:0 3px 14px rgba(190,18,60,0.3);
+  transition:background 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+.cart-checkout-btn:hover:not(:disabled) {
+  background:var(--brand-dark); transform:translateY(-1px);
+  box-shadow:0 5px 20px rgba(190,18,60,0.35);
+}
+.cart-checkout-btn:disabled {
+  background:#ddd; color:#aaa; cursor:not-allowed;
+  box-shadow:none; transform:none;
+}
+
+.cart-continue-link {
+  display:block; text-align:center;
+  margin-top:12px;
+  font-size:13px; color:var(--ink-3); font-weight:600;
+  text-decoration:none; transition:color 0.13s;
+}
+.cart-continue-link:hover { color:var(--brand); }
+`;

@@ -25,6 +25,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AppCacheModule } from './common/cache/cache.module';
 import { PayPalModule } from './modules/paypal/paypal.module';
 import { SepayModule } from './modules/sepay/sepay.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -33,6 +34,14 @@ import { SepayModule } from './modules/sepay/sepay.module';
       load: [configuration],
       envFilePath: ['.env', '../../.env'],
     }),
+
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 5,
+      },
+    ]),
+
     PrismaModule,
     AppCacheModule,
     AuthModule,

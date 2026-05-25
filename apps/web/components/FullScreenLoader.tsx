@@ -2,55 +2,59 @@
 
 export function FullScreenLoader() {
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-zinc-950">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#1a0f0a]">
       {/* Background glow */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl" />
+        <div className="w-64 h-64 bg-[#f59e0b]/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative flex flex-col items-center gap-5">
         {/* Spinner stack */}
         <div className="relative w-14 h-14">
-          {/* Outer ring - slow */}
+          {/* Outer ring */}
           <div
             className="absolute inset-0 rounded-full border-2 border-transparent"
             style={{
-              borderTopColor: "rgba(99,102,241,0.2)",
-              borderRightColor: "rgba(99,102,241,0.2)",
+              borderTopColor: "rgba(245, 158, 11, 0.25)", // caramel
+              borderRightColor: "rgba(245, 158, 11, 0.15)",
               animation: "spin 2.5s linear infinite reverse",
             }}
           />
-          {/* Middle ring - medium */}
+
+          {/* Middle ring */}
           <div
             className="absolute inset-[5px] rounded-full border-2 border-transparent"
             style={{
-              borderTopColor: "rgba(139,92,246,0.5)",
+              borderTopColor: "rgba(251, 113, 133, 0.6)", // strawberry
               animation: "spin 1.5s linear infinite",
             }}
           />
-          {/* Inner ring - fast */}
+
+          {/* Inner ring */}
           <div
             className="absolute inset-[10px] rounded-full border-2 border-transparent"
             style={{
-              borderTopColor: "#6366f1",
-              borderRightColor: "#6366f1",
+              borderTopColor: "#f59e0b", 
+              borderRightColor: "#fb7185", 
               animation: "spin 0.8s linear infinite",
             }}
           />
+
           {/* Center dot */}
-          <div className="absolute inset-[19px] rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/50" />
+          <div className="absolute inset-[19px] rounded-full bg-[#fb7185] shadow-lg shadow-[#fb7185]/40" />
         </div>
 
         {/* Label */}
         <div className="flex items-center gap-1.5">
-          <span className="text-zinc-400 text-[11px] font-medium tracking-[0.2em] uppercase">
+          <span className="text-[#ffe4c7] text-[11px] font-medium tracking-[0.2em] uppercase">
             Đang tải
           </span>
+
           <span className="flex gap-0.5">
             {[0, 1, 2].map((i) => (
               <span
                 key={i}
-                className="w-1 h-1 rounded-full bg-zinc-500"
+                className="w-1 h-1 rounded-full bg-[#f59e0b]"
                 style={{
                   animation: "pulse 1.2s ease-in-out infinite",
                   animationDelay: `${i * 0.2}s`,
@@ -67,6 +71,7 @@ export function FullScreenLoader() {
             transform: rotate(360deg);
           }
         }
+
         @keyframes pulse {
           0%,
           100% {

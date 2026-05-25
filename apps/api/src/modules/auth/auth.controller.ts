@@ -14,6 +14,7 @@ import { LoginDto } from './dto/login.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { UsersService } from '../users/users.service';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -35,6 +36,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Register new user' })
   @ApiBody({ type: RegisterDto })
   @ApiOkResponse({ type: AuthTokensResponseDto })
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Public()
   @Post('register')
   async register(
@@ -56,6 +58,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Login and get token pair' })
   @ApiBody({ type: LoginDto })
   @ApiOkResponse({ type: AuthTokensResponseDto })
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Public()
   @Post('login')
   async login(
