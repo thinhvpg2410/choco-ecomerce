@@ -97,7 +97,7 @@ export class OrdersService {
         }
       }
 
-      const shippingFee = 30000;
+      const shippingFee = dto.is_hcm ? 15_000 : 30_000;
       const finalAmount = Math.max(
         0,
         totalAmount + shippingFee - discountAmount,
@@ -236,7 +236,7 @@ export class OrdersService {
         }
       }
 
-      const shippingFee = 30000;
+      const shippingFee = dto.is_hcm ? 15_000 : 30_000;
       const finalAmount = Math.max(
         0,
         totalAmount + shippingFee - discountAmount,

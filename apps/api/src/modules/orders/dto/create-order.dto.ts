@@ -79,4 +79,8 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   coupon_code?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is_hcm?: boolean;
 }

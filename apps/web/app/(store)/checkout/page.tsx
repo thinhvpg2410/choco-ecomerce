@@ -115,12 +115,29 @@ export default function CheckoutPage() {
   }, []);
 
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
-  const SHIPPING = 0;
+  // Thành này
+  const HCM_KEYWORDS = [
+    "hồ chí minh",
+    "ho chi minh",
+    "hcm",
+    "tphcm",
+    "tp.hcm",
+    "tp hcm",
+    "sài gòn",
+    "sai gon",
+  ];
+
+  const isHCM = selectedAddress
+    ? HCM_KEYWORDS.some((kw) => selectedAddress.city.toLowerCase().includes(kw))
+    : false;
+
+  const shippingFee = isHCM ? 15_000 : 30_000;
+
   const totalDiscount = appliedVouchers.reduce(
     (sum, item) => sum + item.discount,
     0,
   );
-  const total = Math.max(0, subtotal + SHIPPING - totalDiscount);
+  const total = Math.max(0, subtotal + shippingFee - totalDiscount);
   const fmt = (n: number) => n.toLocaleString("vi-VN") + "đ";
 
   const applyVoucher = async () => {
@@ -314,7 +331,7 @@ export default function CheckoutPage() {
               <OrderSummarySection
                 itemsLength={items.length}
                 subtotal={subtotal}
-                SHIPPING={SHIPPING}
+                SHIPPING={shippingFee}
                 appliedVouchers={appliedVouchers}
                 total={total}
                 fmt={fmt}
@@ -327,6 +344,7 @@ export default function CheckoutPage() {
                 note={note}
                 isBuyNow={isBuyNow}
                 buyNowProduct={buyNowProduct}
+                isHCM={isHCM}
               />
             </div>
           </div>
