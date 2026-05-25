@@ -2,7 +2,6 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { ProductList } from "@/components/product/product-list";
-import { HeroBanner } from "@/components/ui/hero-banner";
 import { getProducts } from "@/services/product.service";
 import { generatePagination } from "@/lib/pagination";
 import Link from "next/link";
@@ -21,6 +20,9 @@ type SearchParams = {
   is_best_seller?: string;
   brand_id?: string;
   category_id?: string;
+  sort_by?: string;
+  category?: string;
+  brand?: string;
 };
 
 export default async function ProductPage({
@@ -31,7 +33,6 @@ export default async function ProductPage({
   noStore();
 
   const params = await searchParams;
-  console.log("📌 searchParams:", params);
 
   const currentPage =
     Number.isInteger(Number(params.page)) && Number(params.page) > 0
@@ -48,123 +49,255 @@ export default async function ProductPage({
     is_best_seller: params.is_best_seller === "true",
     brand_id: params.brand_id,
     category_id: params.category_id,
+    sort_by: params.sort_by,
   });
 
   const totalPages = total > 0 && limit > 0 ? Math.ceil(total / limit) : 1;
 
+  const pageHref = (p: number) => {
+    const q = new URLSearchParams();
+    if (params.search) q.set("search", params.search);
+    if (params.min_price) q.set("min_price", params.min_price);
+    if (params.max_price) q.set("max_price", params.max_price);
+    if (params.is_new) q.set("is_new", params.is_new);
+    if (params.is_best_seller) q.set("is_best_seller", params.is_best_seller);
+    if (params.brand_id) q.set("brand_id", params.brand_id);
+    if (params.category_id) q.set("category_id", params.category_id);
+    if (params.sort_by) q.set("sort_by", params.sort_by);
+    q.set("page", String(p));
+    return `?${q.toString()}`;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      <div>
-        <div className="px-6 py-3 bg-[#FFF0F6]">
-          {/* Breadcrumb */}
-          <div className="w-full mx-auto py-2 text-base text-[#3b1d14] flex items-center gap-2 font-serif">
-            <a href="/" className="flex items-center">
-              <img src="/image/home.png" alt="home" className="w-5 h-5" />
-            </a>
-            <span>›</span>
-            <a href="/product" className="hover:text-[#6b4f3b]">
-              Sản phẩm
-            </a>
-          </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        :root {
+  /* primary */
+  --p:           #FF8A65;
+  --p-dark:      #F97316;
+  --p-light:     #FFF1EB;
+  --p-border:    #FED7C3;
 
-          {/* Banner */}
-          <div className="relative overflow-hidden rounded-sm">
-            <img
-              src="/image/bg.png"
-              alt="privacy"
-              className="w-full h-[300px] object-cover"
-            />
-            <div className="absolute inset-0 bg-[#FFC1DA]/30"></div>
-            <div className="absolute inset-4 border-2 border-[#FFF0F6] pointer-events-none"></div>
-            <h1
-              className="absolute inset-0 flex items-center justify-center 
-                text-[#D85A8A] text-8xl tracking-widest uppercase"
-            >
-              SẢN PHẨM
-            </h1>
+  /* text */
+  --ink:         #2B2B2B;
+  --ink2:        #5B5B5B;
+  --ink3:        #9E9E9E;
+
+  /* surfaces */
+  --surface:     #FFFFFF;
+  --bg:          #FFFDFB;
+  --border:      #F1E5DD;
+
+  /* radius */
+  --radius-sm:   8px;
+  --radius:      12px;
+  --radius-lg:   16px;
+}
+
+        .pp-root {
+          min-height: 100vh;
+          background: var(--bg);
+          font-family: 'Inter', sans-serif;
+          padding-bottom: 80px;
+        }
+
+        /* ── HERO ── */
+        .pp-hero {
+          background: var(--surface);
+          border-bottom: 1.5px solid var(--border);
+          padding: 16px 28px 0;
+        }
+        .pp-breadcrumb {
+          display: flex; align-items: center; gap: 6px;
+          font-size: 13px; font-weight: 500; color: var(--ink3);
+          margin-bottom: 16px;
+        }
+        .pp-breadcrumb a { color: var(--ink3); text-decoration: none; transition: color .15s; }
+        .pp-breadcrumb a:hover { color: var(--p); }
+        .pp-breadcrumb-sep { color: var(--border); }
+
+        .pp-banner {
+          position: relative; border-radius: 14px 14px 0 0;
+          overflow: hidden; height: 200px;
+        }
+        .pp-banner img { width: 100%; height: 100%; object-fit: cover; }
+        .pp-banner-overlay {
+          position: absolute; inset: 0;
+          background: linear-gradient(135deg, rgba(15,23,42,.52) 0%, rgba(15,23,42,.15) 100%);
+        }
+        .pp-banner-title {
+          position: absolute; inset: 0;
+          display: flex; align-items: center; justify-content: center;
+          font-family: 'Inter', sans-serif;
+          font-size: 42px; font-weight: 800;
+          letter-spacing: .06em; text-transform: uppercase;
+          color: #fff;
+        }
+        .pp-banner-badge {
+          position: absolute; bottom: 16px; right: 20px;
+          background: rgba(255,255,255,.15);
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(255,255,255,.25);
+          border-radius: 999px;
+          padding: 5px 14px;
+          font-size: 13px; font-weight: 600; color: #fff;
+        }
+
+        /* ── BODY ── */
+        .pp-body { max-width: 1400px; margin: 0 auto; padding: 28px 28px 0; }
+        .pp-top-row {
+          display: flex; align-items: baseline; margin-bottom: 20px; gap: 8px;
+        }
+        .pp-heading { font-size: 22px; font-weight: 700; color: var(--ink); }
+        .pp-count { font-size: 14px; font-weight: 500; color: var(--ink3); }
+
+        /* ── LAYOUT ── */
+        .pp-grid {
+          display: grid;
+          grid-template-columns: 1fr 256px;
+          gap: 24px;
+          align-items: start;
+        }
+        @media (max-width: 1024px) {
+          .pp-grid { grid-template-columns: 1fr; }
+          .pp-sidebar { display: none; }
+        }
+        .pp-sidebar { position: sticky; top: 80px; }
+
+        /* ── EMPTY ── */
+        .pp-empty {
+          background: var(--surface); border: 1.5px solid var(--border);
+          border-radius: var(--radius-lg); padding: 60px 20px; text-align: center;
+        }
+        .pp-empty-icon { font-size: 36px; margin-bottom: 10px; }
+        .pp-empty-text { font-size: 14px; color: var(--ink3); font-weight: 500; }
+
+        /* ── PAGINATION ── */
+        .pp-pagination { display: flex; justify-content: center; margin-top: 48px; }
+        .pp-pag-inner {
+          display: inline-flex; align-items: center; gap: 2px;
+          background: var(--surface); border: 1.5px solid var(--border);
+          border-radius: var(--radius-lg); padding: 4px;
+          box-shadow: 0 1px 4px rgba(0,0,0,.04);
+        }
+        .pp-pag-btn {
+          padding: 8px 16px; border-radius: var(--radius-sm);
+          font-size: 13px; font-weight: 600; color: var(--ink2);
+          text-decoration: none; transition: all .15s;
+          font-family: 'Inter', sans-serif;
+        }
+        .pp-pag-btn:hover:not(.disabled) { background: var(--p-light); color: var(--p); }
+        .pp-pag-btn.disabled { color: var(--border); pointer-events: none; }
+        .pp-pag-num {
+          min-width: 36px; height: 36px;
+          display: flex; align-items: center; justify-content: center;
+          border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+          color: var(--ink2); text-decoration: none; transition: all .15s;
+          font-family: 'Inter', sans-serif;
+        }
+        .pp-pag-num:hover { background: var(--p-light); color: var(--p); }
+        .pp-pag-num.current { background: var(--p); color: #fff; }
+        .pp-pag-dots { padding: 0 4px; color: var(--ink3); font-weight: 600; }
+      `}</style>
+
+      <div className="pp-root">
+        {/* HERO */}
+        <div className="pp-hero">
+          <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+            <div className="pp-breadcrumb">
+              <a href="/">
+                <img
+                  src="/image/home.png"
+                  alt="home"
+                  style={{ width: 14, height: 14, verticalAlign: "middle" }}
+                />
+              </a>
+              <span className="pp-breadcrumb-sep">›</span>
+              <a href="/product">Sản phẩm</a>
+            </div>
+            <div className="pp-banner">
+              <img src="/image/bg.png" alt="Sản phẩm" />
+              <div className="pp-banner-overlay" />
+              <div className="pp-banner-title">Sản phẩm</div>
+              <div className="pp-banner-badge">{total} sản phẩm</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="container mx-auto px-6 pt-10">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-[#3b1d14]">
-            Tất cả sản phẩm <span className="text-[#FF7FB8]">({total})</span>
-          </h1>
-        </div>
+        {/* BODY */}
+        <div className="pp-body">
+          <div className="pp-top-row">
+            <span className="pp-heading">Tất cả sản phẩm</span>
+            <span className="pp-count">({total} sản phẩm)</span>
+          </div>
 
-        <ProductSearchBar />
+          <ProductSearchBar />
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-          <div>
-            {products.length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-2xl border">
-                <p className="text-[#3b1d14]">Không có sản phẩm nào.</p>
-              </div>
-            ) : (
-              <>
-                <ProductList products={products} />
-                {/* PAGINATION */}
-                {totalPages > 1 && (
-                  <div className="mt-12 flex justify-center">
-                    <div className="inline-flex items-center gap-1 rounded-lg border bg-white p-1 shadow-sm">
-                      <Link
-                        href={`?page=${Math.max(1, currentPage - 1)}`}
-                        prefetch={false}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                          currentPage <= 1
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "hover:bg-gray-100"
-                        }`}
-                      >
-                        ← Trước
-                      </Link>
+          <div className="pp-grid">
+            {/* MAIN */}
+            <div>
+              {products.length === 0 ? (
+                <div className="pp-empty">
+                  <div className="pp-empty-icon">🔍</div>
+                  <div className="pp-empty-text">
+                    Không có sản phẩm nào phù hợp.
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <ProductList products={products} />
 
-                      {generatePagination(currentPage, totalPages).map(
-                        (page, idx) => (
-                          <span key={idx}>
-                            {page === "..." ? (
-                              <span className="px-3 py-2 text-gray-400">…</span>
+                  {totalPages > 1 && (
+                    <div className="pp-pagination">
+                      <div className="pp-pag-inner">
+                        <Link
+                          href={pageHref(Math.max(1, currentPage - 1))}
+                          prefetch={false}
+                          className={`pp-pag-btn ${currentPage <= 1 ? "disabled" : ""}`}
+                        >
+                          ← Trước
+                        </Link>
+
+                        {generatePagination(currentPage, totalPages).map(
+                          (page, idx) =>
+                            page === "..." ? (
+                              <span key={idx} className="pp-pag-dots">
+                                …
+                              </span>
                             ) : (
                               <Link
-                                href={`?page=${page}`}
+                                key={idx}
+                                href={pageHref(Number(page))}
                                 prefetch={false}
-                                className={`min-w-[40px] h-10 flex items-center justify-center rounded-md text-sm font-medium border transition-all ${
-                                  page === currentPage
-                                    ? "bg-red-500 text-white border-red-500"
-                                    : "border-transparent hover:bg-gray-100"
-                                }`}
+                                className={`pp-pag-num ${page === currentPage ? "current" : ""}`}
                               >
                                 {page}
                               </Link>
-                            )}
-                          </span>
-                        ),
-                      )}
+                            ),
+                        )}
 
-                      <Link
-                        href={`?page=${Math.min(totalPages, currentPage + 1)}`}
-                        prefetch={false}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                          currentPage >= totalPages
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "hover:bg-gray-100"
-                        }`}
-                      >
-                        Sau →
-                      </Link>
+                        <Link
+                          href={pageHref(Math.min(totalPages, currentPage + 1))}
+                          prefetch={false}
+                          className={`pp-pag-btn ${currentPage >= totalPages ? "disabled" : ""}`}
+                        >
+                          Sau →
+                        </Link>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+                  )}
+                </>
+              )}
+            </div>
 
-          <aside className="space-y-6 lg:sticky lg:top-28">
-            <ProductSidebarFilters />
-          </aside>
+            {/* SIDEBAR */}
+            <aside className="pp-sidebar">
+              <ProductSidebarFilters />
+            </aside>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

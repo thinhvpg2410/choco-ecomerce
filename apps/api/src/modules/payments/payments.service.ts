@@ -232,68 +232,6 @@ export class PaymentsService {
     }
   }
 
-  // private async createQrBankPayment(orderId: string, userId: string) {
-  //   const result = await this.prisma.$transaction(async (tx) => {
-  //     const order = await tx.order.findFirst({
-  //       where: { id: orderId, userId },
-  //     });
-
-  //     if (!order) {
-  //       throw new NotFoundException('Đơn hàng không tồn tại');
-  //     }
-
-  //     if (order.status === OrderStatus.CANCELLED) {
-  //       throw new BadRequestException(
-  //         'Không thể thanh toán cho đơn hàng đã hủy',
-  //       );
-  //     }
-
-  //     // Tạo mã nội dung chuyển khoản duy nhất dựa trên ID đơn hàng để không bị trùng
-  //     const transactionCode = `DH${order.id.split('-')[0].toUpperCase()}`;
-
-  //     // Sử dụng upsert: Nếu chưa có thì tạo mới, nếu có rồi thì cập nhật lại transactionCode
-  //     const payment = await tx.payment.upsert({
-  //       where: { orderId: orderId },
-  //       update: {
-  //         transactionCode,
-  //         paymentMethod: PaymentMethod.QR_BANK,
-  //         paymentStatus: PaymentStatus.PENDING,
-  //       },
-  //       create: {
-  //         orderId,
-  //         paymentMethod: PaymentMethod.QR_BANK,
-  //         paymentStatus: PaymentStatus.PENDING,
-  //         amount: order.finalAmount,
-  //         transactionCode,
-  //       },
-  //     });
-
-  //     await tx.order.update({
-  //       where: { id: orderId },
-  //       data: { paymentStatus: PaymentStatus.PENDING },
-  //     });
-
-  //     // Tạo URL QR SePay mượt mà
-  //     const qrUrl =
-  //       `https://qr.sepay.vn/img` +
-  //       `?acc=0961439551` +
-  //       `&bank=MBBank` +
-  //       `&amount=${Number(order.finalAmount)}` +
-  //       `&des=${transactionCode}`;
-
-  //     return { payment, qrUrl };
-  //   });
-
-  //   return {
-  //     success: true,
-  //     message: 'Tạo thanh toán QR thành công',
-  //     data: {
-  //       ...this.toPaymentResponse(result.payment),
-  //       qr_url: result.qrUrl,
-  //     },
-  //   };
-  // }
-
   private async createQrBankPayment(orderId: string, userId: string) {
     const result = await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findFirst({
@@ -309,22 +247,22 @@ export class PaymentsService {
           'Không thể thanh toán cho đơn hàng đã hủy',
         );
       }
-      const testAmount = 2000; 
+
       const transactionCode = `DH${order.id.split('-')[0].toUpperCase()}`;
 
+      // Dùng đúng finalAmount từ đơn hàng
       const payment = await tx.payment.upsert({
         where: { orderId: orderId },
         update: {
           transactionCode,
           paymentMethod: PaymentMethod.QR_BANK,
           paymentStatus: PaymentStatus.PENDING,
-          amount: testAmount,
         },
         create: {
           orderId,
           paymentMethod: PaymentMethod.QR_BANK,
           paymentStatus: PaymentStatus.PENDING,
-          amount: testAmount,
+          amount: order.finalAmount,
           transactionCode,
         },
       });
@@ -334,10 +272,9 @@ export class PaymentsService {
         data: { paymentStatus: PaymentStatus.PENDING },
       });
 
-      // Tạo URL QR SePay mượt mà
       const qrUrl =
         `https://img.vietqr.io/image/MB-0961439551-compact2.png` +
-        `?amount=${testAmount}` +
+        `?amount=${Number(order.finalAmount)}` +
         `&addInfo=${transactionCode}` +
         `&accountName=CHOCOSHOP`;
 
