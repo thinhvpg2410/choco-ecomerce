@@ -23,12 +23,13 @@ type Props = {
   note: string;
   isBuyNow: boolean;
   buyNowProduct: any;
+  isHCM: boolean;
 };
 
 export default function OrderSummarySection({
   itemsLength, subtotal, SHIPPING, appliedVouchers, total, fmt,
   placing, orderLocked, payMethod,
-  selectedAddress, items, cartItemIds, note, isBuyNow, buyNowProduct,
+  selectedAddress, items, cartItemIds, note, isBuyNow, buyNowProduct, isHCM,
 }: Props) {
   const router = useRouter();
 
@@ -39,10 +40,16 @@ export default function OrderSummarySection({
     }
     const checkoutData = {
       items, cartItemIds, selectedAddress, appliedVouchers, note,
-      payMethod, subtotal, shipping: SHIPPING, total, isBuyNow, buyNowProduct,
+      payMethod, subtotal, shipping: SHIPPING, total, isBuyNow, buyNowProduct, isHCM,
     };
     localStorage.setItem("payment_meta", JSON.stringify({ method: payMethod }));
-    localStorage.setItem("pending_checkout", JSON.stringify({ ...checkoutData }));
+    localStorage.setItem(
+      "pending_checkout",
+      JSON.stringify({
+        ...checkoutData,
+        shipping: SHIPPING, 
+      }),
+    );
     localStorage.setItem("cart_backup", JSON.stringify(items));
     router.push("/checkout/payment");
   };

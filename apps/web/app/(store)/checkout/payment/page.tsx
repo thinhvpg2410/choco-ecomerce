@@ -129,7 +129,6 @@ export default function PaymentPage() {
           clearInterval(intervalRef.current!);
           intervalRef.current = null;
           setCheckingPayment(false);
-          await createPayment({ order_id: orderId, payment_method: "QR_BANK" });
           localStorage.removeItem("pending_checkout");
           localStorage.removeItem("checkout_cart");
           localStorage.removeItem("payment_meta");
@@ -176,6 +175,7 @@ export default function PaymentPage() {
         cart_item_ids: checkoutData.cartItemIds || [],
         buy_now: checkoutData.isBuyNow || false,
         coupon_code: checkoutData.appliedVouchers?.[0]?.code || null,
+        is_hcm: isHCM,
       };
       if (checkoutData.isBuyNow) {
         payload.product_id = checkoutData.buyNowProduct.product_id;
@@ -271,6 +271,7 @@ export default function PaymentPage() {
     shipping,
     appliedVouchers,
     payMethod,
+    isHCM,
   } = checkoutData;
   const totalDiscount =
     appliedVouchers?.reduce((sum: number, v: any) => sum + v.discount, 0) || 0;
