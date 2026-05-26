@@ -16,14 +16,15 @@ import { Input } from "@/components/ui/input";
 import ProductModal from "@/components/admin/ProductModal";
 import {
   getAdminProducts,
-  deleteProduct,
+  toggleProductActive
 } from "@/services/admin.product.service";
 import { toast } from "sonner";
 import {
   Search,
   Plus,
   Pencil,
-  Trash2,
+  Eye,
+  EyeOff,
   Package,
   ChevronLeft,
   ChevronRight,
@@ -117,16 +118,36 @@ export function ProductsManagement() {
     return true;
   });
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Xác nhận ẩn sản phẩm này?")) return;
+  const handleToggleActive = async (product: any) => {
+    const willHide = product.is_active;
+    if (
+      !confirm(
+        willHide
+          ? "Xác nhận ẩn sản phẩm này?"
+          : "Xác nhận bật hiển thị sản phẩm này?",
+      )
+    )
+      return;
+
     try {
-      await deleteProduct(id);
-      toast.success("Đã ẩn sản phẩm");
+      const updated = await toggleProductActive(product.id);
+
+      // Cập nhật trạng thái sản phẩm trong list
       setProducts((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, is_active: false } : p)),
+        prev.map((p) =>
+          p.id === product.id ? { ...p, is_active: updated.is_active } : p,
+        ),
+      );
+
+      // Cập nhật counts ngay, không cần gọi lại API
+      setActiveCount((c) => c + (willHide ? -1 : 1));
+      setHiddenCount((c) => c + (willHide ? 1 : -1));
+
+      toast.success(
+        updated.is_active ? "Đã bật hiển thị sản phẩm" : "Đã ẩn sản phẩm",
       );
     } catch {
-      toast.error("Xóa thất bại");
+      toast.error("Thao tác thất bại");
     }
   };
 
@@ -414,6 +435,7 @@ export function ProductsManagement() {
                       </TableCell>
 
                       {/* Actions */}
+                      {/* Actions */}
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
@@ -427,13 +449,23 @@ export function ProductsManagement() {
                           >
                             <Pencil className="w-3 h-3" />
                           </Button>
+
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 w-7 p-0 hover:bg-red-50 hover:border-red-200"
-                            onClick={() => handleDelete(p.id)}
+                            className={`h-7 w-7 p-0 transition-colors ${
+                              p.is_active
+                                ? "hover:bg-red-50 hover:border-red-200"
+                                : "hover:bg-green-50 hover:border-green-200"
+                            }`}
+                            title={p.is_active ? "Ẩn sản phẩm" : "Bật hiển thị"}
+                            onClick={() => handleToggleActive(p)}
                           >
-                            <Trash2 className="w-3 h-3 text-red-500" />
+                            {p.is_active ? (
+                              <EyeOff className="w-3 h-3 text-red-500" />
+                            ) : (
+                              <Eye className="w-3 h-3 text-green-500" />
+                            )}
                           </Button>
                         </div>
                       </TableCell>

@@ -278,20 +278,6 @@ export class ProductsService {
     };
   }
 
-  async remove(productId: string) {
-    this.validateProductId(productId);
-    const result = await this.prisma.product.updateMany({
-      where: { id: productId, isActive: true },
-      data: { isActive: false },
-    });
-    if (result.count === 0) {
-      throw new NotFoundException('Sản phẩm không tồn tại');
-    }
-
-    await this.cache.invalidateAfterProductWrite(productId);
-    return { success: true, message: 'Sản phẩm đã được xóa thành công' };
-  }
-
   private async findAllForViewer(
     query: QueryProductDto,
     viewer: JwtRequestUser,
@@ -592,6 +578,33 @@ export class ProductsService {
 
       category: product.category,
       brand: product.brand,
+    };
+  }
+
+  async toggleActive(productId: string) {
+    this.validateProductId(productId);
+
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true, isActive: true },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Sản phẩm không tồn tại');
+    }
+
+    const updated = await this.prisma.product.update({
+      where: { id: productId },
+      data: { isActive: !product.isActive },
+      select: productPublicSelect,
+    });
+
+    await this.cache.invalidateAfterProductWrite(productId);
+
+    return {
+      success: true,
+      message: updated.isActive ? 'Đã bật hiển thị sản phẩm' : 'Đã ẩn sản phẩm',
+      data: this.toProductResponse(updated),
     };
   }
 }

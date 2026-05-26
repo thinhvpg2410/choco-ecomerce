@@ -141,51 +141,40 @@ export default function CheckoutPage() {
   const fmt = (n: number) => n.toLocaleString("vi-VN") + "đ";
 
   const applyVoucher = async () => {
-    const code = voucherInput.trim().toUpperCase();
-    if (!code) {
-      toast.error("Vui lòng nhập mã giảm giá");
-      return;
-    }
-    if (appliedVouchers.some((v) => v.code === code)) {
-      toast.error("Mã giảm giá đã được sử dụng");
-      return;
-    }
-    try {
-      const response = await applyCoupon({ code, subtotal });
-      let couponData = null;
-      if (response?.data?.data) couponData = response.data.data;
-      else if (response?.data)
-        couponData = response.data.code ? response.data : response.data;
-      else if (response?.code) couponData = response;
+     const code = voucherInput.trim().toUpperCase();
+     if (!code) {
+       toast.error("Vui lòng nhập mã giảm giá");
+       return;
+     }
+     if (appliedVouchers.some((v) => v.code === code)) {
+       toast.error("Mã này đã được áp dụng");
+       return;
+     }
 
-      if (!couponData || !couponData.code) {
-        toast.error(
-          response?.message ||
-            response?.data?.message ||
-            "Mã giảm giá không hợp lệ",
-        );
-        return;
-      }
-      const discount = Number(couponData.discount_amount || 0);
-      if (discount > subtotal) {
-        toast.error("Giảm giá vượt quá giá trị sản phẩm");
-        return;
-      }
-      setAppliedVouchers([
-        {
-          code: couponData.code,
-          discount,
-          finalAmount: couponData.final_amount ?? subtotal - discount,
-          description: `Giảm ${discount.toLocaleString("vi-VN")}đ từ mã ${couponData.code}`,
-        },
-      ]);
-      setVoucherInput("");
-      toast.success(`Áp dụng mã ${couponData.code} thành công!`);
-    } catch (err: any) {
-      const serverMessage = err?.response?.data?.message;
-      if (Array.isArray(serverMessage)) toast.error(serverMessage[0]);
-      else toast.error(serverMessage || "Không thể kết nối đến máy chủ");
-    }
+     try {
+       // ✅ applyCoupon đã return data.data rồi, dùng thẳng
+       const couponData = await applyCoupon({ code, subtotal });
+
+       if (!couponData) {
+         toast.error("Mã giảm giá không hợp lệ");
+         return;
+       }
+
+       setAppliedVouchers([
+         {
+           code: couponData.code,
+           discount: couponData.discount_amount,
+           finalAmount: couponData.final_amount,
+           description: `Giảm ${couponData.discount_amount.toLocaleString("vi-VN")}đ từ mã ${couponData.code}`,
+         },
+       ]);
+       setVoucherInput("");
+       toast.success(`Áp dụng mã ${couponData.code} thành công!`);
+     } catch (err: any) {
+       const serverMessage = err?.response?.data?.message;
+       if (Array.isArray(serverMessage)) toast.error(serverMessage[0]);
+       else toast.error(serverMessage || "Không thể kết nối đến máy chủ");
+     }
   };
 
   if (loadingCart || loadingAddress) {

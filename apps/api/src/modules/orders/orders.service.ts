@@ -55,7 +55,6 @@ export class OrdersService {
         );
       }
 
-      // Giảm stock sản phẩm
       await tx.product.update({
         where: { id: product.id },
         data: { stock: { decrement: quantity } },
@@ -64,37 +63,13 @@ export class OrdersService {
       const unitPrice = Number(product.salePrice ?? product.price);
       const totalAmount = unitPrice * quantity;
 
-      // XỬ LÝ COUPON (CHỈ LÀM 1 LẦN)
       let discountAmount = 0;
       if (dto.coupon_code) {
-        const coupon = await tx.coupon.findUnique({
-          where: { code: dto.coupon_code.trim().toUpperCase() },
-        });
-
-        if (!coupon || !coupon.isActive) {
-          throw new BadRequestException('Mã giảm giá không hợp lệ');
-        }
-
-        if (coupon['discountType'] === 'PERCENT') {
-          discountAmount = (totalAmount * coupon['discountValue']) / 100;
-        } else {
-          discountAmount = coupon['discountValue'];
-        }
-
-        const updated = await tx.coupon.updateMany({
-          where: {
-            id: coupon.id,
-            OR: [
-              { usageLimit: null },
-              { usedCount: { lt: coupon.usageLimit ?? 0 } },
-            ],
-          },
-          data: { usedCount: { increment: 1 } },
-        });
-
-        if (updated.count === 0) {
-          throw new BadRequestException('Mã giảm giá đã hết lượt sử dụng');
-        }
+        discountAmount = await this.applyCouponInTx(
+          tx,
+          dto.coupon_code,
+          totalAmount,
+        );
       }
 
       const shippingFee = dto.is_hcm ? 15_000 : 30_000;
@@ -103,21 +78,12 @@ export class OrdersService {
         totalAmount + shippingFee - discountAmount,
       );
 
-      const orderItemData = {
-        productId: product.id,
-        productNameAtTime: product.name,
-        productImageAtTime: product.imageUrl,
-        price: product.price,
-        salePrice: product.salePrice,
-        quantity: quantity,
-      };
-
-      // Tạo Đơn hàng
       const order = await tx.order.create({
         data: {
           userId,
           totalAmount,
           shippingFee,
+          discountAmount,
           finalAmount,
           status: OrderStatus.PENDING,
           paymentStatus: PaymentStatus.PENDING,
@@ -127,7 +93,18 @@ export class OrdersService {
           paymentMethod: dto.payment_method,
           note: dto.note,
           paypalOrderId: dto.paypal_order_id,
-          items: { create: [orderItemData] },
+          items: {
+            create: [
+              {
+                productId: product.id,
+                productNameAtTime: product.name,
+                productImageAtTime: product.imageUrl,
+                price: product.price,
+                salePrice: product.salePrice,
+                quantity,
+              },
+            ],
+          },
         },
         include: { items: true },
       });
@@ -206,34 +183,11 @@ export class OrdersService {
 
       let discountAmount = 0;
       if (dto.coupon_code) {
-        const coupon = await tx.coupon.findUnique({
-          where: { code: dto.coupon_code.trim().toUpperCase() },
-        });
-
-        if (!coupon || !coupon.isActive) {
-          throw new BadRequestException('Mã giảm giá không hợp lệ');
-        }
-
-        if (coupon['discountType'] === 'PERCENT') {
-          discountAmount = (totalAmount * coupon['discountValue']) / 100;
-        } else {
-          discountAmount = coupon['discountValue'];
-        }
-
-        const updated = await tx.coupon.updateMany({
-          where: {
-            id: coupon.id,
-            OR: [
-              { usageLimit: null },
-              { usedCount: { lt: coupon.usageLimit ?? 0 } },
-            ],
-          },
-          data: { usedCount: { increment: 1 } },
-        });
-
-        if (updated.count === 0) {
-          throw new BadRequestException('Mã giảm giá đã hết lượt sử dụng');
-        }
+        discountAmount = await this.applyCouponInTx(
+          tx,
+          dto.coupon_code,
+          totalAmount,
+        );
       }
 
       const shippingFee = dto.is_hcm ? 15_000 : 30_000;
@@ -242,12 +196,12 @@ export class OrdersService {
         totalAmount + shippingFee - discountAmount,
       );
 
-      // Tiến hành tạo Đơn hàng
       const order = await tx.order.create({
         data: {
           userId,
           totalAmount,
           shippingFee,
+          discountAmount,
           finalAmount,
           status: OrderStatus.PENDING,
           paymentStatus: PaymentStatus.PENDING,
@@ -465,5 +419,57 @@ export class OrdersService {
       note: order.note,
       createdAt: order.createdAt,
     };
+  }
+
+  private async applyCouponInTx(
+    tx: Prisma.TransactionClient,
+    couponCode: string,
+    totalAmount: number,
+  ): Promise<number> {
+    const coupon = await tx.coupon.findUnique({
+      where: { code: couponCode.trim().toUpperCase() },
+    });
+
+    if (!coupon || !coupon.isActive) {
+      throw new BadRequestException('Mã giảm giá không hợp lệ');
+    }
+    if (coupon.expiryDate && coupon.expiryDate <= new Date()) {
+      throw new BadRequestException('Mã giảm giá đã hết hạn');
+    }
+
+    let discountAmount = 0;
+    if (coupon.couponType === 'PERCENT') {
+      const percent = Number(coupon.discountPercent ?? 0);
+      discountAmount = (totalAmount * percent) / 100;
+      if (coupon.maxDiscountAmount) {
+        discountAmount = Math.min(
+          discountAmount,
+          Number(coupon.maxDiscountAmount),
+        );
+      }
+    } else if (coupon.couponType === 'FIXED') {
+      discountAmount = Number(coupon.discountAmount ?? 0);
+    } else if (coupon.couponType === 'FREE_SHIP') {
+      discountAmount = 30_000;
+    }
+
+    discountAmount = Math.min(discountAmount, totalAmount);
+
+    const updated = await tx.coupon.updateMany({
+      where: {
+        id: coupon.id,
+        OR: [
+          { usageLimit: null },
+          { usedCount: { lt: coupon.usageLimit ?? 0 } },
+        ],
+      },
+      data: { usedCount: { increment: 1 } },
+    });
+
+    if (updated.count === 0) {
+      throw new BadRequestException('Mã giảm giá đã hết lượt sử dụng');
+    }
+
+    return discountAmount;
   }
 }

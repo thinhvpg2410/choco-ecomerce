@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Patch,
   Query,
   UseInterceptors,
   UploadedFile,
@@ -97,6 +98,16 @@ export class ProductsController {
     return this.productsService.update(productId, updateProductDto);
   }
 
+  @ApiOperation({ summary: 'Toggle product active/hidden (admin only)' })
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: ProductDetailResponseDto })
+  @Roles(UserRole.admin)
+  @Patch(':id/toggle-active')
+  async toggleActive(
+@Param('id') productId: string) {
+    return this.productsService.toggleActive(productId);
+  }
+
   @Post(':id/upload-image')
   @ApiBearerAuth()
   @Roles(UserRole.admin)
@@ -122,14 +133,5 @@ export class ProductsController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     return this.productsService.uploadImage(productId, file);
-  }
-
-  @ApiOperation({ summary: 'Soft delete product (admin only)' })
-  @ApiBearerAuth()
-  @ApiOkResponse({ description: 'Product deleted' })
-  @Roles(UserRole.admin)
-  @Delete(':id')
-  async remove(@Param('id') productId: string) {
-    return this.productsService.remove(productId);
   }
 }
