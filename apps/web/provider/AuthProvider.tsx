@@ -14,36 +14,24 @@ export default function AuthProvider({
   useEffect(() => {
     const restoreAuth = async () => {
       dispatch(setLoading(true));
+      console.log("🔄 [Auth] Bắt đầu restore session...");
 
       try {
-        // Gửi request để lấy token mới từ cookie
         const res = await api.post("/auth/refresh");
-
         const { accessToken, user } = res.data.data;
-
         setAccessToken(accessToken);
         dispatch(login(user));
-
-        console.log("✅ [Auth] Tự động đăng nhập thành công");
+        console.log("✅ [Auth] Restore thành công, user:", user);
+        console.log("✅ [Auth] Role:", user?.role);
       } catch (err: any) {
         const status = err?.response?.status;
-
-        // Phân loại lỗi để tránh báo đỏ vô lý
-        if (status === 401) {
-          // 401 là bình thường: Người dùng chưa đăng nhập hoặc cookie hết hạn
-          console.log("ℹ️ [Auth] Chưa có phiên đăng nhập (Khách)");
-        } else {
-          // Các lỗi khác (500, Network Error) thì mới cần log error
-          console.error(
-            "❌ [Auth] Lỗi kết nối hệ thống xác thực:",
-            err.message,
-          );
-        }
-
+        console.log("❌ [Auth] Refresh fail, status:", status);
+        console.log("❌ [Auth] Error:", err?.response?.data);
         setAccessToken(null);
         dispatch(logout());
       } finally {
         dispatch(setLoading(false));
+        console.log("🏁 [Auth] setLoading(false) xong");
       }
     };
 

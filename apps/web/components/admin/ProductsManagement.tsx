@@ -51,6 +51,14 @@ export function ProductsManagement() {
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
 
+  const [statusFilter, setStatusFilter] = useState<"" | "active" | "hidden">(
+    "",
+  );
+
+  const [activeCount, setActiveCount] = useState(0);
+  const [hiddenCount, setHiddenCount] = useState(0);
+  const [outOfStockCount, setOutOfStockCount] = useState(0);
+
   useEffect(() => {
     const loadFilters = async () => {
       try {
@@ -85,6 +93,10 @@ export function ProductsManagement() {
         brand_id: brandId || undefined,
       });
       setProducts(res.products ?? []);
+      // trong loadProducts sau setProducts:
+      setActiveCount(res.activeCount);
+      setHiddenCount(res.hiddenCount);
+      setOutOfStockCount(res.outOfStockCount);
       setTotalPages(res.pagination?.totalPages ?? 1);
       setTotalItems(res.pagination?.total ?? res.products?.length ?? 0);
     } catch {
@@ -99,11 +111,23 @@ export function ProductsManagement() {
     loadProducts();
   }, [page, categoryId, brandId]);
 
+  const filteredProducts = products.filter((p) => {
+    if (statusFilter === "active") return p.is_active;
+    if (statusFilter === "hidden") return !p.is_active;
+    return true;
+  });
+
   const handleDelete = async (id: string) => {
-    if (!confirm("Xác nhận xóa sản phẩm này?")) return;
-    await deleteProduct(id);
-    toast.success("Đã xóa sản phẩm");
-    loadProducts();
+    if (!confirm("Xác nhận ẩn sản phẩm này?")) return;
+    try {
+      await deleteProduct(id);
+      toast.success("Đã ẩn sản phẩm");
+      setProducts((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, is_active: false } : p)),
+      );
+    } catch {
+      toast.error("Xóa thất bại");
+    }
   };
 
   const stockBadge = (stock: number) => {
@@ -132,8 +156,6 @@ export function ProductsManagement() {
       currency: "VND",
     }).format(n);
 
-  const outOfStock = products.filter((p) => p.stock === 0).length;
-  const activeProducts = products.filter((p) => p.is_active).length;
 
   return (
     <div className="space-y-6">
@@ -165,11 +187,19 @@ export function ProductsManagement() {
             value: totalItems,
             color: "text-foreground",
           },
-          { label: "Đang bán", value: activeProducts, color: "text-green-600" },
-          { label: "Hết hàng", value: outOfStock, color: "text-red-500" },
+          {
+            label: "Đang bán",
+            value: activeCount,
+            color: "text-green-600",
+          },
+          {
+            label: "Hết hàng",
+            value: outOfStockCount,
+            color: "text-red-500",
+          },
           {
             label: "Đã ẩn",
-            value: products.filter((p) => !p.is_active).length,
+            value: hiddenCount,
             color: "text-muted-foreground",
           },
         ].map((stat) => (
@@ -198,6 +228,16 @@ export function ProductsManagement() {
                 className="pl-9 h-8 text-sm bg-background"
               />
             </div>
+
+            <select
+              className="h-8 text-sm border rounded-md px-3 bg-background text-foreground min-w-[130px]"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="active">Đang bán</option>
+              <option value="hidden">Đã ẩn</option>
+            </select>
 
             <select
               className="h-8 text-sm border rounded-md px-3 bg-background text-foreground min-w-[140px]"
@@ -252,7 +292,7 @@ export function ProductsManagement() {
               <Package className="h-8 w-8 animate-pulse opacity-40" />
               <p className="text-sm">Đang tải...</p>
             </div>
-          ) : products.length === 0 ? (
+          ) : filteredProducts.length === 0  ? (
             <div className="py-16 flex flex-col items-center gap-3 text-muted-foreground">
               <Package className="h-10 w-10 opacity-20" />
               <p className="text-sm">Không tìm thấy sản phẩm nào</p>
@@ -275,7 +315,7 @@ export function ProductsManagement() {
               </TableHeader>
 
               <TableBody>
-                {products.map((p) => {
+                {filteredProducts.map((p) => {
                   const stock = stockBadge(p.stock);
                   const displayPrice = p.sale_price || p.price;
                   const hasDiscount = p.sale_price && p.sale_price < p.price;

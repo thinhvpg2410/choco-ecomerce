@@ -73,7 +73,11 @@ export class BannersController {
   @Post(':id/upload-image')
   @ApiBearerAuth()
   @Roles(UserRole.admin)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {

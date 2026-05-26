@@ -29,10 +29,9 @@ export async function getAdminProducts(params: {
   category_id?: string;
   brand_id?: string;
 }) {
-  const res = await api.get("/products", {
+  const res = await api.get("/admin/products", {
     params: {
       page: params.page || 1,
-      limit: 10, // hoặc 12 cho UI đẹp
       search: params.search,
       category_id: params.category_id,
       brand_id: params.brand_id,
@@ -42,17 +41,18 @@ export async function getAdminProducts(params: {
   const data = res.data?.data;
 
   return {
-    products: data?.items ?? [],
+    products: data?.products ?? [],
     pagination: {
-      page: data?.pagination?.page ?? 1,
-      limit: data?.pagination?.limit ?? 10,
-      total: data?.pagination?.total ?? 0,
-      totalPages: data?.pagination?.totalPages ?? 1,
+      page: data?.page ?? 1,
+      limit: data?.limit ?? 20,
+      total: data?.total ?? 0,
+      totalPages: Math.ceil((data?.total ?? 0) / (data?.limit ?? 20)),
     },
+    activeCount: data?.activeCount ?? 0,
+    hiddenCount: data?.hiddenCount ?? 0,
+    outOfStockCount: data?.outOfStockCount ?? 0,
   };
 }
-
-// ================= CRUD =================
 
 export async function createProduct(data: any) {
   const res = await api.post("/products", data);

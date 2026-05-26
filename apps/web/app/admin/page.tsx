@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 
-import AdminProtectedRoute from "@/components/AdminProtectedRoute";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
 import { Overview } from "@/components/admin/Overview";
@@ -86,7 +85,7 @@ export default function AdminPage() {
   };
 
   return (
-    <AdminProtectedRoute>
+    <>
       <div className="flex w-full h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950">
         {/* ─── SIDEBAR ─────────────────────────────────────────── */}
         <aside
@@ -222,6 +221,6 @@ export default function AdminPage() {
       </div>
 
       <Toaster richColors position="top-right" />
-    </AdminProtectedRoute>
+    </>
   );
 }

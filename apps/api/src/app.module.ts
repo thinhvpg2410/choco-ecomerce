@@ -25,7 +25,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AppCacheModule } from './common/cache/cache.module';
 import { PayPalModule } from './modules/paypal/paypal.module';
 import { SepayModule } from './modules/sepay/sepay.module';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [

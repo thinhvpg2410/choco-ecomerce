@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Req, Patch } from '@nestjs/common';
 import type { Request } from 'express';
 import {
   ApiBearerAuth,
@@ -66,6 +66,13 @@ export class OrdersController {
   @Get()
   async findAllOrders() {
     return this.ordersService.findAllOrders();
+  }
+
+  @ApiOperation({ summary: 'Cancel order (owner only, COD + PENDING)' })
+  @Patch(':id/cancel')
+  async cancelOrder(@Req() request: Request, @Param('id') orderId: string) {
+    const user = request.user as { sub: string };
+    return this.ordersService.cancelOrder(orderId, user.sub);
   }
 
   @Get('reviewable')

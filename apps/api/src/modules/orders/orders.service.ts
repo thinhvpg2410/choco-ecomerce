@@ -386,6 +386,37 @@ export class OrdersService {
     };
   }
 
+  async cancelOrder(orderId: string, userId: string) {
+    this.validateOrderId(orderId);
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
+
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+    if (order.userId !== userId)
+      throw new NotFoundException('Không tìm thấy đơn hàng');
+    if (order.status !== OrderStatus.PENDING)
+      throw new BadRequestException(
+        'Chỉ có thể huỷ đơn hàng ở trạng thái chờ xác nhận',
+      );
+    if (order.paymentMethod !== PaymentMethod.COD)
+      throw new BadRequestException('Chỉ có thể huỷ đơn COD');
+
+    const updated = await this.prisma.order.update({
+      where: { id: orderId },
+      data: { status: OrderStatus.CANCELLED },
+      include: { items: true },
+    });
+
+    return {
+      success: true,
+      message: 'Đơn hàng đã được huỷ thành công',
+      data: this.toOrderResponse(updated),
+    };
+  }
+
   async getReviewableOrders(userId: string) {
     const orders = await this.prisma.order.findMany({
       where: { userId, status: OrderStatus.DELIVERED },
@@ -423,6 +454,8 @@ export class OrdersService {
           quantity: item.quantity,
         })) || [],
       total_amount: Number(order.totalAmount),
+      shipping_fee: Number(order.shippingFee),
+      final_amount: Number(order.finalAmount),
       payment_method: order.paymentMethod,
       payment_status: order.paymentStatus ?? null,
       status: order.status,

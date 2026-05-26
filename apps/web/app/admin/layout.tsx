@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/store/store";
+import { FullScreenLoader } from "@/components/FullScreenLoader";
 
 export default function AdminLayout({
   children,
@@ -12,24 +13,23 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-
-  const user = useSelector((state: RootState) => state.auth.user);
+  const { user, isLoading } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    // ✅ Cho phép truy cập trang admin login
+    if (isLoading) return; // ← chờ AuthProvider restore xong
     if (pathname === "/admin/login") return;
 
-    // ❌ Chưa login
     if (!user) {
       router.replace("/admin/login");
       return;
     }
-
-    // ❌ Không phải admin
     if (user.role !== "admin") {
       router.replace("/");
     }
-  }, [user, router, pathname]);
+  }, [user, isLoading, router, pathname]);
+
+  // Đang restore session → hiện loader, không render children
+  if (isLoading) return <FullScreenLoader />;
 
   return <>{children}</>;
 }

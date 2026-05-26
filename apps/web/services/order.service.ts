@@ -24,6 +24,8 @@ export interface OrderApiResponse {
   user_id: string;
   items: OrderApiItem[];
   total_amount: number;
+  final_amount: number;
+  shipping_fee: number;
   status: OrderStatus;
   payment_status?: PaymentStatus;
   receiver_name: string;
@@ -65,4 +67,11 @@ export const getOrderById = async (
     console.error("Get order by id error:", error?.response?.data || error);
     return null;
   }
+};
+
+export const cancelOrder = async (
+  orderId: string,
+): Promise<OrderApiResponse> => {
+  const res = await api.patch(`/orders/${orderId}/cancel`);
+  return res.data?.data;
 };
