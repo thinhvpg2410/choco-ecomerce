@@ -40,6 +40,7 @@ export default function PaymentPage() {
   const [verifyingQR, setVerifyingQR] = useState(false);
   const [timeLeft, setTimeLeft] = useState(120);
   const [countdownActive, setCountdownActive] = useState(false);
+  const [confirmedTotal, setConfirmedTotal] = useState<number>(0);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const createdRef = useRef(false);
   const dispatch = useDispatch();
@@ -48,7 +49,7 @@ export default function PaymentPage() {
 
   const startCountdown = () => {
     setTimeLeft(120);
-    setCountdownActive(true); // ← thêm
+    setCountdownActive(true);
     if (countdownRef.current) clearInterval(countdownRef.current);
     countdownRef.current = setInterval(() => {
       setTimeLeft((prev) => {
@@ -183,6 +184,7 @@ export default function PaymentPage() {
       }
       const order = await createOrder(payload);
       setCreatedOrderId(order.id);
+      setConfirmedTotal(order.final_amount);
 
       if (checkoutData.payMethod === "QR_BANK") {
         const paymentRes = await createPayment({
@@ -321,7 +323,7 @@ export default function PaymentPage() {
             <div className="flex justify-between items-center pt-2 border-t border-dashed border-gray-200">
               <span className="font-bold text-gray-900">Tổng thanh toán</span>
               <span className="font-black text-orange-600 text-lg">
-                {fmt(total)}
+                {fmt(confirmedTotal || total)}
               </span>
             </div>
           </div>

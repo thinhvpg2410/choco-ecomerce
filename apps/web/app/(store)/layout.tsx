@@ -2,12 +2,6 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Toaster } from "sonner";
 
-// Tất cả trang bán hàng nằm trong group (store):
-//   app/(store)/page.tsx        → "/"
-//   app/(store)/products/...   → "/products/..."
-//   app/(store)/cart/page.tsx  → "/cart"
-// Dấu ngoặc đơn (store) không ảnh hưởng URL.
-
 export default function StoreLayout({
   children,
 }: {

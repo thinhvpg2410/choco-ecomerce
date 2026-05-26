@@ -7,9 +7,21 @@ export interface CreatePaymentDto {
   transaction_code?: string;
 }
 
+export interface PaymentResponse {
+  id: string;
+  order_id: string;
+  payment_method: string;
+  payment_status: "PENDING" | "PAID";
+  amount: number;
+  transaction_code?: string;
+  qr_url?: string; 
+  paid_at?: string;
+  created_at: string;
+}
+
 export const createPayment = async (
   dto: CreatePaymentDto,
-): Promise<Payment> => {
+): Promise<PaymentResponse> => {
   try {
     const res = await api.post("/payments", dto);
     return res.data.data;
@@ -21,7 +33,7 @@ export const createPayment = async (
 
 export const getPaymentByOrderId = async (
   orderId: string,
-): Promise<Payment | null> => {
+): Promise<PaymentResponse | null> => {
   try {
     const res = await api.get(`/payments/${orderId}`);
     return res.data?.data || null;

@@ -21,16 +21,17 @@ export class UploadService {
         {
           folder: `chocoshop/${folder}`,
           resource_type: 'image',
+          quality: 'auto:good',
+          fetch_format: 'auto',
+          transformation: [{ width: 1920, height: 1080, crop: 'limit' }],
         },
         (error, result) => {
           if (error || !result?.secure_url) {
             return reject(error || new Error('Upload failed'));
           }
-
           resolve(result.secure_url);
         },
       );
-
       uploadStream.end(file.buffer);
     });
   }

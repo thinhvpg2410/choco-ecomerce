@@ -76,60 +76,45 @@ export class AdminService {
     if (query.search) {
       where.OR = [
         {
-          name: {
-            contains: query.search,
-            mode: Prisma.QueryMode.insensitive,
-          },
+          name: { contains: query.search, mode: Prisma.QueryMode.insensitive },
         },
-        {
-          sku: {
-            contains: query.search,
-            mode: Prisma.QueryMode.insensitive,
-          },
-        },
+        { sku: { contains: query.search, mode: Prisma.QueryMode.insensitive } },
       ];
     }
-    if (query.category_id) {
-      where.categoryId = query.category_id;
-    }
-    if (query.brand_id) {
-      where.brandId = query.brand_id;
-    }
+    if (query.category_id) where.categoryId = query.category_id;
+    if (query.brand_id) where.brandId = query.brand_id;
 
-    const [products, total] = await Promise.all([
-      this.prisma.product.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          category: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              isActive: true,
+    const [products, total, activeCount, hiddenCount, outOfStockCount] =
+      await Promise.all([
+        this.prisma.product.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            category: {
+              select: { id: true, name: true, slug: true, isActive: true },
+            },
+            brand: {
+              select: { id: true, name: true, slug: true, isActive: true },
             },
           },
-          brand: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              isActive: true,
-            },
-          },
-        },
-      }),
-      this.prisma.product.count({ where }),
-    ]);
+        }),
+        this.prisma.product.count({ where }),
+        this.prisma.product.count({ where: { isActive: true } }), // ← toàn hệ thống
+        this.prisma.product.count({ where: { isActive: false } }),
+        this.prisma.product.count({ where: { stock: 0 } }),
+      ]);
 
     return {
       success: true,
       message: 'Lấy danh sách sản phẩm thành công',
       data: {
-        products,
+        products: products.map((p) => this.toAdminProductResponse(p)),
         total,
+        activeCount,
+        hiddenCount,
+        outOfStockCount,
         page,
         limit,
       },
@@ -433,7 +418,7 @@ export class AdminService {
         },
       };
     } catch (error: any) {
-      console.error('❌ Lỗi thống kê:', error.message);
+      console.error('Lỗi thống kê:', error.message);
       throw error;
     }
   }
@@ -581,6 +566,33 @@ export class AdminService {
       success: true,
       message: 'Cập nhật trạng thái thanh toán thành công',
       data: updated,
+    };
+  }
+
+  private toAdminProductResponse(p: any) {
+    return {
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+      sku: p.sku,
+      price: Number(p.price),
+      sale_price: p.salePrice ? Number(p.salePrice) : null,
+      cost_price: p.costPrice ? Number(p.costPrice) : null,
+      stock: p.stock,
+      image_url: p.imageUrl,
+      category_id: p.categoryId,
+      brand_id: p.brandId,
+      is_active: p.isActive,
+      is_featured: p.isFeatured,
+      is_best_seller: p.isBestSeller,
+      is_new: p.isNew,
+      average_rating: p.averageRating ? Number(p.averageRating) : null,
+      review_count: p.reviewCount,
+      created_at: p.createdAt,
+      updated_at: p.updatedAt,
+      category: p.category,
+      brand: p.brand,
+      _count: p._count,
     };
   }
 }

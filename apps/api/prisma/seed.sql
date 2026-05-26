@@ -1,3 +1,5 @@
+SET client_encoding = 'UTF8';
+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 TRUNCATE TABLE
@@ -383,7 +385,7 @@ WITH order_users AS (
 INSERT INTO orders (
   id, user_id, coupon_id, total_amount, shipping_fee, discount_amount, final_amount,
   status, payment_status, receiver_name, receiver_phone,
-  shipping_address, ward, district, city, note, created_at, updated_at
+  shipping_address, ward, city, note, created_at, updated_at
 )
 SELECT
   uuid_generate_v4(),
@@ -397,8 +399,7 @@ SELECT
   CASE WHEN ou.rn % 4 = 0 THEN 'PAID'::"PaymentStatus"    ELSE 'PENDING'::"PaymentStatus" END,
   'Nguyen Van ' || ou.rn,
   '09000000' || ou.rn,
-  '123 Nguyen Trai',
-  'Phường 1', 'Quận 5', 'Hồ Chí Minh',
+  '123 Nguyen Trai', 'Hồ Chí Minh',
   'Giao giờ hành chính.',
   NOW() - ((ou.rn * 2) || ' days')::interval,
   NOW() - ((ou.rn * 2) || ' days')::interval

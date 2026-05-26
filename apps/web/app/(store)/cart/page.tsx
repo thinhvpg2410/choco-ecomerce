@@ -572,10 +572,6 @@ export default function CartPage() {
                     <span>-{fmt(totalSaved)}</span>
                   </div>
                 )}
-                <div className="cart-summary-row cart-summary-ship">
-                  <span>Phí giao hàng</span>
-                  <span className="cart-free-ship">Miễn phí</span>
-                </div>
               </div>
 
               <div className="cart-summary-divider" />
@@ -698,8 +694,26 @@ const cartStyles = `
 .cart-item-check-wrap { display:flex; align-items:center; justify-content:center; }
 
 /* Item image */
-.cart-item-img-wrap { position:relative; width:76px; height:76px; border-radius:12px; overflow:hidden; flex-shrink:0; background:#f5ede4; }
-.cart-item-img { width:100%; height:100%; object-fit:cover; }
+
+.cart-item-img-wrap { 
+  position:relative; 
+  width:76px; 
+  height:76px; 
+  border-radius:12px; 
+  overflow:hidden; 
+  flex-shrink:0; 
+  background:#f5ede4;
+  display:flex;           
+  align-items:center;    
+  justify-content:center;
+}
+.cart-item-img { 
+  width:100%; 
+  height:100%; 
+  object-fit:cover;
+  object-position:center;
+  display:block;
+}
 .cart-sale-badge {
   position:absolute; top:5px; left:5px; z-index:1;
   background:var(--brand); color:#fff;

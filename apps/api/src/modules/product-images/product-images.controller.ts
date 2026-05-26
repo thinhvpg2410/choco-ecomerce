@@ -34,7 +34,11 @@ export class ProductImagesController {
   @Post('upload')
   @ApiBearerAuth()
   @Roles(UserRole.admin)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {

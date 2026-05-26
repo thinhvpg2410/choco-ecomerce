@@ -42,7 +42,11 @@ export class BrandsController {
   @Post(':id/upload-logo')
   @ApiBearerAuth()
   @Roles(UserRole.admin)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -55,7 +59,10 @@ export class BrandsController {
       },
     },
   })
-  uploadLogo(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+  uploadLogo(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
     return this.brandsService.uploadLogo(id, file);
   }
 

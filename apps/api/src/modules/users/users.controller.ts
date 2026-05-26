@@ -45,7 +45,11 @@ export class UsersController {
   }
 
   @Post('me/avatar')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -58,7 +62,10 @@ export class UsersController {
       },
     },
   })
-  async uploadAvatar(@Req() req: Request, @UploadedFile() file: Express.Multer.File) {
+  async uploadAvatar(
+    @Req() req: Request,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
     const { sub } = req.user as { sub: string };
     const user = await this.usersService.uploadAvatar(sub, file);
     return {
