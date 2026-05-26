@@ -84,7 +84,7 @@ export const createCoupon = async (
 
     return res.data?.data || null;
   } catch (error: any) {
-    console.error("❌ Create coupon error:", error?.response?.data || error);
+    console.error("Create coupon error:", error?.response?.data || error);
 
     throw error;
   }
@@ -114,7 +114,7 @@ export const updateCoupon = async (
 
     return res.data?.data || null;
   } catch (error: any) {
-    console.error("❌ Update coupon error:", error?.response?.data || error);
+    console.error("Update coupon error:", error?.response?.data || error);
 
     throw error;
   }
@@ -126,7 +126,7 @@ export const deleteCoupon = async (id: string): Promise<boolean> => {
 
     return true;
   } catch (error: any) {
-    console.error("❌ Delete coupon error:", error?.response?.data || error);
+    console.error("Delete coupon error:", error?.response?.data || error);
 
     throw error;
   }
