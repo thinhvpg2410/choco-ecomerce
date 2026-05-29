@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 import SumRow from "./SumRow";
 
-type Voucher = { code: string; discount: number };
+type Voucher = { code: string; discount: number; isFreeship?: boolean; };
 
 type Props = {
   itemsLength: number;
@@ -38,18 +38,22 @@ export default function OrderSummarySection({
       toast.error("Vui lòng chọn địa chỉ giao hàng");
       return;
     }
+
+    const resolvedVouchers = appliedVouchers.map((v) => ({
+      ...v,
+      discount: v.isFreeship ? SHIPPING : v.discount,
+    }));
     const checkoutData = {
-      items, cartItemIds, selectedAddress, appliedVouchers, note,
-      payMethod, subtotal, shipping: SHIPPING, total, isBuyNow, buyNowProduct, isHCM,
+      items, cartItemIds, selectedAddress,
+      appliedVouchers: resolvedVouchers, // ← dùng resolved
+      note, payMethod, subtotal, shipping: SHIPPING, total, isBuyNow, buyNowProduct, isHCM,
     };
+
     localStorage.setItem("payment_meta", JSON.stringify({ method: payMethod }));
-    localStorage.setItem(
-      "pending_checkout",
-      JSON.stringify({
-        ...checkoutData,
-        shipping: SHIPPING, 
-      }),
-    );
+    localStorage.setItem("pending_checkout", JSON.stringify({
+      ...checkoutData,
+      shipping: SHIPPING,
+    }));
     localStorage.setItem("cart_backup", JSON.stringify(items));
     router.push("/checkout/payment");
   };
@@ -70,7 +74,12 @@ export default function OrderSummarySection({
           green={SHIPPING === 0}
         />
         {appliedVouchers.map((v) => (
-          <SumRow key={v.code} label={`Voucher · ${v.code}`} value={`-${fmt(v.discount)}`} green />
+          <SumRow
+            key={v.code}
+            label={`Voucher · ${v.code}`}
+            value={`-${fmt(v.isFreeship ? SHIPPING : v.discount)}`}
+            green
+          />
         ))}
 
         <div className="pt-2 border-t border-dashed border-gray-100">

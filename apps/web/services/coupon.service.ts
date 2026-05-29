@@ -18,7 +18,7 @@ export interface Coupon {
 export interface ApplyCouponPayload {
   code: string;
   subtotal: number;
-
+  shipping_fee?: number; 
   order_id?: string;
 }
 
@@ -27,6 +27,7 @@ export interface ApplyCouponResponse {
   discount_amount: number;
   subtotal: number;
   final_amount: number;
+  coupon_type?: "PERCENT" | "FIXED" | "FREE_SHIP";
 }
 
 
@@ -49,6 +50,7 @@ export const applyCoupon = async (
     const res = await api.post("/coupons/apply", {
       code: payload.code,
       subtotal: payload.subtotal,
+      shipping_fee: payload.shipping_fee,
       order_id: payload.order_id,
     });
 

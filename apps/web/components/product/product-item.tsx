@@ -4,10 +4,10 @@ import { useState } from "react";
 import { Product } from "@/types/type";
 import { addToCart } from "@/services/cart.service";
 import { toast } from "sonner";
-import { Button } from "../ui/button";
 import { Check, ShoppingCart, Zap, Minus, Plus, Flag } from "lucide-react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { fetchCart } from "@/store/cartSlice";
+import { RootState } from "@/store";
 
 interface Props {
   product: Product;
@@ -18,14 +18,24 @@ export function ProductItem({ product }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [qty, setQty] = useState(1);
 
-  const isOutOfStock = product.stock === 0;
-  const isLowStock = product.stock > 0 && product.stock <= 5;
+  const dispatch = useDispatch();
+
+  // Lấy cartQty trực tiếp từ store, không cần truyền prop
+  const cartQty = useSelector((state: RootState) =>
+    state.cart.items.find(
+      (item: any) => String(item.product_id) === String(product.id)
+    )?.quantity ?? 0
+  );
+
+  const remainingStock = Math.max(0, product.stock - cartQty);
+  const isOutOfStock = product.stock === 0 || remainingStock === 0;
+  const isLowStock = remainingStock > 0 && remainingStock <= 5;
   const hasSale =
     product.sale_price != null && product.sale_price < product.price;
   const discountPercentage = hasSale
     ? Math.round(((product.price - product.sale_price!) / product.price) * 100)
     : 0;
-  const stock = product.stock || 1;
+  const stock = remainingStock || 1;
 
   const changeQty = (delta: number) => {
     setQty((v) => Math.min(stock, Math.max(1, v + delta)));
@@ -42,21 +52,26 @@ export function ProductItem({ product }: Props) {
     setQty((v) => Math.max(1, Math.min(stock, v)));
   };
 
-  const dispatch = useDispatch();
-
   const handleAddToCart = async () => {
     if (isAdding || isOutOfStock || !product?.id) return;
+    const safeQty = Math.max(1, Math.min(stock, qty));
+    setQty(safeQty);
     setIsAdding(true);
     try {
-      await addToCart({ product_id: product.id, quantity: qty });
+      await addToCart({ product_id: product.id, quantity: safeQty });
       dispatch(fetchCart() as any);
-      toast.success(`Đã thêm ${qty} ${product.name} vào giỏ hàng!`);
+      toast.success(`Đã thêm ${safeQty} ${product.name} vào giỏ hàng!`);
       setIsAdded(true);
       setQty(1);
       setTimeout(() => setIsAdded(false), 1500);
     } catch (err: any) {
       console.error(err);
-      toast.error(err.response?.data?.message || "Thêm vào giỏ thất bại!");
+      if (err.response?.status === 401)
+        toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng!");
+      else if (err.response?.status === 409)
+        toast.error("Số lượng vượt quá tồn kho!");
+      else
+        toast.error(err.response?.data?.message || "Thêm vào giỏ thất bại!");
     } finally {
       setIsAdding(false);
     }
@@ -178,13 +193,14 @@ export function ProductItem({ product }: Props) {
             product.stock !== undefined && [
               "Tồn kho",
               <span
+                key="stock"
                 className={`font-semibold ${isOutOfStock ? "text-red-500" : isLowStock ? "text-orange-500" : "text-emerald-600"}`}
               >
                 {isOutOfStock
                   ? "Hết hàng"
                   : isLowStock
-                    ? `Còn ${product.stock} (sắp hết)`
-                    : `${product.stock} sản phẩm`}
+                    ? `Còn ${remainingStock} (sắp hết)`
+                    : `${remainingStock} sản phẩm`}
               </span>,
             ],
             product.package_type && ["Loại bao bì", product.package_type],
@@ -256,7 +272,7 @@ export function ProductItem({ product }: Props) {
         </div>
         {isLowStock && (
           <span className="text-xs text-orange-500 font-medium">
-            Còn {product.stock} sản phẩm
+            Còn {remainingStock} sản phẩm
           </span>
         )}
       </div>

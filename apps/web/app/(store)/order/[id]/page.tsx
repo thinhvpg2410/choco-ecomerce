@@ -234,19 +234,17 @@ export default function OrderDetailPage({
       </ProtectedRoute>
     );
 
-  const subtotal =
-    order.subtotal ??
-    order.items.reduce(
-      (s, i) => s + ((i as any).sale_price ?? i.price) * i.quantity,
-      0,
-    );
-  const shippingFee: number = order.shipping_fee ?? 30000;
-  const discount: number = order.discount_amount ?? 0;
-  const totalAmount: number = Math.max(0, subtotal + shippingFee - discount);
-  const canCancel = CANCELLABLE_STATUSES.includes(order.status);
-  const canReview = order.status === "DELIVERED";
-  const meta = STATUS_META[order.status] ?? STATUS_META["PENDING"];
-  const StatusIcon = meta.icon;
+  const subtotal = order.items.reduce(
+  (s, i) => s + ((i as any).sale_price ?? i.price) * i.quantity,
+  0,
+);
+const shippingFee: number = order.shipping_fee ?? 30000;
+const discount: number = order.discount_amount ?? 0;
+const totalAmount: number = order.final_amount;
+const canCancel = CANCELLABLE_STATUSES.includes(order.status);
+const canReview = order.status === "DELIVERED";
+const meta = STATUS_META[order.status] ?? STATUS_META["PENDING"];
+const StatusIcon = meta.icon;
 
   return (
     <ProtectedRoute>

@@ -26,6 +26,7 @@ import { AppCacheModule } from './common/cache/cache.module';
 import { PayPalModule } from './modules/paypal/paypal.module';
 import { SepayModule } from './modules/sepay/sepay.module';
 import { ThrottlerModule } from '@nestjs/throttler';
+// import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     AdminModule,
     PayPalModule,
     SepayModule,
+    // ChatModule,
   ],
   controllers: [AppController],
   providers: [

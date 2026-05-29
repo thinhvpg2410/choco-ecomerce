@@ -7,13 +7,14 @@ import { useState } from "react";
 import { addToCart } from "@/services/cart.service";
 import { toast } from "sonner";
 import { fetchCart } from "@/store/cartSlice";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 interface Props {
   product: Product;
+  cartQty?: number;
 }
 
-export function ProductCard({ product }: Props) {
+export function ProductCard({ product, cartQty = 0 }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [qty, setQty] = useState(1);
@@ -21,8 +22,10 @@ export function ProductCard({ product }: Props) {
 
   const hasSale =
     product.sale_price != null && product.sale_price < product.price;
-  const isOutOfStock = product.stock === 0;
-  const isLowStock = product.stock > 0 && product.stock <= 5;
+
+  const remainingStock = Math.max(0, product.stock - cartQty);
+  const isOutOfStock = product.stock === 0 || remainingStock === 0;
+  const isLowStock = remainingStock > 0 && remainingStock <= 5;
 
   const discountPercentage = hasSale
     ? Math.round(((product.price - product.sale_price!) / product.price) * 100)
@@ -30,34 +33,33 @@ export function ProductCard({ product }: Props) {
 
   const changeQty = (e: React.MouseEvent, delta: number) => {
     e.preventDefault();
-    setQty((v) => Math.min(product.stock || 1, Math.max(1, v + delta)));
+    setQty((v) => Math.min(remainingStock || 1, Math.max(1, v + delta)));
   };
 
   const handleQtyInputChange = (raw: string) => {
     if (/^\d*$/.test(raw)) {
       const next = raw === "" ? 0 : Number(raw);
-      setQty(Math.min(product.stock || 1, next));
+      setQty(Math.min(remainingStock || 1, next));
     }
   };
 
   const handleQtyInputBlur = () => {
-    const stock = product.stock || 1;
-    setQty((v) => Math.max(1, Math.min(stock, v || 1)));
+    setQty((v) => Math.max(1, Math.min(remainingStock || 1, v || 1)));
   };
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (isAdding || isOutOfStock || !product?.id) return;
 
-    const safeQty = Math.max(1, Math.min(product.stock || 1, qty));
+    const safeQty = Math.max(1, Math.min(remainingStock || 1, qty));
     setQty(safeQty);
 
     setIsAdding(true);
     try {
-      await addToCart({ product_id: String(product.id), quantity: qty });
+      await addToCart({ product_id: String(product.id), quantity: safeQty });
       dispatch(fetchCart() as any);
       setIsAdded(true);
-      toast.success(`Đã thêm ${qty} sản phẩm vào giỏ!`);
+      toast.success(`Đã thêm ${safeQty} sản phẩm vào giỏ!`);
       setTimeout(() => {
         setIsAdded(false);
         setQty(1);
@@ -67,8 +69,6 @@ export function ProductCard({ product }: Props) {
         toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng!");
       else if (err.response?.status === 400)
         toast.error(err.response.data?.message || "Dữ liệu không hợp lệ!");
-      else if (err.response?.status === 404)
-        toast.error("Sản phẩm không tồn tại!");
       else if (err.response?.status === 409)
         toast.error("Số lượng vượt quá tồn kho!");
       else
@@ -82,10 +82,6 @@ export function ProductCard({ product }: Props) {
 
   return (
     <Link href={`/product/${product.id}`} className="group block h-full">
-      {/*
-        CARD — position:relative so the hover overlay (absolute, bottom-0)
-        can slide up over the name+price section which lives in the bottom portion.
-      */}
       <div
         className="relative flex flex-col h-full rounded-3xl overflow-hidden
           bg-white border border-orange-100
@@ -104,10 +100,8 @@ export function ProductCard({ product }: Props) {
             className="w-full h-full object-cover transition-transform duration-600 group-hover:scale-[1.07]"
           />
 
-          {/* Subtle dim on whole card hover */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-400" />
 
-          {/* Badges */}
           {hasSale && (
             <span
               className="absolute top-3 left-3 z-10 flex items-center gap-1
@@ -145,7 +139,7 @@ export function ProductCard({ product }: Props) {
           }}
         />
 
-        {/* ── CARD BODY (name + price + stock) — this is what the overlay covers ── */}
+        {/* ── CARD BODY ── */}
         <div className="relative flex-1 flex flex-col px-4 pt-3.5 pb-5 gap-1">
           {product.brand?.name && (
             <p className="text-[10px] font-extrabold tracking-[0.2em] uppercase text-orange-400">
@@ -181,14 +175,14 @@ export function ProductCard({ product }: Props) {
               <>
                 Còn{" "}
                 <span className="text-orange-500 font-black text-sm">
-                  {product.stock}
+                  {remainingStock}
                 </span>{" "}
                 sản phẩm
               </>
             )}
           </p>
 
-          {/* ── HOVER OVERLAY — absolute, covers entire card body (name+price area) ── */}
+          {/* ── HOVER OVERLAY ── */}
           {!isOutOfStock && (
             <div
               className="absolute inset-0 z-20 flex flex-col justify-center gap-3 px-4
@@ -205,7 +199,7 @@ export function ProductCard({ product }: Props) {
                 >
                   Còn{" "}
                   <span className="text-orange-500 font-black text-base leading-none">
-                    {product.stock}
+                    {remainingStock}
                   </span>{" "}
                   sản phẩm
                 </span>
@@ -228,7 +222,7 @@ export function ProductCard({ product }: Props) {
                   <input
                     type="number"
                     min={1}
-                    max={product.stock || 1}
+                    max={remainingStock || 1}
                     value={qty}
                     onChange={(e) => handleQtyInputChange(e.target.value)}
                     onBlur={handleQtyInputBlur}
@@ -239,7 +233,7 @@ export function ProductCard({ product }: Props) {
                   />
                   <button
                     onClick={(e) => changeQty(e, 1)}
-                    disabled={qty >= (product.stock || 1)}
+                    disabled={qty >= (remainingStock || 1)}
                     className="w-8 h-8 flex items-center justify-center font-bold text-base
                       text-orange-500 hover:bg-orange-50 disabled:opacity-30 transition"
                   >

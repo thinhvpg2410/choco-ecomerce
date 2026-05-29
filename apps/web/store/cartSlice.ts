@@ -15,7 +15,7 @@ const initialState: CartState = {
 
 export const fetchCart = createAsyncThunk("cart/fetchCart", async () => {
   const cart = await getCart();
-  return cart?.items || [];
+  return (cart as any)?.items || [];
 });
 
 const cartSlice = createSlice({
