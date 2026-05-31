@@ -26,6 +26,7 @@ import { PayPalModule } from './modules/paypal/paypal.module';
 import { SepayModule } from './modules/sepay/sepay.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { ThrottlerModule } from '@nestjs/throttler';
+// import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [

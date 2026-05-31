@@ -72,22 +72,27 @@ export function Header() {
 
   useEffect(() => {
     const loadProducts = async () => {
-      try {
-        const productIds = [
-          ...new Set(cartItems.map((i: any) => i.product_id)),
-        ];
-        const map: Record<string, any> = {};
-        await Promise.all(
-          productIds.map(async (id: string) => {
-            const p = await getProductById(id);
-            if (p) map[id] = p;
-          }),
-        );
-        setProductsMap(map);
-      } catch (err) {
-        console.error(err);
-      }
-    };
+    try {
+      const productIds = [
+        ...new Set(cartItems.map((i: any) => i.product_id)),
+      ];
+
+      console.log("Cart items raw:", cartItems);       // ← xem toàn bộ cart item
+      console.log("Product IDs to fetch:", productIds); // ← xem IDs có đúng không
+
+      const map: Record<string, any> = {};
+      await Promise.all(
+        productIds.map(async (id: string) => {
+          console.log("Fetching product:", id);        // ← xem từng ID trước khi gọi
+          const p = await getProductById(id);
+          if (p) map[id] = p;
+        }),
+      );
+      setProductsMap(map);
+    } catch (err) {
+      console.error(err);
+    }
+  };
     if (cartItems.length > 0) loadProducts();
     else setProductsMap({});
   }, [cartItems]);

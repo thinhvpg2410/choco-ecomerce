@@ -8,6 +8,7 @@ import ReviewList from "@/components/review/review-list";
 import ProductImageGallery from "@/components/product/product-image-gallery";
 import SameBrandProducts from "@/components/product/same-brand-products";
 import { ChevronRight, Home, Star } from "lucide-react";
+// ← bỏ import RootState và useSelector
 
 interface Props {
   params: { id: string };
@@ -26,19 +27,21 @@ export default async function ProductDetailPage({ params }: Props) {
     return notFound();
   }
 
+  // ← bỏ toàn bộ phần useSelector và cartQty ở đây
+
   return (
     <div className="min-h-screen bg-[#F7F7F8]">
       {/* ── BREADCRUMB ── */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-[0_1px_0_0_#f0f0f0]">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm">
           <Home className="w-3.5 h-3.5 text-gray-400" />
-          <span className="text-gray-500 hover:text-orange-500 cursor-pointer transition-colors">
+          <a href="/" className="text-gray-500 hover:text-orange-500 cursor-pointer transition-colors">
             Trang chủ
-          </span>
+          </a>
           <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
-          <span className="text-gray-500 hover:text-orange-500 cursor-pointer transition-colors">
+          <a href="/product" className="text-gray-500 hover:text-orange-500 cursor-pointer transition-colors">
             Sản phẩm
-          </span>
+          </a>
           <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
           <span className="text-gray-800 font-medium truncate max-w-[280px]">
             {product.name}
@@ -61,7 +64,6 @@ export default async function ProductDetailPage({ params }: Props) {
               className="relative p-8 md:p-10 border-b md:border-b-0 md:border-r border-gray-100"
               style={{ background: "#FAFAFA" }}
             >
-              {/* Subtle corner accent */}
               <div
                 className="absolute top-0 right-0 w-32 h-32 opacity-[0.04] pointer-events-none"
                 style={{
@@ -80,7 +82,7 @@ export default async function ProductDetailPage({ params }: Props) {
 
             {/* RIGHT — Info */}
             <div className="p-8 lg:p-12">
-              <ProductItem product={product as any} />
+              <ProductItem product={product} /> {/* ← bỏ cartQty prop */}
             </div>
           </div>
         </div>
@@ -90,7 +92,6 @@ export default async function ProductDetailPage({ params }: Props) {
           className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
           style={{ boxShadow: "0 2px 16px -4px rgba(0,0,0,0.06)" }}
         >
-          {/* Section header */}
           <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-[3px] h-6 rounded-full bg-orange-500" />
@@ -120,7 +121,6 @@ export default async function ProductDetailPage({ params }: Props) {
         <div className="h-6" />
       </div>
 
-      {/* Fade-in animation */}
       <style>{`
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(16px); }

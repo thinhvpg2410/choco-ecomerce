@@ -4,6 +4,8 @@ import { ProductCard } from "./product-card";
 import { Product } from "@/types/type";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";  // ← chỉnh lại đúng path store của bạn
 
 interface Props {
   products: Product[];
@@ -12,6 +14,13 @@ interface Props {
 export function ProductList({ products }: Props) {
   const searchParams = useSearchParams();
   const view = searchParams.get("view") || "grid";
+
+  // Lấy danh sách items trong giỏ hàng
+  const cartItems = useSelector((state: RootState) => state.cart.items);
+
+  // Helper: lấy số lượng đã có trong giỏ theo product id
+  const getCartQty = (productId: number | string) =>
+    cartItems.find((item) => String(item.product_id) === String(productId))?.quantity ?? 0;
 
   if (!products || products.length === 0) {
     return (
@@ -72,7 +81,8 @@ export function ProductList({ products }: Props) {
                     <span className="text-red-500">Hết hàng</span>
                   ) : (
                     <span className="text-emerald-600">
-                      Còn {product.stock}
+                      {/* Hiển thị số còn có thể thêm, không phải tổng tồn kho */}
+                      Còn {Math.max(0, product.stock - getCartQty(product.id))}
                     </span>
                   )}
                 </div>
@@ -87,7 +97,11 @@ export function ProductList({ products }: Props) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+        <ProductCard
+          key={product.id}
+          product={product}
+          cartQty={getCartQty(product.id)}
+        />
       ))}
     </div>
   );

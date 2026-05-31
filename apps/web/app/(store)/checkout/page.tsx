@@ -141,41 +141,30 @@ export default function CheckoutPage() {
   const fmt = (n: number) => n.toLocaleString("vi-VN") + "đ";
 
   const applyVoucher = async () => {
-     const code = voucherInput.trim().toUpperCase();
-     if (!code) {
-       toast.error("Vui lòng nhập mã giảm giá");
-       return;
-     }
-     if (appliedVouchers.some((v) => v.code === code)) {
-       toast.error("Mã này đã được áp dụng");
-       return;
-     }
+  const code = voucherInput.trim().toUpperCase();
+  if (!code) { toast.error("Vui lòng nhập mã giảm giá"); return; }
+  if (appliedVouchers.some((v) => v.code === code)) {
+    toast.error("Mã này đã được áp dụng"); return;
+  }
 
-     try {
-       // ✅ applyCoupon đã return data.data rồi, dùng thẳng
-       const couponData = await applyCoupon({ code, subtotal });
+  try {
+    const couponData = await applyCoupon({ code, subtotal, shipping_fee: shippingFee });
+    if (!couponData) { toast.error("Mã giảm giá không hợp lệ"); return; }
 
-       if (!couponData) {
-         toast.error("Mã giảm giá không hợp lệ");
-         return;
-       }
-
-       setAppliedVouchers([
-         {
-           code: couponData.code,
-           discount: couponData.discount_amount,
-           finalAmount: couponData.final_amount,
-           description: `Giảm ${couponData.discount_amount.toLocaleString("vi-VN")}đ từ mã ${couponData.code}`,
-         },
-       ]);
-       setVoucherInput("");
-       toast.success(`Áp dụng mã ${couponData.code} thành công!`);
-     } catch (err: any) {
-       const serverMessage = err?.response?.data?.message;
-       if (Array.isArray(serverMessage)) toast.error(serverMessage[0]);
-       else toast.error(serverMessage || "Không thể kết nối đến máy chủ");
-     }
-  };
+    setAppliedVouchers([{
+      code: couponData.code,
+      discount: couponData.discount_amount,
+      finalAmount: couponData.final_amount,
+      description: `Giảm ${fmt(couponData.discount_amount)} từ mã ${couponData.code}`,
+    }]);
+    setVoucherInput("");
+    toast.success(`Áp dụng mã ${couponData.code} thành công!`);
+  } catch (err: any) {
+    const serverMessage = err?.response?.data?.message;
+    if (Array.isArray(serverMessage)) toast.error(serverMessage[0]);
+    else toast.error(serverMessage || "Không thể kết nối đến máy chủ");
+  }
+};
 
   if (loadingCart || loadingAddress) {
     return (

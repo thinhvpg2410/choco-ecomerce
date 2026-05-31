@@ -17,4 +17,10 @@ export class ApplyCouponDto {
   @IsNumber()
   @Min(0)
   subtotal?: number;
+
+  @ApiPropertyOptional({ description: 'Shipping fee to compute FREE_SHIP discount correctly' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  shipping_fee?: number;
 }

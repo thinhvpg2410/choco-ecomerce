@@ -63,16 +63,18 @@ export class OrdersService {
       const unitPrice = Number(product.salePrice ?? product.price);
       const totalAmount = unitPrice * quantity;
 
+      const shippingFee = dto.is_hcm ? 15_000 : 30_000;
       let discountAmount = 0;
+
       if (dto.coupon_code) {
         discountAmount = await this.applyCouponInTx(
           tx,
           dto.coupon_code,
           totalAmount,
+          shippingFee,
         );
       }
 
-      const shippingFee = dto.is_hcm ? 15_000 : 30_000;
       const finalAmount = Math.max(
         0,
         totalAmount + shippingFee - discountAmount,
@@ -181,12 +183,14 @@ export class OrdersService {
         });
       }
 
+      const shippingFee = dto.is_hcm ? 15_000 : 30_000; 
       let discountAmount = 0;
       if (dto.coupon_code) {
         discountAmount = await this.applyCouponInTx(
           tx,
           dto.coupon_code,
           totalAmount,
+          shippingFee,
         );
       }
 
@@ -425,6 +429,7 @@ export class OrdersService {
     tx: Prisma.TransactionClient,
     couponCode: string,
     totalAmount: number,
+    shippingFee: number,
   ): Promise<number> {
     const coupon = await tx.coupon.findUnique({
       where: { code: couponCode.trim().toUpperCase() },
@@ -436,6 +441,8 @@ export class OrdersService {
     if (coupon.expiryDate && coupon.expiryDate <= new Date()) {
       throw new BadRequestException('Mã giảm giá đã hết hạn');
     }
+
+    
 
     let discountAmount = 0;
     if (coupon.couponType === 'PERCENT') {
@@ -450,10 +457,11 @@ export class OrdersService {
     } else if (coupon.couponType === 'FIXED') {
       discountAmount = Number(coupon.discountAmount ?? 0);
     } else if (coupon.couponType === 'FREE_SHIP') {
-      discountAmount = 30_000;
+      discountAmount = shippingFee;
     }
-
-    discountAmount = Math.min(discountAmount, totalAmount);
+    if (coupon.couponType !== 'FREE_SHIP') {
+      discountAmount = Math.min(discountAmount, totalAmount);
+    }
 
     const updated = await tx.coupon.updateMany({
       where: {
