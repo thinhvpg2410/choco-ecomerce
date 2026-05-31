@@ -253,18 +253,6 @@ export interface CartItem {
   updated_at?: string;
 }
 
-// ================= BANNER =================
-export interface Banner {
-  id: string;
-  description?: string;
-  image_url: string;
-  product_id?: string; // Nếu link đến sản phẩm
-  is_active: boolean;
-  sort_order?: number;
-  created_at: string;
-  updated_at?: string;
-}
-
 // ================= ORDER STATUS & PAYMENT STATUS (Giữ nguyên) =================
 export type OrderStatus =
   | "PENDING"

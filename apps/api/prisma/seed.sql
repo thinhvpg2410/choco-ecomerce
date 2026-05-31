@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 TRUNCATE TABLE
   payments, order_items, orders, cart_items, carts,
-  reviews, coupons, banners, product_images, products,
+  reviews, coupons, product_images, products,
   brands, categories, user_addresses, users
 CASCADE;
 
@@ -471,18 +471,3 @@ FROM products p
 CROSS JOIN LATERAL (
   SELECT u.id FROM users u ORDER BY random() LIMIT (floor(random() * 2) + 2)
 ) u;
-
--- ================= BANNERS =================
-INSERT INTO banners (id, description, image_url, product_id, is_active, sort_order, created_at, updated_at)
-SELECT
-  uuid_generate_v4(),
-  'Featured banner for ' || p.name,
-  p.image_url,
-  p.id,
-  true,
-  (row_number() OVER (ORDER BY p.created_at)) - 1,
-  NOW(),
-  NOW()
-FROM products p
-ORDER BY p.created_at
-LIMIT 5;

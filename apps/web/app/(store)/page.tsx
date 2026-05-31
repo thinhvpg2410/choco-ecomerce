@@ -11,10 +11,16 @@ import {
 import Autoplay from "embla-carousel-autoplay";
 import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
-import { bannerService, Banner } from "@/services/banner.service";
 import { getProducts } from "@/services/product.service";
 import { ProductCard } from "@/components/product/product-card";
-import { toast } from "sonner";
+ 
+const STATIC_BANNERS = [
+  { id: "1", image_url: "/banners/bn1.jpg", description: "Banner 1" },
+  { id: "2", image_url: "/banners/bn2.jpg", description: "Banner 2" },
+  { id: "3", image_url: "/banners/bn3.png", description: "Banner 3" },
+  { id: "4", image_url: "/banners/bn4.png", description: "Banner 4" },
+  { id: "5", image_url: "/banners/bn5.png", description: "Banner 5" },
+];
 
 const homeStyles = `
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -66,7 +72,7 @@ const homeStyles = `
   transition:all 0.18s;
 }
 
-/* ── SECTION 1: Best Sellers — dark chocolate card ── */
+/* ── SECTION 1: Best Sellers ── */
 .s1 {
   background: linear-gradient(160deg, #2b1209 0%, #3e1a0e 55%, #2b1209 100%);
   position:relative; overflow:hidden;
@@ -80,7 +86,6 @@ const homeStyles = `
     radial-gradient(ellipse 40% 60% at 10% 80%, rgba(232,51,109,0.07) 0%, transparent 70%);
   pointer-events:none;
 }
-/* subtle dot pattern */
 .s1::after {
   content:'';
   position:absolute; inset:0;
@@ -105,7 +110,7 @@ const homeStyles = `
 .s1-viewall:hover { background:var(--gold); color:var(--choco); border-color:var(--gold); }
 .s1-carousel-wrap { position:relative; }
 
-/* ── SECTION 2: New Arrivals — fresh light layout ── */
+/* ── SECTION 2: New Arrivals ── */
 .s2 {
   background:#fff;
   padding: 80px 0 90px;
@@ -137,14 +142,8 @@ const homeStyles = `
 .s2-desc { color:var(--ink-3); font-size:14px; margin:12px 0 0; line-height:1.65; }
 .s2-viewall { margin-top:22px; background:var(--rose); color:#fff; border:none; }
 .s2-viewall:hover { background:#c0295a; transform:translateY(-1px); box-shadow:0 6px 20px rgba(232,51,109,0.3); }
-/* Badge NEW on product card — inject via CSS sibling trick if not in ProductCard */
-.s2-new-tag {
-  display:inline-block; font-size:10px; font-weight:700; letter-spacing:0.08em;
-  background:var(--rose); color:#fff; padding:3px 8px; border-radius:4px;
-  margin-bottom:6px; font-family:var(--f-body);
-}
 
-/* ── SECTION 3: Featured — editorial asymmetric ── */
+/* ── SECTION 3: Featured ── */
 .s3 {
   background:linear-gradient(135deg, #fdf5e6 0%, #fde8f0 50%, #fdf5e6 100%);
   padding: 80px 0 90px;
@@ -224,20 +223,99 @@ const homeStyles = `
   background:var(--gold); border-color:var(--gold); color:var(--choco);
 }
 
-.s1 .ProductCard, 
-.s2 .ProductCard, 
-.s3 .ProductCard {
-  font-size: 0.95rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+/* ── Banner ── */
+.banner-wrap {
+  width:100%; position:relative; z-index:10; padding-bottom:20px;
 }
-
-.s3-grid {
-  gap: 18px !important;
+.banner-img-wrap {
+  position:relative; overflow:hidden;
+}
+.banner-img {
+  width:100%;
+  height:clamp(240px,45vw,500px);
+  object-fit:cover;
+  transition:transform 0.7s ease;
+  display:block;
+}
+.banner-img-wrap:hover .banner-img { transform:scale(1.04); }
+.banner-overlay {
+  position:absolute; inset:0;
+  background:linear-gradient(100deg, rgba(27,8,3,0.92) 0%, rgba(43,18,9,0.75) 40%, rgba(43,18,9,0.1) 75%, transparent 100%);
+}
+.banner-text {
+  position:absolute; inset:0;
+  display:flex; align-items:center;
+  z-index:20; pointer-events:none;
+}
+.banner-text-inner {
+  margin-left:clamp(24px,6vw,96px);
+  max-width:580px;
+}
+.banner-eyebrow-row {
+  display:flex; align-items:center; gap:12px; margin-bottom:16px;
+}
+.banner-eyebrow-line {
+  width:40px; height:1px; background:#c9893a; opacity:0.8;
+}
+.banner-eyebrow-text {
+  font-family:var(--f-body);
+  font-size:11px; font-weight:600; letter-spacing:0.14em;
+  text-transform:uppercase; color:#f5d9a0; margin:0;
+}
+.banner-h1 { font-family:var(--f-display); margin:0; line-height:1.08; }
+.banner-sub {
+  display:block; font-size:clamp(22px,3.5vw,42px);
+  font-weight:400; color:#fff; letter-spacing:0.06em;
+}
+.banner-keo {
+  display:block; margin-top:4px;
+  font-size:clamp(30px,5.5vw,68px);
+  font-weight:700; font-style:italic;
+  background:linear-gradient(90deg,#ffd6df,#ff9eb5,#ffe5ea);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 14px rgba(255,160,190,0.4));
+}
+.banner-brand {
+  display:block; margin-top:2px;
+  font-size:clamp(28px,5vw,64px);
+  font-weight:700;
+  background:linear-gradient(90deg,#f5d9b0,#f3c67a,#f5d9b0);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 12px rgba(243,198,122,0.4));
+}
+.banner-divider {
+  width:85%; height:1px;
+  background:rgba(245,217,160,0.3); margin:20px 0;
+}
+.banner-tagline {
+  font-family:var(--f-body);
+  font-size:clamp(13px,1.6vw,18px);
+  color:rgba(255,255,255,0.72);
+  margin:0; line-height:1.65;
+}
+.banner-cta-wrap { pointer-events:all; display:inline-block; }
+.banner-cta {
+  margin-top:28px;
+  padding:12px 32px; border-radius:100px;
+  background:linear-gradient(90deg,#ffe3b3,#f3c67a);
+  border:none; color:#3b1d14;
+  font-family:var(--f-body); font-size:14px;
+  font-weight:700; letter-spacing:0.04em;
+  cursor:pointer;
+  box-shadow:0 10px 30px rgba(243,198,122,0.35);
+  transition:transform 0.2s, box-shadow 0.2s;
+}
+.banner-cta:hover { transform:translateY(-2px) scale(1.03); }
+.banner-dots {
+  display:flex; justify-content:center; gap:10px; margin-top:18px;
+}
+.banner-dot {
+  border-radius:100px; border:none; cursor:pointer; padding:0;
+  height:8px; transition:all 0.3s;
 }
 `;
 
 export default function Home() {
-  const [banners, setBanners] = useState<Banner[]>([]);
   const [bestSellers, setBestSellers] = useState<any[]>([]);
   const [newProducts, setNewProducts] = useState<any[]>([]);
   const [featured, setFeatured] = useState<any[]>([]);
@@ -253,27 +331,20 @@ export default function Home() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [bannerData, bestData, newData, featuredData] = await Promise.all(
-          [
-            bannerService.getActiveBanners().catch(() => []),
-            getProducts({ is_best_seller: true, limit: 10 }).catch(() => ({
-              products: [],
-            })),
-            getProducts({ is_new: true, limit: 10 }).catch(() => ({
-              products: [],
-            })),
-            getProducts({ is_featured: true, limit: 10 }).catch(() => ({
-              products: [],
-            })),
-          ],
-        );
-        setBanners(bannerData || []);
+        const [bestData, newData, featuredData] = await Promise.all([
+          getProducts({ is_best_seller: true, limit: 10 }).catch(() => ({
+            products: [],
+          })),
+          getProducts({ is_new: true, limit: 10 }).catch(() => ({
+            products: [],
+          })),
+          getProducts({ limit: 10 }).catch(() => ({ products: [] })),
+        ]);
         setBestSellers(bestData.products || []);
         setNewProducts(newData.products || []);
         setFeatured(featuredData.products || []);
       } catch (err) {
         console.error("Lỗi tải dữ liệu Home:", err);
-        toast.error("Không thể tải một số dữ liệu");
       } finally {
         setLoading(false);
       }
@@ -304,279 +375,101 @@ export default function Home() {
       <style>{homeStyles}</style>
       <div className="home-root">
         <main>
-
-          {banners.length > 0 && (
-            <div
-              style={{
-                width: "100%",
-                position: "relative",
-                zIndex: 10,
-                paddingBottom: 20,
-              }}
-            >
-              <div style={{ position: "relative" }}>
-                <Carousel
-                  plugins={[plugin.current]}
-                  opts={{ loop: true }}
-                  setApi={setApi}
-                >
-                  <CarouselContent>
-                    {banners.map((banner) => (
-                      <CarouselItem key={banner.id}>
-                        <Link
-                          href={
-                            banner.product_id
-                              ? `/product/${banner.product_id}`
-                              : (banner as any).link || "#"
-                          }
-                        >
-                          <div
-                            style={{ position: "relative", overflow: "hidden" }}
-                            className="group"
-                          >
-                            <img
-                              src={banner.image_url || (banner as any).imageUrl}
-                              alt={banner.description || "Banner"}
-                              style={{
-                                width: "100%",
-                                height: "clamp(240px,45vw,500px)",
-                                objectFit: "cover",
-                                transition: "transform 0.7s ease",
-                              }}
-                              className="group-hover:scale-105"
-                              onError={(e) => {
-                                e.currentTarget.src =
-                                  "https://picsum.photos/1600/800?random=88";
-                              }}
-                            />
-                            <div
-                              style={{
-                                position: "absolute",
-                                inset: 0,
-                                background:
-                                  "linear-gradient(100deg, rgba(27,8,3,0.92) 0%, rgba(43,18,9,0.75) 40%, rgba(43,18,9,0.1) 75%, transparent 100%)",
-                              }}
-                            />
-                          </div>
-                        </Link>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious
-                    style={{
-                      position: "absolute",
-                      left: 20,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      zIndex: 30,
-                      background: "rgba(255,255,255,0.12)",
-                      border: "1.5px solid rgba(255,255,255,0.25)",
-                      color: "#fff",
-                      backdropFilter: "blur(6px)",
-                    }}
-                  />
-                  <CarouselNext
-                    style={{
-                      position: "absolute",
-                      right: 20,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      zIndex: 30,
-                      background: "rgba(255,255,255,0.12)",
-                      border: "1.5px solid rgba(255,255,255,0.25)",
-                      color: "#fff",
-                      backdropFilter: "blur(6px)",
-                    }}
-                  />
-                </Carousel>
-
-                {/* Banner overlay text */}
-                <div
+          {/* ── BANNER ── */}
+          <div className="banner-wrap">
+            <div style={{ position: "relative" }}>
+              <Carousel
+                plugins={[plugin.current]}
+                opts={{ loop: true }}
+                setApi={setApi}
+              >
+                <CarouselContent>
+                  {STATIC_BANNERS.map((banner) => (
+                    <CarouselItem key={banner.id}>
+                      <div className="banner-img-wrap">
+                        <img
+                          src={banner.image_url}
+                          alt={banner.description}
+                          className="banner-img"
+                          onError={(e) => {
+                            e.currentTarget.src = `https://picsum.photos/1600/800?random=${banner.id}`;
+                          }}
+                        />
+                        <div className="banner-overlay" />
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious
                   style={{
                     position: "absolute",
-                    inset: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    zIndex: 20,
-                    pointerEvents: "none",
+                    left: 20,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    zIndex: 30,
+                    background: "rgba(255,255,255,0.12)",
+                    border: "1.5px solid rgba(255,255,255,0.25)",
+                    color: "#fff",
+                    backdropFilter: "blur(6px)",
                   }}
-                >
-                  <div
-                    style={{
-                      marginLeft: "clamp(24px,6vw,96px)",
-                      maxWidth: 580,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        marginBottom: 16,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 40,
-                          height: 1,
-                          background: "#c9893a",
-                          opacity: 0.8,
-                        }}
-                      />
-                      <p
-                        style={{
-                          fontFamily: "var(--f-body)",
-                          fontSize: 11,
-                          fontWeight: 600,
-                          letterSpacing: "0.14em",
-                          textTransform: "uppercase",
-                          color: "#f5d9a0",
-                          margin: 0,
-                        }}
-                      >
-                        Chào mừng đến với
-                      </p>
-                      <div
-                        style={{
-                          width: 40,
-                          height: 1,
-                          background: "#c9893a",
-                          opacity: 0.8,
-                        }}
-                      />
-                    </div>
-                    <h1
-                      style={{
-                        fontFamily: "var(--f-display)",
-                        margin: 0,
-                        lineHeight: 1.08,
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: "block",
-                          fontSize: "clamp(22px,3.5vw,42px)",
-                          fontWeight: 400,
-                          color: "#fff",
-                          letterSpacing: "0.06em",
-                        }}
-                      >
-                        VƯƠNG QUỐC
-                      </span>
-                      <span
-                        style={{
-                          display: "block",
-                          marginTop: 4,
-                          fontSize: "clamp(30px,5.5vw,68px)",
-                          fontWeight: 700,
-                          fontStyle: "italic",
-                          background:
-                            "linear-gradient(90deg,#ffd6df,#ff9eb5,#ffe5ea)",
-                          WebkitBackgroundClip: "text",
-                          WebkitTextFillColor: "transparent",
-                          filter: "drop-shadow(0 0 14px rgba(255,160,190,0.4))",
-                        }}
-                      >
-                        KẸO NGỌT
-                      </span>
-                      <span
-                        style={{
-                          display: "block",
-                          marginTop: 2,
-                          fontSize: "clamp(28px,5vw,64px)",
-                          fontWeight: 700,
-                          background:
-                            "linear-gradient(90deg,#f5d9b0,#f3c67a,#f5d9b0)",
-                          WebkitBackgroundClip: "text",
-                          WebkitTextFillColor: "transparent",
-                          filter: "drop-shadow(0 0 12px rgba(243,198,122,0.4))",
-                        }}
-                      >
-                        SWEPI
-                      </span>
-                    </h1>
-                    <div
-                      style={{
-                        width: "85%",
-                        height: 1,
-                        background: "rgba(245,217,160,0.3)",
-                        margin: "20px 0",
-                      }}
-                    />
-                    <p
-                      style={{
-                        fontFamily: "var(--f-body)",
-                        fontSize: "clamp(13px,1.6vw,18px)",
-                        color: "rgba(255,255,255,0.72)",
-                        margin: 0,
-                        lineHeight: 1.65,
-                      }}
-                    >
-                      Chạm đến hạnh phúc trong từng hương vị ngọt ngào
-                    </p>
-                    <Link href="/product" style={{ pointerEvents: "all" }}>
-                      <button
-                        style={{
-                          marginTop: 28,
-                          padding: "12px 32px",
-                          borderRadius: 100,
-                          background: "linear-gradient(90deg,#ffe3b3,#f3c67a)",
-                          border: "none",
-                          color: "#3b1d14",
-                          fontFamily: "var(--f-body)",
-                          fontSize: 14,
-                          fontWeight: 700,
-                          letterSpacing: "0.04em",
-                          cursor: "pointer",
-                          boxShadow: "0 10px 30px rgba(243,198,122,0.35)",
-                          transition: "transform 0.2s, box-shadow 0.2s",
-                        }}
-                        onMouseOver={(e) => {
-                          (e.currentTarget as any).style.transform =
-                            "translateY(-2px) scale(1.03)";
-                        }}
-                        onMouseOut={(e) => {
-                          (e.currentTarget as any).style.transform = "none";
-                        }}
-                      >
-                        KHÁM PHÁ NGAY →
-                      </button>
-                    </Link>
+                />
+                <CarouselNext
+                  style={{
+                    position: "absolute",
+                    right: 20,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    zIndex: 30,
+                    background: "rgba(255,255,255,0.12)",
+                    border: "1.5px solid rgba(255,255,255,0.25)",
+                    color: "#fff",
+                    backdropFilter: "blur(6px)",
+                  }}
+                />
+              </Carousel>
+
+              {/* Overlay text — always on top, independent of slide */}
+              <div className="banner-text">
+                <div className="banner-text-inner">
+                  <div className="banner-eyebrow-row">
+                    <div className="banner-eyebrow-line" />
+                    <p className="banner-eyebrow-text">Chào mừng đến với</p>
+                    <div className="banner-eyebrow-line" />
                   </div>
+                  <h1 className="banner-h1">
+                    <span className="banner-sub">VƯƠNG QUỐC</span>
+                    <span className="banner-keo">KẸO NGỌT</span>
+                    <span className="banner-brand">SWEPI</span>
+                  </h1>
+                  <div className="banner-divider" />
+                  <p className="banner-tagline">
+                    Chạm đến hạnh phúc trong từng hương vị ngọt ngào
+                  </p>
+                  <Link href="/product" className="banner-cta-wrap">
+                    <button className="banner-cta">KHÁM PHÁ NGAY →</button>
+                  </Link>
                 </div>
               </div>
-
-              {/* Dots */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: 10,
-                  marginTop: 18,
-                }}
-              >
-                {banners.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => api?.scrollTo(i)}
-                    style={{
-                      borderRadius: 100,
-                      border: "none",
-                      cursor: "pointer",
-                      padding: 0,
-                      background:
-                        current === i ? "var(--rose)" : "rgba(0,0,0,0.15)",
-                      width: current === i ? 28 : 8,
-                      height: 8,
-                      transition: "all 0.3s",
-                    }}
-                  />
-                ))}
-              </div>
             </div>
-          )}
 
-          {/* SECTION 1 — BEST SELLERS (Nổi Bật) */}
+            {/* Dots */}
+            <div className="banner-dots">
+              {STATIC_BANNERS.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => api?.scrollTo(i)}
+                  className="banner-dot"
+                  style={{
+                    background:
+                      current === i ? "var(--rose)" : "rgba(0,0,0,0.15)",
+                    width: current === i ? 28 : 8,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* SECTION 1 — BEST SELLERS */}
           {bestSellers.length > 0 && (
             <section className="s1" style={{ padding: "60px 0 70px" }}>
               <div className="s1-inner">
@@ -599,7 +492,6 @@ export default function Home() {
                     Xem tất cả →
                   </Link>
                 </div>
-
                 <div className="s1-carousel-wrap dark-arrows">
                   <Carousel opts={{ align: "start" }}>
                     <CarouselContent style={{ marginLeft: -10 }}>
@@ -621,7 +513,7 @@ export default function Home() {
             </section>
           )}
 
-          {/* SECTION 2 — NEW ARRIVALS (Hàng Mới) */}
+          {/* SECTION 2 — NEW ARRIVALS */}
           {newProducts.length > 0 && (
             <section className="s2" style={{ padding: "70px 0 80px" }}>
               <div className="s2-inner">
@@ -644,7 +536,6 @@ export default function Home() {
                       Xem tất cả →
                     </Link>
                   </div>
-
                   <div className="s2-carousel-col">
                     <Carousel opts={{ align: "start" }}>
                       <CarouselContent style={{ marginLeft: -10 }}>
@@ -687,7 +578,6 @@ export default function Home() {
                     Xem tất cả →
                   </Link>
                 </div>
-
                 <div
                   className="s3-grid"
                   style={{
@@ -703,6 +593,7 @@ export default function Home() {
             </section>
           )}
 
+          {/* Features strip */}
           <div className="feat-strip">
             <div className="feat-strip-inner">
               <div className="feat-item">

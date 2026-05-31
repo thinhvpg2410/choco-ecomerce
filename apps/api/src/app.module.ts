@@ -15,7 +15,6 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 import { CouponsModule } from './modules/coupons/coupons.module';
 import { BrandsModule } from './modules/brands/brands.module';
 import { UserAddressesModule } from './modules/user-addresses/user-addresses.module';
-import { BannersModule } from './modules/banners/banners.module';
 import { ProductImagesModule } from './modules/product-images/product-images.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -56,7 +55,6 @@ import { ThrottlerModule } from '@nestjs/throttler';
     CouponsModule,
     BrandsModule,
     UserAddressesModule,
-    BannersModule,
     ProductImagesModule,
     AdminModule,
     PayPalModule,

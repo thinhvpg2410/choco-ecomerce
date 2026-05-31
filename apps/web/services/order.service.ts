@@ -26,6 +26,7 @@ export interface OrderApiResponse {
   total_amount: number;
   final_amount: number;
   shipping_fee: number;
+  discount_amount?: number;
   status: OrderStatus;
   payment_status?: PaymentStatus;
   receiver_name: string;

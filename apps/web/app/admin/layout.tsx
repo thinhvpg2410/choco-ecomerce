@@ -16,7 +16,7 @@ export default function AdminLayout({
   const { user, isLoading } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    if (isLoading) return; // ← chờ AuthProvider restore xong
+    if (isLoading) return;
     if (pathname === "/admin/login") return;
 
     if (!user) {
@@ -28,8 +28,13 @@ export default function AdminLayout({
     }
   }, [user, isLoading, router, pathname]);
 
-  // Đang restore session → hiện loader, không render children
   if (isLoading) return <FullScreenLoader />;
 
-  return <>{children}</>;
+  const isLoginPage = pathname === "/admin/login";
+
+  return (
+    <>
+      {children}
+    </>
+  );
 }

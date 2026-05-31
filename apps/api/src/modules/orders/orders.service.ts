@@ -183,7 +183,7 @@ export class OrdersService {
         });
       }
 
-      const shippingFee = dto.is_hcm ? 15_000 : 30_000; 
+      const shippingFee = dto.is_hcm ? 15_000 : 30_000;
       let discountAmount = 0;
       if (dto.coupon_code) {
         discountAmount = await this.applyCouponInTx(
@@ -194,7 +194,6 @@ export class OrdersService {
         );
       }
 
-      const shippingFee = dto.is_hcm ? 15_000 : 30_000;
       const finalAmount = Math.max(
         0,
         totalAmount + shippingFee - discountAmount,
@@ -413,6 +412,7 @@ export class OrdersService {
         })) || [],
       total_amount: Number(order.totalAmount),
       shipping_fee: Number(order.shippingFee),
+      discount_amount: Number(order.discountAmount),
       final_amount: Number(order.finalAmount),
       payment_method: order.paymentMethod,
       payment_status: order.paymentStatus ?? null,
@@ -441,8 +441,6 @@ export class OrdersService {
     if (coupon.expiryDate && coupon.expiryDate <= new Date()) {
       throw new BadRequestException('Mã giảm giá đã hết hạn');
     }
-
-    
 
     let discountAmount = 0;
     if (coupon.couponType === 'PERCENT') {

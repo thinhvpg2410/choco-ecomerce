@@ -53,8 +53,8 @@ services:
     volumes:
       - ./apps/api:/app/apps/api
       - /app/apps/api/node_modules
-    mem_limit: 768m
-    cpus: 0.7
+    mem_limit: 1536m
+    cpus: 1
     depends_on:
       db:
         condition: service_healthy

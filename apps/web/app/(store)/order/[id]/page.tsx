@@ -128,14 +128,17 @@ export default function OrderDetailPage({
       try {
         const data = await getOrderById(id);
         setOrder(data);
-        const map: Record<string, any> = {};
-        for (const item of data.items) {
-          try {
-            const r = await getMyReviewForOrderItem(item.order_item_id);
-            if (r) map[item.order_item_id] = r;
-          } catch (_) {}
+
+        if (data.status === "DELIVERED") {
+          const map: Record<string, any> = {};
+          for (const item of data.items) {
+            try {
+              const r = await getMyReviewForOrderItem(item.order_item_id);
+              if (r) map[item.order_item_id] = r;
+            } catch (_) {}
+          }
+          setMyReviews(map);
         }
-        setMyReviews(map);
       } catch (err) {
         console.error(err);
       } finally {
@@ -239,12 +242,14 @@ export default function OrderDetailPage({
   0,
 );
 const shippingFee: number = order.shipping_fee ?? 30000;
-const discount: number = order.discount_amount ?? 0;
+const discount: number = Number(order.discount_amount ?? 0);
 const totalAmount: number = order.final_amount;
 const canCancel = CANCELLABLE_STATUSES.includes(order.status);
 const canReview = order.status === "DELIVERED";
 const meta = STATUS_META[order.status] ?? STATUS_META["PENDING"];
 const StatusIcon = meta.icon;
+
+console.log("discount_amount:", order.discount_amount, typeof order.discount_amount);
 
   return (
     <ProtectedRoute>
