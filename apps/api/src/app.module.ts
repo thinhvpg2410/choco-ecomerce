@@ -24,7 +24,6 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AppCacheModule } from './common/cache/cache.module';
 import { PayPalModule } from './modules/paypal/paypal.module';
 import { SepayModule } from './modules/sepay/sepay.module';
-import { ChatModule } from './modules/chat/chat.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 // import { ChatModule } from './modules/chat/chat.module';
 
@@ -60,7 +59,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     AdminModule,
     PayPalModule,
     SepayModule,
-    ChatModule,
+    // ChatModule,
   ],
   controllers: [AppController],
   providers: [
