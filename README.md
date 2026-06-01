@@ -1,0 +1,242 @@
+# Choco Ecommerce
+
+Monorepo for a chocolate-themed ecommerce platform: a **Next.js** storefront and admin UI plus a **NestJS** REST API backed by **PostgreSQL** (Prisma), with optional **Redis** caching and integrations for **PayPal** and **Sepay** (QR bank transfer).
+
+## Tech stack
+
+| Layer | Stack |
+|-------|--------|
+| Frontend | Next.js 16, React 19, Redux Toolkit, Tailwind CSS 4, Radix UI / shadcn |
+| Backend | NestJS 11, Prisma 6, JWT auth, Swagger, Redis cache, Cloudinary uploads |
+| Database | PostgreSQL 16 |
+| Tooling | npm workspaces + Yarn 4, Docker Compose, Jenkins CI/CD |
+
+## Repository structure
+
+```
+choco-ecomerce/
+├── apps/
+│   ├── api/          # NestJS API (Prisma, auth, catalog, orders, payments)
+│   └── web/          # Next.js storefront + admin
+├── docker-compose.yml           # API + Postgres (local / prod-like)
+├── docker-compose.dev.yml       # API (hot reload) + Postgres + Redis
+├── docker-compose.prod.yml      # Production deploy (API from registry image)
+├── docker-compose.jenkins.yml   # Jenkins for CI/CD
+├── Jenkinsfile                  # CI/CD pipeline
+├── JENKINS-CICD.md              # Jenkins setup guide (Vietnamese)
+└── package.json                 # Root workspace scripts
+```
+
+## Features
+
+**Store (web)**
+
+- Product catalog, categories, brands, search and filters
+- Cart, checkout, coupons
+- User registration/login, profile, saved addresses
+- Orders and order history
+- Payments: COD, PayPal, QR bank (Sepay)
+- Reviews, policies, about page
+
+**API modules**
+
+- Auth (JWT access + refresh cookies), users, user addresses
+- Products, categories, brands, product images, banners
+- Cart, orders, payments, coupons, reviews
+- Admin operations, PayPal, Sepay webhooks
+
+**API documentation:** `http://localhost:5000/docs` (Swagger UI). All routes use the `/api` prefix.
+
+## Prerequisites
+
+- **Node.js 22+** (matches API Docker images; Jenkins CI uses Node 20)
+- **npm** 9+ or **Yarn** 4 (`corepack enable` — version pinned in `package.json` → `packageManager`)
+- **PostgreSQL 16+** for local API development (or use Docker Compose)
+- **Redis** optional locally; included in `docker-compose.dev.yml`
+
+## Package managers (npm vs Yarn)
+
+This monorepo supports **both** npm and Yarn. Lockfiles are committed for each (`package-lock.json`, `yarn.lock`). Pick one tool for day-to-day work and stick to it on your machine.
+
+| Where | Tool | Notes |
+|-------|------|--------|
+| Root `package.json` scripts | **npm** | Scripts call `npm run … --workspace=…` (e.g. `dev:api`, `build`) |
+| **Jenkins** (`Jenkinsfile`) | **Yarn** | `yarn install --immutable`, `yarn workspace api …` |
+| **API Docker** (`apps/api/Dockerfile*`) | **npm** | `npm ci`, `npm run … --workspace=api` |
+| `packageManager` field | **Yarn 4.5.1** | Use `corepack enable` so Yarn matches CI |
+
+**npm** — typical local flow:
+
+```bash
+npm install
+npm run dev:api
+npm run dev:web
+```
+
+**Yarn** — same scripts via workspaces (matches Jenkins):
+
+```bash
+corepack enable
+yarn install
+yarn dev:api          # runs root script (still invokes npm inside)
+yarn workspace api start:dev
+yarn workspace web dev
+```
+
+For workspace-only tasks, prefer:
+
+| Task | npm | Yarn |
+|------|-----|------|
+| Install | `npm install` | `yarn install` |
+| API dev (watch) | `npm run dev:api` | `yarn workspace api start:dev` |
+| Web dev | `npm run dev:web` | `yarn workspace web dev` |
+| Build all | `npm run build` | `yarn workspace api build` + `yarn workspace web build` |
+| API tests | `npm run test --workspace=api` | `yarn workspace api test` |
+| Prisma migrate | `npm run prisma:migrate --workspace=api` | `yarn workspace api prisma:migrate` |
+| Prisma migrate (dev) | `npm run prisma:migrate:dev --workspace=api` | `yarn workspace api prisma:migrate:dev` |
+| Prisma generate | `npm run prisma:generate --workspace=api` | `yarn workspace api prisma:generate` |
+
+## Quick start
+
+### 1. Install dependencies
+
+From the repository root:
+
+```bash
+# npm
+npm install
+
+# or Yarn (CI uses this)
+corepack enable
+yarn install
+```
+
+### 2. Configure environment
+
+**API** — copy and edit `apps/api/.env` (see `apps/api/.env.example`):
+
+```bash
+cp apps/api/.env.example apps/api/.env
+```
+
+Key variables: `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, Redis, Cloudinary.
+
+**Web** — create `apps/web/.env` as needed:
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | PayPal client ID for checkout |
+
+The web app calls the API at `http://localhost:5000/api` by default (see `apps/web/services/axios.ts`).
+
+### 3. Database
+
+Start Postgres (Docker or local), then apply migrations:
+
+```bash
+# npm
+npm run prisma:migrate --workspace=api
+# npm (development migrations)
+npm run prisma:migrate:dev --workspace=api
+
+# Yarn
+yarn workspace api prisma:migrate
+yarn workspace api prisma:migrate:dev
+```
+
+Optional seed data: `apps/api/prisma/seed.sql`.
+
+### 4. Run development servers
+
+**Terminal 1 — API** (port `5000`):
+
+```bash
+npm run dev:api
+# or: yarn workspace api start:dev
+```
+
+**Terminal 2 — Web** (port `3000`):
+
+```bash
+npm run dev:web
+# or: yarn workspace web dev
+```
+
+Open the storefront at [http://localhost:3000](http://localhost:3000).
+
+## Root scripts
+
+Defined in root `package.json` (implemented with npm workspaces):
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev:web` | Start Next.js dev server |
+| `npm run dev:api` | Start NestJS in watch mode |
+| `npm run build` | Build all workspaces |
+| `npm run docker:dev` | Docker Compose dev stack (API reload + DB + Redis) |
+
+With Yarn you can run the same root scripts (`yarn dev:api`, `yarn build`, …) or call workspaces directly — see the table in [Package managers](#package-managers-npm-vs-yarn).
+
+Workspace examples:
+
+```bash
+# npm
+npm run test --workspace=api
+npm run prisma:generate --workspace=api
+npm run build --workspace=web
+
+# Yarn
+yarn workspace api test
+yarn workspace api prisma:generate
+yarn workspace web build
+```
+
+## Docker
+
+### API + database (production-like)
+
+Builds the API image, runs migrations on start, serves on port `5000`:
+
+```bash
+docker compose up --build
+```
+
+- API: [http://localhost:5000](http://localhost:5000)
+- Postgres: `localhost:5432` (db `choco_ecommerce`, user/password `postgres`)
+
+### Development (hot reload + Redis)
+
+```bash
+npm run docker:dev
+# or: yarn docker:dev
+# or: docker compose -f docker-compose.dev.yml up --build
+```
+
+After changing `apps/api/prisma/schema.prisma` (inside the dev API container, **npm** is used):
+
+```bash
+docker compose -f docker-compose.dev.yml exec api npm run prisma:generate --workspace=api
+```
+
+More detail: [apps/api/README.md](apps/api/README.md).
+
+## CI/CD
+
+Jenkins pipeline (`Jenkinsfile`) uses **Yarn**: `yarn install --immutable`, then lint/test/build via `yarn workspace api` / `yarn workspace web`. The API image build uses **npm** inside `apps/api/Dockerfile`.
+
+Flow: install → lint → test → build → Docker image push → SSH deploy (`docker-compose.prod.yml`).
+
+Setup steps: [JENKINS-CICD.md](JENKINS-CICD.md).
+
+```bash
+docker compose -f docker-compose.jenkins.yml up -d
+```
+
+## App-specific docs
+
+- [apps/api/README.md](apps/api/README.md) — API env, Prisma, Docker, tests
+- [apps/web/README.md](apps/web/README.md) — Next.js defaults (see root README for monorepo workflow)
+
+## License
+
+ISC (root `package.json`). API workspace is `UNLICENSED`.
