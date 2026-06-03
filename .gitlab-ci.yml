@@ -79,4 +79,6 @@ deploy:
     - chmod 700 ~/.ssh
     - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
   script:
+    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "mkdir -p ${DEPLOY_PATH}"
+    - scp docker-compose.prod.yml ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/docker-compose.prod.yml
     - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "set -e && cd ${DEPLOY_PATH} && API_IMAGE=${DOCKER_IMAGE_REPO}:latest docker compose -f docker-compose.prod.yml pull api && API_IMAGE=${DOCKER_IMAGE_REPO}:latest docker compose -f docker-compose.prod.yml up -d"
