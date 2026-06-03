@@ -74,10 +74,7 @@ export class PayPalService {
       console.log('Tạo đơn hàng PayPal thành công: ', data.id);
       return data;
     } catch (error: any) {
-      console.error(
-        'Lỗi API PayPal:',
-        error.response?.data || error.message,
-      );
+      console.error('Lỗi API PayPal:', error.response?.data || error.message);
       throw new Error(error.response?.data?.message || error.message);
     }
   }

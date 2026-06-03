@@ -13,7 +13,9 @@ export default () => ({
     enabled: process.env.REDIS_ENABLED !== 'false',
   },
   database: {
-    url: process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/choco_ecommerce',
+    url:
+      process.env.DATABASE_URL ??
+      'postgresql://postgres:postgres@localhost:5432/choco_ecommerce',
   },
   jwt: {
     secret: process.env.JWT_SECRET ?? 'choco-ecommerce-secret',

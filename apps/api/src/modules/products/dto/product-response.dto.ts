@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PublicResponseMetaDto } from '../../../common/dto/viewer-meta.dto';
-import { ProductImageDto } from '../../product-images/dto/product-image.dto'; 
+import { ProductImageDto } from '../../product-images/dto/product-image.dto';
 
 export class MyReviewSnippetDto {
   @ApiProperty()

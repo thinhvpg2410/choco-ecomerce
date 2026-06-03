@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import {
@@ -82,7 +87,13 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     search: string,
     categoryId: string,
   ): string {
-    return productsListCacheKey(this.keyPrefix, page, limit, search, categoryId);
+    return productsListCacheKey(
+      this.keyPrefix,
+      page,
+      limit,
+      search,
+      categoryId,
+    );
   }
 
   productDetailKey(productId: string): string {
@@ -110,7 +121,9 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.client!.set(key, JSON.stringify(value), 'EX', ttl);
     } catch (err) {
-      this.logger.warn(`Redis SET failed for ${key}: ${(err as Error).message}`);
+      this.logger.warn(
+        `Redis SET failed for ${key}: ${(err as Error).message}`,
+      );
     }
   }
 
@@ -119,7 +132,9 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.client!.unlink(key);
     } catch (err) {
-      this.logger.warn(`Redis DEL failed for ${key}: ${(err as Error).message}`);
+      this.logger.warn(
+        `Redis DEL failed for ${key}: ${(err as Error).message}`,
+      );
     }
   }
 

@@ -41,9 +41,7 @@ export class PaymentsService {
     }
 
     if (order.payment?.paymentStatus === PaymentStatus.PAID) {
-      throw new ConflictException(
-        'Đơn hàng này đã được thanh toán thành công',
-      );
+      throw new ConflictException('Đơn hàng này đã được thanh toán thành công');
     }
 
     const strategy = this.paymentStrategyFactory.getStrategy(

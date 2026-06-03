@@ -103,8 +103,7 @@ export class ProductsController {
   @ApiOkResponse({ type: ProductDetailResponseDto })
   @Roles(UserRole.admin)
   @Patch(':id/toggle-active')
-  async toggleActive(
-@Param('id') productId: string) {
+  async toggleActive(@Param('id') productId: string) {
     return this.productsService.toggleActive(productId);
   }
 

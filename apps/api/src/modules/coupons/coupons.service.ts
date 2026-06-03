@@ -242,19 +242,19 @@ export class CouponsService {
     }
 
     const discount = this.computeDiscount(
-  {
-    type: coupon.couponType,
-    value:
-      coupon.couponType === CouponType.PERCENT
-        ? (coupon.discountPercent ?? new Prisma.Decimal(0))
-        : coupon.couponType === CouponType.FIXED
-          ? (coupon.discountAmount ?? new Prisma.Decimal(0))
-          : new Prisma.Decimal(0), // FREE_SHIP: value không dùng nữa
-    maxDiscount: coupon.maxDiscountAmount,
-    shippingFee: dto.shipping_fee ?? 30000, // truyền vào
-  },
-  subtotal,
-);
+      {
+        type: coupon.couponType,
+        value:
+          coupon.couponType === CouponType.PERCENT
+            ? (coupon.discountPercent ?? new Prisma.Decimal(0))
+            : coupon.couponType === CouponType.FIXED
+              ? (coupon.discountAmount ?? new Prisma.Decimal(0))
+              : new Prisma.Decimal(0), // FREE_SHIP: value không dùng nữa
+        maxDiscount: coupon.maxDiscountAmount,
+        shippingFee: dto.shipping_fee ?? 30000, // truyền vào
+      },
+      subtotal,
+    );
     const finalAmount = this.roundMoney(Math.max(0, subtotal - discount));
 
     return {
@@ -270,33 +270,33 @@ export class CouponsService {
   }
 
   private computeDiscount(
-  coupon: {
-    type: CouponType;
-    value: Prisma.Decimal;
-    maxDiscount: Prisma.Decimal | null;
-    shippingFee?: number; 
-  },
-  subtotal: number,
-): number {
-  const value = Number(coupon.value);
-  let discount = 0;
+    coupon: {
+      type: CouponType;
+      value: Prisma.Decimal;
+      maxDiscount: Prisma.Decimal | null;
+      shippingFee?: number;
+    },
+    subtotal: number,
+  ): number {
+    const value = Number(coupon.value);
+    let discount = 0;
 
-  if (coupon.type === CouponType.PERCENT) {
-    discount = (subtotal * value) / 100;
-  } else if (coupon.type === CouponType.FIXED) {
-    discount = value;
-  } else if (coupon.type === CouponType.FREE_SHIP) {
-    discount = coupon.shippingFee ?? 30000; 
-  }
+    if (coupon.type === CouponType.PERCENT) {
+      discount = (subtotal * value) / 100;
+    } else if (coupon.type === CouponType.FIXED) {
+      discount = value;
+    } else if (coupon.type === CouponType.FREE_SHIP) {
+      discount = coupon.shippingFee ?? 30000;
+    }
 
-  if (coupon.type === CouponType.PERCENT && coupon.maxDiscount !== null) {
-    discount = Math.min(discount, Number(coupon.maxDiscount));
+    if (coupon.type === CouponType.PERCENT && coupon.maxDiscount !== null) {
+      discount = Math.min(discount, Number(coupon.maxDiscount));
+    }
+    if (coupon.type !== CouponType.FREE_SHIP) {
+      discount = Math.min(discount, subtotal);
+    }
+    return this.roundMoney(discount);
   }
-  if (coupon.type !== CouponType.FREE_SHIP) {
-    discount = Math.min(discount, subtotal);
-  }
-  return this.roundMoney(discount);
-}
 
   private validateCouponValue(
     type: CouponType,

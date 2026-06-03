@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { OrderStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
@@ -20,9 +24,7 @@ export class CodPaymentStrategy implements PaymentStrategy {
     dto: CreatePaymentDto,
   ): Promise<PaymentStrategyResult> {
     if (order.status === OrderStatus.CANCELLED) {
-      throw new BadRequestException(
-        'Không thể thanh toán cho đơn hàng đã hủy',
-      );
+      throw new BadRequestException('Không thể thanh toán cho đơn hàng đã hủy');
     }
 
     const payment = await this.prisma.$transaction(async (tx) => {

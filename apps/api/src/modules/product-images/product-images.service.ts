@@ -15,7 +15,11 @@ export class ProductImagesService {
     return this.prisma.productImage.create({ data: dto });
   }
 
-  async uploadAndCreate(file: Express.Multer.File, productId: string, sortOrder?: number) {
+  async uploadAndCreate(
+    file: Express.Multer.File,
+    productId: string,
+    sortOrder?: number,
+  ) {
     const imageUrl = await this.uploadService.uploadImage(file, 'products');
     return this.prisma.productImage.create({
       data: {
@@ -46,6 +50,9 @@ export class ProductImagesService {
   async remove(id: string) {
     const image = await this.findOne(id);
     await this.prisma.productImage.delete({ where: { id } });
-    return { success: true, message: 'Hình ảnh sản phẩm đã được xóa thành công' };
+    return {
+      success: true,
+      message: 'Hình ảnh sản phẩm đã được xóa thành công',
+    };
   }
 }

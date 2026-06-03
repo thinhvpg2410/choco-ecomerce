@@ -52,7 +52,9 @@ export class CategoriesService {
     }
 
     const cacheKey = this.cache.categoriesKey();
-    type Payload = Awaited<ReturnType<CategoriesService['loadGuestCategories']>>;
+    type Payload = Awaited<
+      ReturnType<CategoriesService['loadGuestCategories']>
+    >;
     const cached = await this.cache.get<Payload>(cacheKey);
     if (cached) {
       return cached;
@@ -112,8 +114,12 @@ export class CategoriesService {
       const updatedCategory = await this.prisma.category.update({
         where: { id: categoryId },
         data: {
-          ...(updateCategoryDto.name !== undefined && { name: updateCategoryDto.name }),
-          ...(updateCategoryDto.slug !== undefined && { slug: updateCategoryDto.slug }),
+          ...(updateCategoryDto.name !== undefined && {
+            name: updateCategoryDto.name,
+          }),
+          ...(updateCategoryDto.slug !== undefined && {
+            slug: updateCategoryDto.slug,
+          }),
           ...(updateCategoryDto.description !== undefined && {
             description: updateCategoryDto.description,
           }),
@@ -156,14 +162,19 @@ export class CategoriesService {
       where: { categoryId: category.id, isActive: true },
     });
     if (existingProducts > 0) {
-      throw new BadRequestException('Không thể xóa danh mục có sản phẩm đang tồn tại');
+      throw new BadRequestException(
+        'Không thể xóa danh mục có sản phẩm đang tồn tại',
+      );
     }
 
     await this.prisma.category.delete({ where: { id: categoryId } });
     await this.cache.invalidateAfterCategoryWrite();
     return { success: true, message: 'Danh mục đã được xóa thành công' };
   }
-  async uploadImage(categoryId: string, file: Express.Multer.File): Promise<any> {
+  async uploadImage(
+    categoryId: string,
+    file: Express.Multer.File,
+  ): Promise<any> {
     this.validateUuid(categoryId);
     const imageUrl = await this.uploadService.uploadImage(file, 'categories');
     const updatedCategory = await this.prisma.category.update({
@@ -177,7 +188,6 @@ export class CategoriesService {
       data: this.toCategoryResponse(updatedCategory),
     };
   }
-
 
   private validateUuid(id: string): void {
     if (!isUuid(id)) {

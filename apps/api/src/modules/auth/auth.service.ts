@@ -49,12 +49,17 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const user = await this.usersService.findByEmailWithPassword(loginDto.email);
+    const user = await this.usersService.findByEmailWithPassword(
+      loginDto.email,
+    );
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.password,
+    );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -65,7 +70,10 @@ export class AuthService {
 
     let mergedCart: CartDataResponseDto | undefined;
     if (loginDto.guestCart?.length) {
-      const mergeResult = await this.cartService.mergeGuestCart(user.id, loginDto.guestCart);
+      const mergeResult = await this.cartService.mergeGuestCart(
+        user.id,
+        loginDto.guestCart,
+      );
       mergedCart = mergeResult.data;
     }
 

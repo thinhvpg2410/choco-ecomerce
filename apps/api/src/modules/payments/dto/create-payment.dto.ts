@@ -1,6 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PaymentMethod } from '@prisma/client';
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
 export class CreatePaymentDto {
   @ApiProperty({ format: 'uuid' })
@@ -12,7 +19,8 @@ export class CreatePaymentDto {
   payment_method: PaymentMethod;
 
   @ApiPropertyOptional({
-    description: 'Required to complete BANKING; maps to transaction_code (type.ts)',
+    description:
+      'Required to complete BANKING; maps to transaction_code (type.ts)',
     maxLength: 255,
   })
   @IsOptional()

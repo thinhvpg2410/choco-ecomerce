@@ -11,7 +11,9 @@ export class CouponDataDto {
   @ApiProperty({ description: '0–100; 0 when discount_amount is used' })
   discount_percent: number;
 
-  @ApiPropertyOptional({ description: 'Fixed amount off when coupon type is FIXED' })
+  @ApiPropertyOptional({
+    description: 'Fixed amount off when coupon type is FIXED',
+  })
   discount_amount?: number;
 
   @ApiProperty()
