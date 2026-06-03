@@ -6,18 +6,21 @@ import { CreateProductImageDto } from './dto/create-product-image.dto';
 import { UpdateProductImageDto } from './dto/update-product-image.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('ProductImages')
 @Controller('product-images')
 export class ProductImagesController {
   constructor(private readonly service: ProductImagesService) {}
 
+  @Public()
   @ApiQuery({ name: 'product_id', required: false })
   @Get()
   async findAll(@Query('product_id') productId?: string) {
     return this.service.findAll(productId);
   }
 
+  @Public()
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.service.findOne(id);

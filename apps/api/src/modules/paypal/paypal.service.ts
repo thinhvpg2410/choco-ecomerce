@@ -1,14 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-
 import { CreatePayPalOrderDto } from './dto/create-paypal-order.dto';
+
+import { RateLimiterClient } from '../../common/utils/rate-limiter-client';
 
 @Injectable()
 export class PayPalService {
   private readonly clientId: string;
   private readonly secret: string;
   private readonly baseUrl: string;
+
+  //Khởi tạo: tối đa 10 request / 60 giây tới PayPal
+  private readonly rateLimiter = new RateLimiterClient(10, 60_000);
 
   constructor(private configService: ConfigService) {
     this.clientId = this.configService.get<string>('PAYPAL_CLIENT_ID')!;
@@ -20,7 +24,6 @@ export class PayPalService {
     const auth = Buffer.from(`${this.clientId}:${this.secret}`).toString(
       'base64',
     );
-
     const { data } = await axios.post(
       `${this.baseUrl}/v1/oauth2/token`,
       'grant_type=client_credentials',
@@ -31,12 +34,12 @@ export class PayPalService {
         },
       },
     );
-
     return data.access_token;
   }
 
   async createOrder(dto: CreatePayPalOrderDto) {
-    try {
+    // ✅ Dùng callWithLimit — tự check + throw nếu vượt giới hạn
+    return this.rateLimiter.callWithLimit('paypal-create-order', async () => {
       console.log('📨 Yêu cầu tạo đơn hàng PayPal: ', dto);
 
       if (!dto.amount || dto.amount <= 0) {
@@ -44,7 +47,6 @@ export class PayPalService {
       }
 
       const accessToken = await this.getAccessToken();
-
       const payload = {
         intent: 'CAPTURE',
         purchase_units: [
@@ -57,8 +59,6 @@ export class PayPalService {
           },
         ],
       };
-
-      console.log('📤 Sending to PayPal:', JSON.stringify(payload, null, 2));
 
       const { data } = await axios.post(
         `${this.baseUrl}/v2/checkout/orders`,
@@ -73,18 +73,12 @@ export class PayPalService {
 
       console.log('Tạo đơn hàng PayPal thành công: ', data.id);
       return data;
-    } catch (error: any) {
-      console.error(
-        'Lỗi API PayPal:',
-        error.response?.data || error.message,
-      );
-      throw new Error(error.response?.data?.message || error.message);
-    }
+    });
   }
-  async captureOrder(orderId: string) {
-    try {
-      const accessToken = await this.getAccessToken();
 
+  async captureOrder(orderId: string) {
+    return this.rateLimiter.callWithLimit('paypal-capture', async () => {
+      const accessToken = await this.getAccessToken();
       const { data } = await axios.post(
         `${this.baseUrl}/v2/checkout/orders/${orderId}/capture`,
         {},
@@ -95,12 +89,7 @@ export class PayPalService {
           },
         },
       );
-
       return data;
-    } catch (error: any) {
-      console.error('Lỗi Capture:', error.response?.data || error.message);
-
-      throw new Error(error.response?.data?.message || error.message);
-    }
+    });
   }
 }
