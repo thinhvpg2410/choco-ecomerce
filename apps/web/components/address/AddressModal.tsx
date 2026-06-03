@@ -74,8 +74,8 @@ export function AddressFormModal({
         receiverName,
         receiverPhone,
         address: addrDetail,
-        ward: addrSel.ward.name,
-        city: addrSel.province.name,
+        ward: addrSel.ward?.name ?? "",
+        city: addrSel.province?.name ?? "",
       });
       onClose();
     } catch {

@@ -18,6 +18,7 @@ export async function getProducts(params: {
   is_new?: boolean;
   is_best_seller?: boolean;
   limit?: number;
+  sort_by?: string;
 }): Promise<ProductResponse> {
   try {
     console.log("getProducts params:", params);
@@ -30,6 +31,7 @@ export async function getProducts(params: {
       max_price: params.max_price,
       brand_id: params.brand_id,
       category_id: params.category_id,
+      sort_by: params.sort_by,
     };
 
     if (params.is_new) query.is_new = true;

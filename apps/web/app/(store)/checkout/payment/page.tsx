@@ -191,7 +191,7 @@ export default function PaymentPage() {
           order_id: order.id,
           payment_method: "QR_BANK",
         });
-        setQrUrl(paymentRes.qr_url || paymentRes.qrUrl);
+        setQrUrl(paymentRes.qr_url || paymentRes.qrUrl || "");
         startCheckingPayment(order.id);
         return;
       }
@@ -497,7 +497,7 @@ export default function PaymentPage() {
 
                     <PayPalScriptProvider
                       options={{
-                        "client-id": paypalClientId,
+                        clientId: paypalClientId,
                         currency: "USD",
                         intent: "capture",
                       }}

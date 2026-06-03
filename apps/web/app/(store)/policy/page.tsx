@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import type { CSSProperties } from "react";
 
 const sections = {
   shipping: {
@@ -287,7 +288,7 @@ const S = {
     fontWeight: 500,
   },
   navList: { display: "flex", flexDirection: "column", gap: ".4rem" },
-  navBtn: (active) => ({
+  navBtn: (active: boolean): CSSProperties => ({
     display: "flex",
     alignItems: "center",
     gap: ".7rem",
@@ -306,7 +307,7 @@ const S = {
     width: "100%",
     transition: "all .2s",
   }),
-  navIcon: (active) => ({
+  navIcon: (active: boolean): CSSProperties => ({
     color: active ? "#C89558" : "rgba(44,24,16,.3)",
     display: "flex",
     alignItems: "center",
@@ -403,7 +404,7 @@ const S = {
     fontWeight: 700,
     color: "#2C1810",
   },
-  faqIcon: (open) => ({
+  faqIcon: (open: boolean): CSSProperties => ({
     color: "#C89558",
     fontSize: "1.3rem",
     transition: "transform .3s",
@@ -413,7 +414,7 @@ const S = {
     fontWeight: 300,
     lineHeight: 1,
   }),
-  faqA: (open) => ({
+  faqA: (open: boolean): CSSProperties => ({
     fontFamily: "'DM Sans', sans-serif",
     fontSize: ".85rem",
     color: "rgba(44,24,16,.65)",
@@ -448,18 +449,18 @@ const S = {
   },
   ctaEm: { color: "#A0522D", fontStyle: "italic" },
   btnRow: { display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" },
-};
+} as const;
 
 /* ── Main component ── */
 export default function PolicyPage() {
-  const [active, setActive] = useState("shipping");
-  const [openFaq, setOpenFaq] = useState(null);
-  const [visible, setVisible] = useState({});
-  const [navHover, setNavHover] = useState(null);
-  const refs = useRef({});
+  const [active, setActive] = useState<string>("shipping");
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [visible, setVisible] = useState<Record<string, boolean>>({});
+  const [navHover, setNavHover] = useState<string | null>(null);
+  const refs = useRef<Record<string, HTMLElement | null>>({});
 
   useEffect(() => {
-    const obs = {};
+    const obs: Record<string, IntersectionObserver> = {};
     Object.entries(refs.current).forEach(([k, el]) => {
       if (!el) return;
       obs[k] = new IntersectionObserver(
@@ -471,16 +472,16 @@ export default function PolicyPage() {
     return () => Object.values(obs).forEach((o) => o.disconnect());
   }, [active]);
 
-  const setRef = (k) => (el) => { refs.current[k] = el; };
-  const cur = sections[active];
+  const setRef = (k: string) => (el: HTMLElement | null) => { refs.current[k] = el; };
+  const cur = sections[active as keyof typeof sections] as any;
 
-  const handleTabChange = (key) => {
+  const handleTabChange = (key: string) => {
     setActive(key);
     setVisible({});
     setOpenFaq(null);
   };
 
-  const fadeStyle = (key, delay = 0) => ({
+  const fadeStyle = (key: string, delay = 0) => ({
     opacity: visible[key] ? 1 : 0,
     transform: visible[key] ? "translateY(0)" : "translateY(28px)",
     transition: `opacity .7s cubic-bezier(.22,1,.36,1) ${delay}s, transform .7s cubic-bezier(.22,1,.36,1) ${delay}s`,
@@ -578,7 +579,7 @@ export default function PolicyPage() {
 
               {/* Content blocks */}
               {cur.content &&
-                cur.content.map((block, bi) => (
+                cur.content.map((block: any, bi: number) => (
                   <div
                     key={bi}
                     ref={setRef(`block${bi}`)}
@@ -589,7 +590,7 @@ export default function PolicyPage() {
                       {block.highlight && <span style={S.badge}>Quan trọng</span>}
                     </h3>
                     <div style={block.highlight ? S.highlightWrap : {}}>
-                      {block.items.map((item, ii) => (
+                      {block.items.map((item: any, ii: number) => (
                         <div key={ii} style={S.item}>
                           <span style={S.itemDot}>◆</span>
                           <span>
@@ -607,7 +608,7 @@ export default function PolicyPage() {
               {/* FAQ */}
               {cur.faqs && (
                 <div ref={setRef("faqs")} style={fadeStyle("faqs")}>
-                  {cur.faqs.map((faq, fi) => (
+                  {cur.faqs.map((faq: any, fi: number) => (
                     <div key={fi} style={S.faqItem}>
                       <button
                         style={S.faqQ}
@@ -647,7 +648,12 @@ export default function PolicyPage() {
 }
 
 /* ── CTA Button ── */
-function CtaButton({ href, variant, children }) {
+interface CtaButtonProps {
+  href: string;
+  variant: "outline" | "fill";
+  children: React.ReactNode;
+}
+function CtaButton({ href, variant, children }: CtaButtonProps) {
   const [hover, setHover] = useState(false);
   const base = {
     display: "inline-block",

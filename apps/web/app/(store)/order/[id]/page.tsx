@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
@@ -129,7 +129,7 @@ export default function OrderDetailPage({
         const data = await getOrderById(id);
         setOrder(data);
 
-        if (data.status === "DELIVERED") {
+        if (data && data.status === "DELIVERED") {
           const map: Record<string, any> = {};
           for (const item of data.items) {
             try {
