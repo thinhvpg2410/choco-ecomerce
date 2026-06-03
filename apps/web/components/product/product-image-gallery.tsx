@@ -34,7 +34,6 @@ export default function ProductImageGallery({
 
         let data: ProductImage[] = res.data || [];
 
-        // 👉 check nếu mainImage chưa có trong list thì add vào
         const exists = data.some((img) => img.imageUrl === mainImage);
 
         if (!exists && mainImage) {
