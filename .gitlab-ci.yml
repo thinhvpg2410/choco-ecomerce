@@ -8,43 +8,41 @@ stages:
 default:
   image: node:20-bullseye
 
+variables:
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
 
 cache:
   key:
     files:
-      - yarn.lock
+      - package-lock.json
   paths:
-    - .yarn/cache
+    - .npm
     - node_modules
 
 install_dependencies:
   stage: install
   script:
-    - corepack enable
-    - yarn install --immutable
+    - npm ci
 
 lint:
   stage: test
   script:
-    - corepack enable
-    - yarn install --immutable
-    - yarn workspace api lint
-    - yarn workspace web lint
+    - npm ci
+    - npm run lint --workspace=api
+    - npm run lint --workspace=web
 
 test:
   stage: test
   script:
-    - corepack enable
-    - yarn install --immutable
-    - yarn workspace api test --runInBand
+    - npm ci
+    - npm run test --workspace=api -- --runInBand
 
 build_app:
   stage: build
   script:
-    - corepack enable
-    - yarn install --immutable
-    - yarn workspace api build
-    - yarn workspace web build
+    - npm ci
+    - npm run build --workspace=api
+    - npm run build --workspace=web
 
 build_and_push_image:
   stage: publish
