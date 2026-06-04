@@ -8,7 +8,7 @@ import { Check, ShoppingCart, Zap, Minus, Plus, Flag } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchCart } from "@/store/cartSlice";
 import { RootState } from "@/store/store";
-
+import { useRouter } from "next/navigation";
 interface Props {
   product: Product;
 }
@@ -17,7 +17,7 @@ export function ProductItem({ product }: Props) {
   const [isAdded, setIsAdded] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [qty, setQty] = useState(1);
-
+  const router = useRouter();
   const dispatch = useDispatch();
 
   // Lấy cartQty trực tiếp từ store, không cần truyền prop
@@ -89,7 +89,7 @@ export function ProductItem({ product }: Props) {
       cart_item_ids: [],
     };
     localStorage.setItem("checkout_cart", JSON.stringify(payload));
-    window.location.href = "/checkout?mode=buy_now";
+    router.push("/checkout?mode=buy_now");
   };
 
   return (
