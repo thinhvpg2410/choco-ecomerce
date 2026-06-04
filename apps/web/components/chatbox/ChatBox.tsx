@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import ReactMarkdown from "react-markdown";
-import type { Components } from "react-markdown";
 import { useRouter } from "next/navigation";
 import { ProductCardHorizontal, ChatProduct } from "@/components/product/product-card";
 
@@ -142,7 +140,9 @@ export default function ChatBot() {
           aria-label="Mở chat hỗ trợ"
           className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-[18px] shadow-lg
                      flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
-          style={{ background: "linear-gradient(135deg, #7b3f00 0%, #c0652b 100%)" }}
+          style={{
+            background: "linear-gradient(135deg, #7b3f00 0%, #c0652b 100%)",
+          }}
         >
           {unread > 0 && (
             <span
@@ -173,7 +173,9 @@ export default function ChatBot() {
           </svg>
           <span
             className="absolute bottom-2 right-2 w-2.5 h-2.5 rounded-full bg-green-400 border-2"
-            style={{ borderColor: "linear-gradient(135deg, #7b3f00 0%, #c0652b 100%)" }}
+            style={{
+              borderColor: "linear-gradient(135deg, #7b3f00 0%, #c0652b 100%)",
+            }}
           />
         </button>
       )}
@@ -194,7 +196,9 @@ export default function ChatBot() {
           {/* Header */}
           <div
             className="flex items-center gap-3 px-4 py-3 flex-shrink-0"
-            style={{ background: "linear-gradient(135deg, #7b3f00 0%, #c0652b 100%)" }}
+            style={{
+              background: "linear-gradient(135deg, #7b3f00 0%, #c0652b 100%)",
+            }}
           >
             <div
               className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0"
@@ -243,7 +247,12 @@ export default function ChatBot() {
               className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/20 text-white transition"
               aria-label="Đóng"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -265,7 +274,11 @@ export default function ChatBot() {
                   key={q.text}
                   onClick={() => sendMessage(q.text)}
                   className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition hover:border-orange-400"
-                  style={{ background: "#FAECE7", color: "#712B13", borderColor: "#F5C4B3" }}
+                  style={{
+                    background: "#FAECE7",
+                    color: "#712B13",
+                    borderColor: "#F5C4B3",
+                  }}
                 >
                   {q.label}
                 </button>
@@ -292,56 +305,16 @@ export default function ChatBot() {
                       }`}
                       style={
                         msg.role === "user"
-                          ? { background: "linear-gradient(135deg, #7b3f00 0%, #c0652b 100%)" }
+                          ? {
+                              background:
+                                "linear-gradient(135deg, #7b3f00 0%, #c0652b 100%)",
+                            }
                           : {}
                       }
                     >
-                      {msg.role === "assistant" ? (
-                        <ReactMarkdown
-                          components={{
-                            p: ({ children }: { children: React.ReactNode }) => (
-                              <p style={{ margin: "0 0 6px", lineHeight: 1.6 }}>{children}</p>
-                            ),
-                            a: ({ href, children }: { href?: string; children: React.ReactNode }) => (
-                              <button
-                                onClick={() => {
-                                  if (href) router.push(href);
-                                }}
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  color: "#c0652b",
-                                  fontWeight: 600,
-                                  textDecoration: "underline",
-                                  textDecorationColor: "rgba(216,90,48,0.4)",
-                                  textUnderlineOffset: 2,
-                                  cursor: "pointer",
-                                  padding: 0,
-                                  fontSize: "inherit",
-                                  fontFamily: "inherit",
-                                }}
-                              >
-                                {children}
-                              </button>
-                            ),
-                            strong: ({ children }: { children: React.ReactNode }) => (
-                              <strong style={{ fontWeight: 700, color: "#712B13" }}>
-                                {children}
-                              </strong>
-                            ),
-                            ul: ({ children }: { children: React.ReactNode }) => (
-                              <ul style={{ margin: "4px 0", paddingLeft: 18 }}>{children}</ul>
-                            ),
-                            li: ({ children }: { children: React.ReactNode }) => (
-                              <li style={{ marginBottom: 3 }}>{children}</li>
-                            ),
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
-                      ) : (
-                        msg.content
-                      )}
+                      <span style={{ whiteSpace: "pre-wrap" }}>
+                        {msg.content}
+                      </span>
                     </div>
                   )}
 
@@ -390,10 +363,18 @@ export default function ChatBot() {
                 disabled={loading || !input.trim()}
                 className="w-9 h-9 rounded-full flex items-center justify-center text-white transition
                            disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 active:scale-95"
-                style={{ background: "linear-gradient(135deg, #7b3f00 0%, #c0652b 100%)" }}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #7b3f00 0%, #c0652b 100%)",
+                }}
                 aria-label="Gửi"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
