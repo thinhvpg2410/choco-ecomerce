@@ -1,20 +1,44 @@
 "use client";
 
 import { Product } from "@/types/type";
-import { ShoppingCart, Check, Sparkles, Flame } from "lucide-react";
+import { ShoppingCart, Check, Sparkles, Flame, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { addToCart } from "@/services/cart.service";
 import { toast } from "sonner";
 import { fetchCart } from "@/store/cartSlice";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
-interface Props {
+// ─────────────────────────────────────────────
+// Shared interface for chat product cards
+// ─────────────────────────────────────────────
+export interface ChatProduct {
+  id: string | number;
+  name: string;
+  price: number;
+  sale_price?: number | null;
+  image_url: string;
+  stock: number;
+  is_new?: boolean;
+  brand?: { name: string } | null;
+}
+
+// ─────────────────────────────────────────────
+// Shared helpers
+// ─────────────────────────────────────────────
+function calcDiscount(price: number, salePrice: number) {
+  return Math.round(((price - salePrice) / price) * 100);
+}
+
+// ─────────────────────────────────────────────
+// ProductCard  (vertical — grid / listing)
+// ─────────────────────────────────────────────
+interface CardProps {
   product: Product;
   cartQty?: number;
 }
 
-export function ProductCard({ product, cartQty = 0 }: Props) {
+export function ProductCard({ product, cartQty = 0 }: CardProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [qty, setQty] = useState(1);
@@ -28,7 +52,7 @@ export function ProductCard({ product, cartQty = 0 }: Props) {
   const isLowStock = remainingStock > 0 && remainingStock <= 5;
 
   const discountPercentage = hasSale
-    ? Math.round(((product.price - product.sale_price!) / product.price) * 100)
+    ? calcDiscount(product.price, product.sale_price!)
     : 0;
 
   const changeQty = (e: React.MouseEvent, delta: number) => {
@@ -300,5 +324,128 @@ export function ProductCard({ product, cartQty = 0 }: Props) {
         </div>
       </div>
     </Link>
+  );
+}
+
+// ─────────────────────────────────────────────
+// ProductCardHorizontal  (horizontal — chatbot)
+// ─────────────────────────────────────────────
+interface HorizontalProps {
+  product: ChatProduct;
+}
+
+export function ProductCardHorizontal({ product }: HorizontalProps) {
+  const hasSale =
+    product.sale_price != null && product.sale_price < product.price;
+  const isOutOfStock = product.stock === 0;
+  const isLowStock = !isOutOfStock && product.stock <= 5;
+  const discountPct = hasSale
+    ? calcDiscount(product.price, product.sale_price!)
+    : 0;
+
+  return (
+    <div
+      className="flex items-stretch gap-0 rounded-2xl overflow-hidden border border-orange-100
+        bg-white shadow-[0_2px_10px_rgba(0,0,0,0.07)]
+        hover:shadow-[0_6px_24px_-4px_rgba(251,146,60,0.22)]
+        transition-all duration-300 hover:-translate-y-0.5"
+    >
+      {/* ── IMAGE ── */}
+      <div className="relative flex-shrink-0 w-[88px] bg-gradient-to-br from-orange-50 to-amber-50 overflow-hidden">
+        <img
+          src={product.image_url}
+          alt={product.name}
+          className="w-full h-full object-cover"
+          style={{ minHeight: 88 }}
+        />
+        {hasSale && (
+          <span
+            className="absolute top-1.5 left-1.5 flex items-center gap-0.5
+              bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow"
+          >
+            <Flame className="w-2.5 h-2.5" />-{discountPct}%
+          </span>
+        )}
+        {product.is_new && !hasSale && (
+          <span
+            className="absolute top-1.5 left-1.5 flex items-center gap-0.5
+              bg-amber-400 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow"
+          >
+            <Sparkles className="w-2.5 h-2.5" />
+            Mới
+          </span>
+        )}
+      </div>
+
+      {/* Candy stripe — vertical */}
+      <div
+        className="w-[3px] flex-shrink-0 self-stretch"
+        style={{
+          background:
+            "repeating-linear-gradient(180deg,#FB923C 0,#FB923C 8px,#FDE68A 8px,#FDE68A 16px,#FDA4AF 16px,#FDA4AF 24px)",
+        }}
+      />
+
+      {/* ── INFO ── */}
+      <div className="flex-1 flex flex-col justify-between px-3 py-2.5 min-w-0">
+        <div>
+          {product.brand?.name && (
+            <p className="text-[9px] font-extrabold tracking-[0.18em] uppercase text-orange-400 mb-0.5">
+              {product.brand.name}
+            </p>
+          )}
+          <h4 className="text-[13px] font-extrabold leading-snug text-gray-800 line-clamp-2">
+            {product.name}
+          </h4>
+        </div>
+
+        <div className="flex items-center justify-between mt-2 gap-2">
+          <div className="flex items-end gap-1.5 min-w-0">
+            {hasSale ? (
+              <>
+                <span className="text-[15px] font-black text-orange-500 leading-none whitespace-nowrap">
+                  {product.sale_price!.toLocaleString("vi-VN")}đ
+                </span>
+                <span className="text-[10px] text-gray-300 line-through leading-none mb-px whitespace-nowrap">
+                  {product.price.toLocaleString("vi-VN")}đ
+                </span>
+              </>
+            ) : (
+              <span className="text-[15px] font-black text-orange-500 leading-none whitespace-nowrap">
+                {product.price.toLocaleString("vi-VN")}đ
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Stock badge */}
+            {isOutOfStock ? (
+              <span className="text-[9px] font-bold text-red-400 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                Hết hàng
+              </span>
+            ) : isLowStock ? (
+              <span className="text-[9px] font-bold text-orange-500 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                Còn {product.stock}
+              </span>
+            ) : null}
+
+            {/* View button */}
+            <Link
+              href={`/product/${product.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-black
+                text-white whitespace-nowrap transition-all duration-200
+                hover:opacity-90 active:scale-95 shadow-sm shadow-orange-200"
+              style={{
+                background: "linear-gradient(135deg, #7b3f00 0%, #c0652b 100%)",
+              }}
+            >
+              <ExternalLink className="w-3 h-3" />
+              Xem thêm
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
