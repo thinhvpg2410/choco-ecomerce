@@ -19,7 +19,10 @@ export function productsListCacheKey(
   return `${prefix}products:page:${page}:limit:${limit}:search:${encodeURIComponent(s)}:cat:${c}`;
 }
 
-export function productDetailCacheKey(prefix: string, productId: string): string {
+export function productDetailCacheKey(
+  prefix: string,
+  productId: string,
+): string {
   return `${prefix}product:${productId}`;
 }
 

@@ -18,7 +18,9 @@ import { PaymentDetailResponseDto } from './dto/payment-response.dto';
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  @ApiOperation({ summary: 'Create payment for an order (one payment per order)' })
+  @ApiOperation({
+    summary: 'Create payment for an order (one payment per order)',
+  })
   @ApiBody({ type: CreatePaymentDto })
   @ApiOkResponse({ type: PaymentDetailResponseDto })
   @Post()
@@ -30,7 +32,10 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Get payment by order id (order owner or admin)' })
   @ApiOkResponse({ type: PaymentDetailResponseDto })
   @Get(':orderId')
-  async findByOrderId(@Req() request: Request, @Param('orderId') orderId: string) {
+  async findByOrderId(
+    @Req() request: Request,
+    @Param('orderId') orderId: string,
+  ) {
     const user = request.user as { sub: string; role: UserRole };
     return this.paymentsService.findByOrderId(orderId, user.sub, user.role);
   }

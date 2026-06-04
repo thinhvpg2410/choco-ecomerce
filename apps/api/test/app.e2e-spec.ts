@@ -53,10 +53,12 @@ describeE2e('Auth, Products, Categories (e2e)', () => {
   });
 
   it('registers user then promotes to admin in DB for protected routes (e2e)', async () => {
-    const registerRes = await request(app.getHttpServer()).post('/api/auth/register').send({
-      email: 'admin@test.com',
-      password: 'StrongPass123',
-    });
+    const registerRes = await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({
+        email: 'admin@test.com',
+        password: 'StrongPass123',
+      });
 
     expect(registerRes.status).toBe(201);
     expect(registerRes.body.success).toBe(true);
@@ -69,10 +71,12 @@ describeE2e('Auth, Products, Categories (e2e)', () => {
       data: { role: 'admin' },
     });
 
-    const loginRes = await request(app.getHttpServer()).post('/api/auth/login').send({
-      email: 'admin@test.com',
-      password: 'StrongPass123',
-    });
+    const loginRes = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({
+        email: 'admin@test.com',
+        password: 'StrongPass123',
+      });
     expect(loginRes.status).toBe(201);
     expect(loginRes.body.success).toBe(true);
     adminAccessToken = loginRes.body.data.accessToken;
@@ -80,10 +84,12 @@ describeE2e('Auth, Products, Categories (e2e)', () => {
   });
 
   it('logs in and returns token pair', async () => {
-    const response = await request(app.getHttpServer()).post('/api/auth/login').send({
-      email: 'admin@test.com',
-      password: 'StrongPass123',
-    });
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({
+        email: 'admin@test.com',
+        password: 'StrongPass123',
+      });
 
     expect(response.status).toBe(201);
     expect(response.body.success).toBe(true);
@@ -94,9 +100,11 @@ describeE2e('Auth, Products, Categories (e2e)', () => {
   });
 
   it('refreshes access token', async () => {
-    const response = await request(app.getHttpServer()).post('/api/auth/refresh').send({
-      refreshToken: adminRefreshToken,
-    });
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/refresh')
+      .send({
+        refreshToken: adminRefreshToken,
+      });
 
     expect(response.status).toBe(201);
     expect(response.body.success).toBe(true);
@@ -177,9 +185,11 @@ describeE2e('Auth, Products, Categories (e2e)', () => {
   });
 
   it('rejects invalid refresh token', async () => {
-    const response = await request(app.getHttpServer()).post('/api/auth/refresh').send({
-      refreshToken: 'invalid.refresh.token',
-    });
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/refresh')
+      .send({
+        refreshToken: 'invalid.refresh.token',
+      });
 
     expect(response.status).toBe(401);
     expect(response.body.success).toBe(false);

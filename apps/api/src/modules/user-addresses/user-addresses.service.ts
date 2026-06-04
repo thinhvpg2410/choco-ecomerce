@@ -8,13 +8,13 @@ export class UserAddressesService {
   constructor(private prisma: PrismaService) {}
 
   create(userId: string, dto: CreateUserAddressDto) {
-  return this.prisma.userAddress.create({
-    data: {
-      userId,
-      ...dto,
-    },
-  });
-}
+    return this.prisma.userAddress.create({
+      data: {
+        userId,
+        ...dto,
+      },
+    });
+  }
 
   findAll(userId: string) {
     return this.prisma.userAddress.findMany({

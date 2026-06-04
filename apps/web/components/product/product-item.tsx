@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Check, ShoppingCart, Zap, Minus, Plus, Flag } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchCart } from "@/store/cartSlice";
-import { RootState } from "@/store";
+import { RootState } from "@/store/store";
 
 interface Props {
   product: Product;
@@ -188,7 +188,7 @@ export function ProductItem({ product }: Props) {
           </p>
         </div>
         <div className="divide-y divide-gray-100">
-          {[
+          {( [
             product.category?.name && ["Danh mục", product.category.name],
             product.stock !== undefined && [
               "Tồn kho",
@@ -214,7 +214,7 @@ export function ProductItem({ product }: Props) {
             product.ingredients && ["Thành phần", product.ingredients],
             product.description && ["Mô tả", product.description],
           ]
-            .filter(Boolean)
+            .filter(Boolean) as any[] )
             .map(([label, value], idx) => (
               <div
                 key={idx}

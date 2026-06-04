@@ -40,7 +40,9 @@ export class CreateCouponDto {
   @Min(0)
   min_order_amount?: number;
 
-  @ApiPropertyOptional({ description: 'Global redemption cap (omit for unlimited)' })
+  @ApiPropertyOptional({
+    description: 'Global redemption cap (omit for unlimited)',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

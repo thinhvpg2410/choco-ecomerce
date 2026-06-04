@@ -8,51 +8,48 @@ stages:
 default:
   image: node:20-bullseye
 
+variables:
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+  DOCKER_IMAGE_REPO: "docker.io/thinhvpg2410/choco-api"
 
 cache:
   key:
     files:
-      - yarn.lock
+      - package-lock.json
   paths:
-    - .yarn/cache
+    - .npm
     - node_modules
 
 install_dependencies:
   stage: install
   script:
-    - corepack enable
-    - yarn install --immutable
+    - npm ci
 
 lint:
   stage: test
   script:
-    - corepack enable
-    - yarn install --immutable
-    - yarn workspace api lint
-    - yarn workspace web lint
+    - npm ci
+    - npm run lint --workspace=api
+    - npm run lint --workspace=web
 
 test:
   stage: test
   script:
-    - corepack enable
-    - yarn install --immutable
-    - yarn workspace api test --runInBand
+    - npm ci
+    - npm run test --workspace=api -- --runInBand
 
 build_app:
   stage: build
   script:
-    - corepack enable
-    - yarn install --immutable
-    - yarn workspace api build
-    - yarn workspace web build
+    - npm ci
+    - npm run build --workspace=api
+    - npm run build --workspace=web
 
 build_and_push_image:
   stage: publish
   image: docker:24.0.7
   services:
     - docker:24.0.7-dind
-  variables:
-    DOCKER_IMAGE_REPO: "docker.io/thinhvpg2410/choco-api"
   rules:
     - if: '$CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "main"'
   before_script:
@@ -81,4 +78,6 @@ deploy:
     - chmod 700 ~/.ssh
     - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
   script:
+    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "mkdir -p ${DEPLOY_PATH}"
+    - scp docker-compose.prod.yml ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/docker-compose.prod.yml
     - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "set -e && cd ${DEPLOY_PATH} && API_IMAGE=${DOCKER_IMAGE_REPO}:latest docker compose -f docker-compose.prod.yml pull api && API_IMAGE=${DOCKER_IMAGE_REPO}:latest docker compose -f docker-compose.prod.yml up -d"

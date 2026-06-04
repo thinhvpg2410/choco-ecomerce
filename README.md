@@ -9,7 +9,7 @@ Monorepo for a chocolate-themed ecommerce platform: a **Next.js** storefront and
 | Frontend | Next.js 16, React 19, Redux Toolkit, Tailwind CSS 4, Radix UI / shadcn |
 | Backend | NestJS 11, Prisma 6, JWT auth, Swagger, Redis cache, Cloudinary uploads |
 | Database | PostgreSQL 16 |
-| Tooling | npm workspaces + Yarn 4, Docker Compose, Jenkins CI/CD |
+| Tooling | npm workspaces, Docker Compose, GitLab CI/CD |
 
 ## Repository structure
 
@@ -49,52 +49,27 @@ choco-ecomerce/
 
 ## Prerequisites
 
-- **Node.js 22+** (matches API Docker images; Jenkins CI uses Node 20)
-- **npm** 9+ or **Yarn** 4 (`corepack enable` — version pinned in `package.json` → `packageManager`)
+- **Node.js 22+** (matches API Docker images; GitLab CI uses Node 20)
+- **npm** 10+
 - **PostgreSQL 16+** for local API development (or use Docker Compose)
 - **Redis** optional locally; included in `docker-compose.dev.yml`
 
-## Package managers (npm vs Yarn)
+## Package manager (npm)
 
-This monorepo supports **both** npm and Yarn. Lockfiles are committed for each (`package-lock.json`, `yarn.lock`). Pick one tool for day-to-day work and stick to it on your machine.
+This monorepo uses **npm workspaces** to manage dependencies and run commands across multiple workspaces.
 
-| Where | Tool | Notes |
-|-------|------|--------|
-| Root `package.json` scripts | **npm** | Scripts call `npm run … --workspace=…` (e.g. `dev:api`, `build`) |
-| **Jenkins** (`Jenkinsfile`) | **Yarn** | `yarn install --immutable`, `yarn workspace api …` |
-| **API Docker** (`apps/api/Dockerfile*`) | **npm** | `npm ci`, `npm run … --workspace=api` |
-| `packageManager` field | **Yarn 4.5.1** | Use `corepack enable` so Yarn matches CI |
+### Common Workspace Commands
 
-**npm** — typical local flow:
-
-```bash
-npm install
-npm run dev:api
-npm run dev:web
-```
-
-**Yarn** — same scripts via workspaces (matches Jenkins):
-
-```bash
-corepack enable
-yarn install
-yarn dev:api          # runs root script (still invokes npm inside)
-yarn workspace api start:dev
-yarn workspace web dev
-```
-
-For workspace-only tasks, prefer:
-
-| Task | npm | Yarn |
-|------|-----|------|
-| Install | `npm install` | `yarn install` |
-| API dev (watch) | `npm run dev:api` | `yarn workspace api start:dev` |
-| Web dev | `npm run dev:web` | `yarn workspace web dev` |
-| Build all | `npm run build` | `yarn workspace api build` + `yarn workspace web build` |
-| API tests | `npm run test --workspace=api` | `yarn workspace api test` |
-| Prisma migrate | `npm run prisma:migrate --workspace=api` | `yarn workspace api prisma:migrate` |
-| Prisma migrate (dev) | `npm run prisma:migrate:dev --workspace=api` | `yarn workspace api prisma:migrate:dev` |
-| Prisma generate | `npm run prisma:generate --workspace=api` | `yarn workspace api prisma:generate` |
+| Task | NPM Workspace Command | Shortcut (Root Script) |
+|------|-----------------------|-------------------------|
+| Install dependencies | `npm install` or `npm ci` | - |
+| Run API in dev (watch) | `npm run start:dev -w api` | `npm run dev:api` |
+| Run Web in dev | `npm run dev -w web` | `npm run dev:web` |
+| Build all | `npm run build` | - |
+| Run API tests | `npm run test -w api -- --runInBand` | - |
+| Prisma migrate | `npm run prisma:migrate -w api` | - |
+| Prisma migrate (dev) | `npm run prisma:migrate:dev -w api` | - |
+| Prisma generate | `npm run prisma:generate -w api` | - |
 
 ## Quick start
 
@@ -103,12 +78,7 @@ For workspace-only tasks, prefer:
 From the repository root:
 
 ```bash
-# npm
 npm install
-
-# or Yarn (CI uses this)
-corepack enable
-yarn install
 ```
 
 ### 2. Configure environment
@@ -134,14 +104,10 @@ The web app calls the API at `http://localhost:5000/api` by default (see `apps/w
 Start Postgres (Docker or local), then apply migrations:
 
 ```bash
-# npm
+# Apply migrations
 npm run prisma:migrate --workspace=api
-# npm (development migrations)
+# Or for development:
 npm run prisma:migrate:dev --workspace=api
-
-# Yarn
-yarn workspace api prisma:migrate
-yarn workspace api prisma:migrate:dev
 ```
 
 Optional seed data: `apps/api/prisma/seed.sql`.
@@ -152,14 +118,12 @@ Optional seed data: `apps/api/prisma/seed.sql`.
 
 ```bash
 npm run dev:api
-# or: yarn workspace api start:dev
 ```
 
 **Terminal 2 — Web** (port `3000`):
 
 ```bash
 npm run dev:web
-# or: yarn workspace web dev
 ```
 
 Open the storefront at [http://localhost:3000](http://localhost:3000).
@@ -175,20 +139,14 @@ Defined in root `package.json` (implemented with npm workspaces):
 | `npm run build` | Build all workspaces |
 | `npm run docker:dev` | Docker Compose dev stack (API reload + DB + Redis) |
 
-With Yarn you can run the same root scripts (`yarn dev:api`, `yarn build`, …) or call workspaces directly — see the table in [Package managers](#package-managers-npm-vs-yarn).
+With npm workspaces you can run root scripts or run commands directly in workspaces.
 
 Workspace examples:
 
 ```bash
-# npm
 npm run test --workspace=api
 npm run prisma:generate --workspace=api
 npm run build --workspace=web
-
-# Yarn
-yarn workspace api test
-yarn workspace api prisma:generate
-yarn workspace web build
 ```
 
 ## Docker
@@ -208,7 +166,6 @@ docker compose up --build
 
 ```bash
 npm run docker:dev
-# or: yarn docker:dev
 # or: docker compose -f docker-compose.dev.yml up --build
 ```
 
@@ -222,15 +179,9 @@ More detail: [apps/api/README.md](apps/api/README.md).
 
 ## CI/CD
 
-Jenkins pipeline (`Jenkinsfile`) uses **Yarn**: `yarn install --immutable`, then lint/test/build via `yarn workspace api` / `yarn workspace web`. The API image build uses **npm** inside `apps/api/Dockerfile`.
+GitLab CI/CD pipeline (`.gitlab-ci.yml`) uses **npm**: `npm ci`, then lint/test/build via workspace commands. The API image build also uses **npm** inside `apps/api/Dockerfile`.
 
 Flow: install → lint → test → build → Docker image push → SSH deploy (`docker-compose.prod.yml`).
-
-Setup steps: [JENKINS-CICD.md](JENKINS-CICD.md).
-
-```bash
-docker compose -f docker-compose.jenkins.yml up -d
-```
 
 ## App-specific docs
 

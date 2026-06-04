@@ -1,6 +1,21 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Req,
+} from '@nestjs/common';
 import type { Request } from 'express';
-import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CartService } from './cart.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
@@ -44,7 +59,10 @@ export class CartController {
   @ApiOperation({ summary: 'Remove item from cart' })
   @ApiOkResponse({ type: CartDetailResponseDto })
   @Delete('remove/:productId')
-  async removeCartItem(@Req() request: Request, @Param('productId') productId: string) {
+  async removeCartItem(
+    @Req() request: Request,
+    @Param('productId') productId: string,
+  ) {
     const user = request.user as { sub: string };
     return this.cartService.removeCartItem(user.sub, productId);
   }

@@ -333,17 +333,17 @@ export function ProductSearchBar() {
     const params = new URLSearchParams(searchParams.toString());
     let changed = false;
     if (catSlug && categories.length > 0) {
-      const found = categories.find((c) => (c.slug ?? c.id) === catSlug);
+      const found = categories.find((c) => (c.slug ?? String(c.id)) === catSlug);
       if (found) {
-        params.set("category_id", found.id);
+        params.set("category_id", String(found.id));
         params.delete("category");
         changed = true;
       }
     }
     if (brandSlug && brands.length > 0) {
-      const found = brands.find((b) => (b.slug ?? b.id) === brandSlug);
+      const found = brands.find((b) => (b.slug ?? String(b.id)) === brandSlug);
       if (found) {
-        params.set("brand_id", found.id);
+        params.set("brand_id", String(found.id));
         params.delete("brand");
         changed = true;
       }
@@ -369,8 +369,8 @@ export function ProductSearchBar() {
     router.push(`?${params.toString()}`);
   };
 
-  const activeCat = categories.find((c) => c.id === activeCatId);
-  const activeBrand = brands.find((b) => b.id === activeBrandId);
+  const activeCat = categories.find((c) => String(c.id) === activeCatId);
+  const activeBrand = brands.find((b) => String(b.id) === activeBrandId);
 
   /* số chip preview hiện trước khi có dropdown */
   const PREVIEW = 3;
@@ -526,11 +526,11 @@ export function ProductSearchBar() {
               {previewCats.map((cat) => (
                 <button
                   key={cat.id}
-                  className={`sb-chip ${activeCatId === cat.id ? "on" : ""}`}
+                  className={`sb-chip ${activeCatId === String(cat.id) ? "on" : ""}`}
                   onClick={() => {
                     setFilter(
                       "category_id",
-                      activeCatId === cat.id ? null : cat.id,
+                      activeCatId === String(cat.id) ? null : String(cat.id),
                     );
                     setOpenDrop(null);
                   }}
@@ -565,7 +565,7 @@ export function ProductSearchBar() {
           <DropdownPanel
             title="Chọn danh mục"
             searchPlaceholder="Tìm danh mục..."
-            items={categories}
+            items={categories.map((c) => ({ ...c, id: String(c.id) }))}
             activeId={activeCatId}
             onSelect={(id) => setFilter("category_id", id)}
             onClose={() => setOpenDrop(null)}
@@ -580,11 +580,11 @@ export function ProductSearchBar() {
               {previewBrands.map((brand) => (
                 <button
                   key={brand.id}
-                  className={`sb-chip ${activeBrandId === brand.id ? "on" : ""}`}
+                  className={`sb-chip ${activeBrandId === String(brand.id) ? "on" : ""}`}
                   onClick={() => {
                     setFilter(
                       "brand_id",
-                      activeBrandId === brand.id ? null : brand.id,
+                      activeBrandId === String(brand.id) ? null : String(brand.id),
                     );
                     setOpenDrop(null);
                   }}
@@ -621,7 +621,7 @@ export function ProductSearchBar() {
           <DropdownPanel
             title="Chọn thương hiệu"
             searchPlaceholder="Tìm thương hiệu..."
-            items={brands}
+            items={brands.map((b) => ({ ...b, id: String(b.id) }))}
             activeId={activeBrandId}
             onSelect={(id) => setFilter("brand_id", id)}
             onClose={() => setOpenDrop(null)}

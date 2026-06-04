@@ -83,11 +83,14 @@ export default function CheckoutPage() {
             setItems([
               {
                 id: parsed.product_id,
+                cart_id: "",
+                product_id: parsed.product_id,
+                created_at: "",
                 name: parsed.name ?? "Sản phẩm",
                 image: parsed.image ?? "",
                 price: Number(parsed.price ?? 0),
                 quantity: Number(parsed.quantity ?? 1),
-              },
+              } as CartItem,
             ]);
           } else {
             setItems(parsed.items ?? []);

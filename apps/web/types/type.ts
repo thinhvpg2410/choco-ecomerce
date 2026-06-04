@@ -12,9 +12,11 @@ export interface User {
   dob?: string; // Ngày sinh (có thể dùng cho khuyến mãi sinh nhật)
   gender?: "male" | "female" | "other";
   avatar_url?: string;
+  avatarUrl?: string;
   refresh_token_hash: string; // Dùng để quản lý phiên đăng nhập
   status: UserStatus;
   created_at: string;
+  createdAt?: string;
   updated_at?: string; // Theo dõi khi nào thông tin user được cập nhật
 }
 
@@ -24,6 +26,8 @@ export interface UserAddress {
   user_id: string;
   receiverName: string; // Tên người nhận
   receiverPhone: string; // SĐT người nhận
+  receiver_name?: string;
+  receiver_phone?: string;
   address: string; // Địa chỉ chi tiết
   ward: string; // Phường/Xã
   city: string; // Tỉnh/Thành phố
@@ -186,6 +190,11 @@ export interface Review {
   is_active: boolean; // Ẩn hiện review (dùng cho quản lý nội dung)
 
   created_at: string;
+  user?: {
+    username?: string;
+    full_name?: string;
+    avatar_url?: string;
+  };
 }
 
 // ================= COUPON =================
@@ -241,6 +250,7 @@ export interface Cart {
   user_id: string;
   created_at: string;
   updated_at?: string;
+  items?: CartItem[];
 }
 
 export interface CartItem {
@@ -251,6 +261,9 @@ export interface CartItem {
   price: number;
   created_at: string;
   updated_at?: string;
+  product?: Product;
+  name?: string;
+  image?: string;
 }
 
 // ================= ORDER STATUS & PAYMENT STATUS (Giữ nguyên) =================
@@ -261,4 +274,4 @@ export type OrderStatus =
   | "CANCELLED";
 
 export type PaymentStatus = "PENDING" | "PAID";
-export type PaymentMethod = "COD" | "VNPay" | "Momo" | "BankTransfer" | "ZaloPay" | "Paypal"; // Thêm phương thức thanh toán phổ biến khác
+export type PaymentMethod = "COD" | "VNPay" | "Momo" | "BankTransfer" | "ZaloPay" | "Paypal" | "PayPal" | "QR_BANK"; // Thêm phương thức thanh toán phổ biến khác

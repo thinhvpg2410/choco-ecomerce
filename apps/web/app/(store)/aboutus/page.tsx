@@ -45,11 +45,11 @@ const timeline = [
 ];
 
 export default function AboutUs() {
-  const [visible, setVisible] = useState({});
-  const refs = useRef({});
+  const [visible, setVisible] = useState<Record<string, boolean>>({});
+  const refs = useRef<Record<string, HTMLElement | null>>({});
 
   useEffect(() => {
-    const observers = {};
+    const observers: Record<string, IntersectionObserver> = {};
     Object.entries(refs.current).forEach(([key, el]) => {
       if (!el) return;
       observers[key] = new IntersectionObserver(
@@ -63,7 +63,7 @@ export default function AboutUs() {
     return () => Object.values(observers).forEach((o) => o.disconnect());
   }, []);
 
-  const setRef = (key) => (el) => {
+  const setRef = (key: string) => (el: HTMLElement | null) => {
     refs.current[key] = el;
   };
 

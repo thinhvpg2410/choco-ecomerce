@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Cart, CartItem, Product } from '@prisma/client';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
@@ -129,7 +133,6 @@ export class CartService {
     };
   }
 
- 
   async mergeGuestCart(userId: string, guestCart: GuestCartItemDto[]) {
     this.validateUserId(userId);
     if (!guestCart.length) {
@@ -230,7 +233,9 @@ export class CartService {
     });
   }
 
-  private async findOrCreateCartWithItems(userId: string): Promise<CartWithItems> {
+  private async findOrCreateCartWithItems(
+    userId: string,
+  ): Promise<CartWithItems> {
     const cart = await this.findOrCreateCart(userId);
     return this.loadCartWithItems(cart.id);
   }

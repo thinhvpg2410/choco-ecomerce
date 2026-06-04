@@ -15,6 +15,7 @@ export interface PaymentResponse {
   amount: number;
   transaction_code?: string;
   qr_url?: string; 
+  qrUrl?: string; 
   paid_at?: string;
   created_at: string;
 }
