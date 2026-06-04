@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { ProductCardHorizontal, ChatProduct } from "@/components/product/product-card";
+import api from "@/services/axios";
 
 interface Message {
   role: "user" | "assistant";
@@ -62,7 +62,6 @@ function parseProductsFromReply(raw: string): {
 
 export default function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
-  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -98,15 +97,19 @@ export default function ChatBot() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: newMessages.slice(-10).map((m) => ({ role: m.role, content: m.content })),
-        }),
-      });
-      const data = await res.json();
-      const raw: string = data.reply ?? "Xin lỗi, thử lại sau nhé!";
+      const res = await api.post(
+        "/chat",
+        {
+          messages: newMessages
+            .slice(-10)
+            .map((m) => ({ role: m.role, content: m.content })),
+        },
+        {
+          baseURL: process.env.NEXT_PUBLIC_CHAT_API_URL,
+        },
+      );
+
+      const raw: string = res.data?.reply ?? res.data?.data?.reply ?? "Xin lỗi, thử lại sau nhé!";
       const { text: replyText, products } = parseProductsFromReply(raw);
 
       setMessages((prev) => [
