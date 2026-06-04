@@ -19,13 +19,8 @@ services:
   api:
     image: ${API_IMAGE}
     container_name: choco-api
-    environment:
-      PORT: 5000
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/choco_ecommerce?schema=public
-      JWT_SECRET: d7a8b5310c2e491944963cac158973549e48891320a80b2dd2c2fbc9058e916e
-      JWT_REFRESH_SECRET: 3144049e5030d0eb0db1df3e2e6352a54b6ce1bd1701c588b61d83e78dde5972
-      JWT_EXPIRES_IN: 1d
-      JWT_REFRESH_EXPIRES_IN: 7d
+    env_file:
+      - .env
     ports:
       - "5000:5000"
     depends_on:
