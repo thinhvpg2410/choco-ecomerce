@@ -143,6 +143,16 @@ function useProductFilters() {
     router.push("?page=1");
   };
 
+  const searchDisplayValue = (() => {
+    if (search) return search;
+    if (isNew === "true" && isBestSeller === "true") return "";
+    if (isNew === "true") return "sản phẩm mới";
+    if (isBestSeller === "true") return "bán chạy";
+    if (searchParams.get("is_featured") === "true") return "nổi bật";
+    if (searchParams.get("on_sale") === "true") return "giảm giá";
+    return "";
+  })();
+
   return {
     search,
     setSearch,
@@ -155,6 +165,7 @@ function useProductFilters() {
     handleSort,
     activeFiltersCount,
     clearAll,
+    searchDisplayValue,
   };
 }
 
@@ -307,6 +318,7 @@ export function ProductSearchBar() {
     handlePriceSelect,
     activeFiltersCount,
     clearAll,
+    searchDisplayValue,
   } = useProductFilters();
 
   const router = useRouter();
@@ -397,24 +409,24 @@ export function ProductSearchBar() {
         .sb-si input::placeholder{color:var(--ink3);}
         .sb-si input:focus{border-color:var(--a);}
         .sb-sbtn{
-  padding:10px 20px;
-  border:none;
-  border-radius:0 var(--r) var(--r) 0;
+          padding:10px 20px;
+          border:none;
+          border-radius:0 var(--r) var(--r) 0;
 
-  background:linear-gradient(135deg,var(--a),var(--a-d));
+          background:linear-gradient(135deg,var(--a),var(--a-d));
 
-  color:#fff;
-  font-size:13.5px;
-  font-weight:600;
-  cursor:pointer;
-  font-family:'Inter',sans-serif;
-  transition:all .15s;
-  white-space:nowrap;
-}
+          color:#fff;
+          font-size:13.5px;
+          font-weight:600;
+          cursor:pointer;
+          font-family:'Inter',sans-serif;
+          transition:all .15s;
+          white-space:nowrap;
+        }
 
-.sb-sbtn:hover{
-  filter:brightness(.96);
-}
+        .sb-sbtn:hover{
+          filter:brightness(.96);
+        }
         .sb-sw{position:relative;}
         .sb-sw select{
           appearance:none;padding:10px 32px 10px 12px;height:100%;
@@ -437,13 +449,13 @@ export function ProductSearchBar() {
         }
         .sb-chip:hover{border-color:var(--a-b);background:var(--a-l);color:var(--a-d);}
         .sb-chip.on{
-  border-color:var(--a);
-  background:var(--a-l);
-  color:var(--a-d);
-  font-weight:600;
+          border-color:var(--a);
+          background:var(--a-l);
+          color:var(--a-d);
+          font-weight:600;
 
-  box-shadow:0 4px 12px rgba(249,115,22,.12);
-}
+          box-shadow:0 4px 12px rgba(249,115,22,.12);
+        }
         .sb-chip img{width:20px;height:20px;border-radius:50%;object-fit:cover;flex-shrink:0;}
         .sb-chip-ph{width:20px;height:20px;border-radius:50%;background:var(--a-l);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--a-d);flex-shrink:0;}
 
@@ -498,7 +510,7 @@ export function ProductSearchBar() {
             <input
               type="text"
               placeholder="Tìm kiếm sản phẩm..."
-              value={search}
+              value={search || searchDisplayValue}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
             />

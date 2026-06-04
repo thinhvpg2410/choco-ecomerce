@@ -18,7 +18,7 @@ const sections = {
       {
         heading: "Phạm vi & Hình thức",
         items: [
-          { strong: "Khu vực:", text: "Chỉ giao trong nội thành và các huyện thuộc TP.HCM." },
+          { strong: "Khu vực:", text: "Giao hàng toàn quốc trên toàn lãnh thổ Việt Nam." },
           { strong: "Bánh kem & Đồ ngọt dễ vỡ:", text: "Giao bằng đội shipper riêng hoặc xe ô tô, đảm bảo không rung lắc, không nghiêng đổ." },
           { strong: "Socola & Bánh kẹo đóng gói:", text: "Giao hỏa tốc trong túi giữ nhiệt chuyên dụng." },
         ],
@@ -34,8 +34,8 @@ const sections = {
       {
         heading: "Phí vận chuyển",
         items: [
-          { strong: "Nội thành:", text: "20.000đ – 35.000đ tùy quận." },
-          { strong: "Ngoại thành:", text: "Theo biểu phí thực tế của Ahamove/Grab." },
+          { strong: "Nội thành:", text: "15.000 VNĐ" },
+          { strong: "Ngoại thành:", text: "30.000 VNĐ" },
           { strong: "Freeship:", text: "Miễn phí vận chuyển cho đơn hàng từ 500.000đ trở lên." },
         ],
       },
@@ -154,7 +154,7 @@ const sections = {
     faqs: [
       { q: "Sản phẩm hết hàng có được nhập về lại không?", a: "Có! Theo dõi Fanpage Facebook/Instagram hoặc đăng ký nhận thông báo email để cập nhật hàng mới sớm nhất." },
       { q: "Làm thế nào để đặt hàng?", a: "Chọn sản phẩm → Thêm vào giỏ hàng → Nhập thông tin giao hàng tại TP.HCM → Chọn thanh toán. Đơn giản và nhanh chóng." },
-      { q: "Choco Kingdom chấp nhận thanh toán nào?", a: "Chuyển khoản ngân hàng, thẻ Visa/Mastercard, ví Momo/ZaloPay và COD (áp dụng cho bánh kẹo có sẵn, không áp dụng bánh kem thiết kế riêng giá trị cao)." },
+      { q: "Choco Kingdom chấp nhận thanh toán nào?", a: "Chuyển khoản QR Code, Paypal và COD (áp dụng cho bánh kẹo có sẵn, không áp dụng bánh kem thiết kế riêng giá trị cao)." },
       { q: "Tôi có thể thay đổi đơn hàng sau khi đặt không?", a: "Liên hệ ngay qua Hotline/Zalo. Lưu ý: với bánh kem đã vào quy trình đóng gói hoặc giao hàng, việc thay đổi có thể không thực hiện được." },
       { q: "Gặp vấn đề với đơn hàng (thiếu/sai/hư), phải làm gì?", a: "Liên hệ trong vòng 2 ngày kể từ nhận hàng, kèm hình ảnh/video mở hộp và hóa đơn. Chúng tôi cam kết giải quyết tận tình." },
       { q: "Các gói bánh kẹo mix có luôn giống nhau không?", a: "Thành phần có thể thay đổi theo hàng tồn kho. Nếu một loại hết, chúng tôi thay thế bằng loại tương đương để đảm bảo gói hàng đầy đặn." },
