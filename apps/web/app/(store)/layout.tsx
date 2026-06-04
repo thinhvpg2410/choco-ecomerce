@@ -1,7 +1,7 @@
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Toaster } from "sonner";
-// import ChatBotUser from "@/components/chat/ChatBotUser";
+import ChatBot from "@/components/chatbox/ChatBox";
 
 export default function StoreLayout({
   children,
@@ -14,7 +14,7 @@ export default function StoreLayout({
       <main className="flex-1">{children}</main>
       <Footer />
       <Toaster richColors position="top-right" />
-      {/* <ChatBotUser /> */}
+      <ChatBot />
     </div>
   );
 }

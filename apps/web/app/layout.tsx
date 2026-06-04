@@ -7,7 +7,6 @@ import {Header} from "@/components/layout/header";
 import {Footer} from "@/components/layout/footer";
 import { Providers } from "@/provider";
 import { Playfair_Display, Poppins } from "next/font/google";
-import ChatBox from "@/components/chatbox/ChatBox";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,10 +46,8 @@ export default function RootLayout({
       >
         <Providers>
           <main>{children}</main>
-
           <Toaster richColors position="top-right" />
         </Providers>
-        <ChatBox />
       </body>
     </html>
   );

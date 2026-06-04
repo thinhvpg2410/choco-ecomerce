@@ -9,7 +9,7 @@ import { ProductCardHorizontal, ChatProduct } from "@/components/product/product
 interface Message {
   role: "user" | "assistant";
   content: string;
-  products?: ChatProduct[]; // parsed products attached to this message
+  products?: ChatProduct[]; 
 }
 
 const QUICK_REPLIES = [
@@ -43,15 +43,6 @@ const TypingDots = () => (
   </div>
 );
 
-/**
- * Parse products injected by the API inside a special JSON fence:
- *
- *   <!--PRODUCTS_JSON
- *   [{"id":1,"name":"...","price":59000,...}]
- *   -->
- *
- * The fence is stripped from the displayed text so the AI reply looks clean.
- */
 function parseProductsFromReply(raw: string): {
   text: string;
   products: ChatProduct[];
@@ -113,7 +104,6 @@ export default function ChatBot() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // Chỉ gửi 10 tin nhắn gần nhất để tránh context cũ ảnh hưởng
           messages: newMessages.slice(-10).map((m) => ({ role: m.role, content: m.content })),
         }),
       });
@@ -240,12 +230,12 @@ export default function ChatBot() {
               href="https://zalo.me/0943648490"
               target="_blank"
               rel="noopener noreferrer"
-              title="Nhắn tin Admin"
+              title="Nhắn tin CSKH"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
                         text-white transition hover:bg-white/30"
               style={{ background: "rgba(255,255,255,0.2)" }}
             >
-              💬 Admin
+              💬 CSKH
             </a>
 
             <button
