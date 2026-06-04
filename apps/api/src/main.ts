@@ -11,7 +11,11 @@ async function bootstrap() {
   app.use(cookieParser());
 
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: [
+      'http://localhost:3000',
+      'https://choco-ecomerce-web.vercel.app',
+      /\.vercel\.app$/,
+    ],
     credentials: true,
   });
 
