@@ -15,6 +15,7 @@ async function bootstrap() {
       'http://localhost:3000',
       'https://choco-ecomerce-web.vercel.app',
       /\.vercel\.app$/,
+      'https://34.229.88.43.nip.io',
     ],
     credentials: true,
   });

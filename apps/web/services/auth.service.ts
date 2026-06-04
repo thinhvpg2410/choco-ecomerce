@@ -48,10 +48,13 @@ export const authLogout = async (): Promise<void> => {
   }
 };
 
-export const authRefresh = async (): Promise<string | null> => {
+export const authRefresh = async (): Promise<{
+  accessToken: string;
+  user: User;
+} | null> => {
   try {
     const res = await api.post("/auth/refresh", {}, { withCredentials: true });
-    return res.data.data.accessToken ?? null;
+    return res.data.data ?? null; 
   } catch (error: any) {
     console.error("Lỗi làm mới token:", error?.response?.data || error);
     return null;
