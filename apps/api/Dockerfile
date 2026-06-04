@@ -16,4 +16,5 @@ RUN npm run prisma:generate --workspace=api && npm run build --workspace=api
 
 EXPOSE 5000
 
-CMD ["sh", "-c", "npm run prisma:generate --workspace=api && npm run prisma:migrate --workspace=api && npm run start:prod --workspace=api"]
+# CMD ["sh", "-c", "npm run prisma:generate --workspace=api && npm run prisma:migrate --workspace=api && npm run start:prod --workspace=api"]
+CMD ["sh", "-c", "npm run prisma:generate --workspace=api && npm run prisma:migrate --workspace=api && node apps/api/dist/src/main"]
