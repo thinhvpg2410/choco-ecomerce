@@ -25,7 +25,8 @@ import { AppCacheModule } from './common/cache/cache.module';
 import { PayPalModule } from './modules/paypal/paypal.module';
 import { SepayModule } from './modules/sepay/sepay.module';
 import { ThrottlerModule } from '@nestjs/throttler';
-// import { ChatModule } from './modules/chat/chat.module';
+import { ChatModule } from './modules/chat/chat.module';
+//import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -59,7 +60,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     AdminModule,
     PayPalModule,
     SepayModule,
-    // ChatModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [
@@ -67,6 +68,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     OptionalJwtAuthGuard,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    //{ provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}

@@ -8,7 +8,6 @@ import ReviewList from "@/components/review/review-list";
 import ProductImageGallery from "@/components/product/product-image-gallery";
 import SameBrandProducts from "@/components/product/same-brand-products";
 import { ChevronRight, Home, Star } from "lucide-react";
-// ← bỏ import RootState và useSelector
 
 interface Props {
   params: { id: string };
