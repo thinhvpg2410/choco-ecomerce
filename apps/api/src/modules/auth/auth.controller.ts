@@ -146,10 +146,11 @@ export class AuthController {
   }
 
   private get refreshTokenCookieOptions() {
+    const isProd = process.env.NODE_ENV === 'production';
     return {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
+      sameSite: isProd ? 'none' : ('lax' as const),
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     };
