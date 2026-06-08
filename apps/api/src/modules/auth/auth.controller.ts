@@ -150,7 +150,7 @@ export class AuthController {
     return {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: isProd ? 'none' : ('lax' as const),
+      sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax' | 'strict',
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     };
